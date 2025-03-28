@@ -1,7 +1,8 @@
 // Use node-fetch v2.x with CommonJS syntax
 const fetch = require('node-fetch');
 
-export const handler = async function(event, context) {
+// Use module.exports for CommonJS
+module.exports.handler = async function(event, context) {
   const drugName = event.queryStringParameters.term;
 
   if (!drugName) {
