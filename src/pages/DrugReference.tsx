@@ -45,7 +45,8 @@ const DrugReference = () => {
     setSearched(true);
 
     const encodedDrugName = encodeURIComponent(searchTerm.trim());
-    const functionUrl = `/.netlify/functions/drug-search?term=${encodedDrugName}`;
+    // Point to the new Express API endpoint
+    const functionUrl = `/api/drug-search?term=${encodedDrugName}`; 
 
     try {
       const response = await fetch(functionUrl);
