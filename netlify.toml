@@ -1,0 +1,18 @@
+# netlify.toml
+
+[build]
+  # Perintah untuk membangun proyek Anda (sesuai log deployment)
+  command = "bun run build" 
+  
+  # Direktori output hasil build Vite
+  publish = "dist"
+
+[functions]
+  # Direktori tempat fungsi Netlify Anda berada
+  directory = "netlify/functions"
+
+# Opsional: Redirects/Rewrites jika diperlukan (misalnya untuk SPA)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
