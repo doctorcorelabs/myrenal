@@ -18,7 +18,8 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Tools from "./pages/Tools";
 import MedicalCalculator from "./pages/MedicalCalculator";
-import DrugReference from "./pages/DrugReference"; // Import the new component
+import DrugReference from "./pages/DrugReference"; 
+import NutritionDatabase from "./pages/NutritionDatabase"; // Import NutritionDatabase
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -65,6 +66,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><DrugReference /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add route for Nutrition Database */}
+            <Route 
+              path="/tools/nutrition-database" 
+              element={
+                <ProtectedRoute>
+                  <Layout><NutritionDatabase /></Layout>
                 </ProtectedRoute>
               } 
             />

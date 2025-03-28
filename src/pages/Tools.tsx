@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse } from 'lucide-react';
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple } from 'lucide-react'; // Added Apple
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -24,11 +24,11 @@ const toolsData = [
     comingSoon: false // Changed to false
   },
   {
-    id: 3,
-    title: 'Diagnosis Assistant',
-    description: 'Differential diagnosis tool based on symptoms',
-    icon: Stethoscope,
-    comingSoon: true
+    id: 3, // Re-sequenced ID
+    title: 'Nutrition Database', 
+    description: 'Explore nutritional information for various food items', 
+    icon: Apple, 
+    comingSoon: false // Changed to false
   },
   {
     id: 4,
@@ -52,10 +52,10 @@ const toolsData = [
     comingSoon: true
   },
   {
-    id: 7,
-    title: 'Anatomy Explorer',
-    description: 'Interactive 3D anatomy reference tool',
-    icon: Brain,
+    id: 7, // Re-sequenced ID
+    title: 'Diagnosis Assistant', 
+    description: 'Differential diagnosis tool based on symptoms', 
+    icon: Stethoscope, 
     comingSoon: true
   },
   {
@@ -111,6 +111,10 @@ const Tools = () => {
                   </Link>
                 ) : tool.id === 2 ? ( // Drug Reference Link
                   <Link to="/tools/drug-reference" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 3 ? ( // Nutrition Database Link
+                  <Link to="/tools/nutrition-database" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
                 ) : ( // Default Button for other tools
