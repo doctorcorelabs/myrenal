@@ -60,7 +60,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
     "zod": "^3.23.8",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
     "@supabase/supabase-js": "^2.45.0"
   },
   "devDependencies": {

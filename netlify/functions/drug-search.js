@@ -1,5 +1,5 @@
-// Use node-fetch v3+ with ES Module syntax
-import fetch from 'node-fetch'; 
+// Use node-fetch v2.x with CommonJS syntax
+const fetch = require('node-fetch');
 
 export const handler = async function(event, context) {
   const drugName = event.queryStringParameters.term;
