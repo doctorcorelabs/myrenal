@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
@@ -279,6 +280,14 @@ const NutritionDatabase = () => {
             ))}
           </div>
         )}
+
+        {/* Back to Tools Button */}
+        <div className="flex justify-center mt-8 mb-4">
+          <Link to="/tools">
+            <Button variant="outline">Back to Tools</Button>
+          </Link>
+        </div>
+        
       </div>
     </>
   );

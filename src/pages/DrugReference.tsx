@@ -6,23 +6,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown'; // Import react-markdown
 import PageHeader from '../components/PageHeader';
 
-// Define a type for the expected result structure
+// Define a type for the data items (text + source)
+interface DataItem {
+  text: string;
+  source: 'fda' | 'ai' | 'unavailable';
+}
+
+// Update the result structure to use DataItem
 interface DrugResult {
   openfda?: {
-    generic_name?: string[];
-    brand_name?: string[];
-    manufacturer_name?: string[];
-    spl_set_id?: string[];
+    generic_name?: DataItem[];
+    brand_name?: DataItem[];
+    manufacturer_name?: DataItem[];
+    spl_set_id?: DataItem[]; // Assuming spl_set_id remains simple string or needs adjustment
   };
-  indications_and_usage?: string[];
-  boxed_warning?: string[];
-  mechanism_of_action?: string[]; // Added
-  contraindications?: string[]; // Added
-  dosage_forms_and_strengths?: string[]; // Added
-  adverse_reactions?: string[]; // Added
+  indications_and_usage?: DataItem[];
+  boxed_warning?: DataItem[];
+  mechanism_of_action?: DataItem[];
+  contraindications?: DataItem[];
+  dosage_forms_and_strengths?: DataItem[];
+  adverse_reactions?: DataItem[];
 }
+
 
 const DrugReference = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -96,77 +104,98 @@ const DrugReference = () => {
     }
   };
 
-  // Helper to display results safely
-  const displayResults = (result: DrugResult) => {
-    const genericName = result.openfda?.generic_name?.join(', ') ?? 'N/A';
-    const brandName = result.openfda?.brand_name?.join(', ') ?? 'N/A';
-    const manufacturer = result.openfda?.manufacturer_name?.join(', ') ?? 'N/A';
-    const indications = result.indications_and_usage?.[0]?.substring(0, 700) ?? 'N/A';
-    const indicationsTruncated = result.indications_and_usage?.[0]?.length > 700;
-    const boxedWarning = result.boxed_warning?.[0]?.substring(0, 700) ?? null;
-    const boxedWarningTruncated = result.boxed_warning?.[0]?.length > 700;
-    // Extract new fields
-    const mechanism = result.mechanism_of_action?.[0]?.substring(0, 700) ?? 'N/A';
-    const mechanismTruncated = result.mechanism_of_action?.[0]?.length > 700;
-    const contraindications = result.contraindications?.[0]?.substring(0, 700) ?? 'N/A';
-    const contraindicationsTruncated = result.contraindications?.[0]?.length > 700;
-    const dosageForms = result.dosage_forms_and_strengths?.[0]?.substring(0, 700) ?? 'N/A';
-    const dosageFormsTruncated = result.dosage_forms_and_strengths?.[0]?.length > 700;
-    const adverseReactions = result.adverse_reactions?.[0]?.substring(0, 700) ?? 'N/A';
-    const adverseReactionsTruncated = result.adverse_reactions?.[0]?.length > 700;
+  // Helper component to display text with AI disclaimer
+  const DisplayField = ({ label, data }: { label: string; data?: DataItem[] }) => {
+    const item = data?.[0]; // Get the first item
+    if (!item || item.source === 'unavailable' || !item.text || item.text.trim() === '') {
+       // Don't render the section if data is unavailable or empty
+       // Optionally, render a placeholder:
+       // return (
+       //   <div>
+       //     <h4 className="font-semibold text-gray-800 mb-1">{label}:</h4>
+       //     <p className="text-gray-500 italic">Information not available.</p>
+       //   </div>
+       // );
+       return null;
+    }
 
-    const splSetId = result.openfda?.spl_set_id?.[0] ?? null;
+    const isAi = item.source === 'ai';
+
+    // Define allowed elements for safety if needed, or use defaults
+    // const allowedElements = ['p', 'strong', 'em', 'ul', 'ol', 'li']; 
+    
+    return (
+      <div>
+        <h4 className="font-semibold text-gray-800 mb-1">{label}:</h4>
+        <div className="text-gray-700 text-justify prose prose-sm max-w-none"> {/* Add prose classes for basic styling */}
+          <ReactMarkdown 
+            // allowedElements={allowedElements} // Uncomment to restrict elements
+            // unwrapDisallowed={true} // Unwrap disallowed elements instead of removing them
+          >
+            {item.text}
+          </ReactMarkdown>
+          {isAi && <span className="text-xs italic text-orange-600 ml-1 block mt-1">(AI generated, verify with a professional)</span>} {/* Make disclaimer block */}
+        </div>
+      </div>
+    );
+  };
+
+   // Helper component for Boxed Warning specifically
+   const DisplayBoxedWarning = ({ data }: { data?: DataItem[] }) => {
+    const item = data?.[0];
+    if (!item || item.source === 'unavailable' || !item.text || item.text.trim() === '') {
+      return null; // Don't show warning section if no data
+    }
+    const isAi = item.source === 'ai';
+    return (
+      <Alert variant="destructive" className="bg-red-50 border-red-500 text-red-800">
+        <AlertTriangle className="h-4 w-4 !text-red-800" />
+        <AlertTitle className="font-bold">Boxed Warning</AlertTitle>
+        <AlertDescription> {/* Removed asChild prop */}
+           <div className="prose prose-sm max-w-none"> {/* Add prose classes */}
+             <ReactMarkdown>{item.text}</ReactMarkdown>
+             {isAi && <span className="text-xs italic text-orange-600 ml-1 block mt-1">(AI generated, verify with a professional)</span>} {/* Make disclaimer block */}
+           </div>
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
+
+  // Helper to display results safely using the new structure
+  const displayResults = (result: DrugResult) => {
+    // Helper to join text from DataItem arrays
+    const joinDataItems = (items?: DataItem[]): string => 
+      items?.map(item => item.text).join(', ') ?? 'Information Not Available';
+
+    const genericName = joinDataItems(result.openfda?.generic_name);
+    const brandName = joinDataItems(result.openfda?.brand_name);
+    const manufacturer = joinDataItems(result.openfda?.manufacturer_name);
+    
+    // Assuming splSetId is still simple, adjust if backend changes it
+    const splSetId = (result.openfda?.spl_set_id as unknown as string[])?.[0] ?? null; 
     const dailyMedLink = splSetId ? `https://dailymed.nlm.nih.gov/dailymed/spl.cfm?setid=${splSetId}` : null;
 
     return (
       <div className="space-y-6"> {/* Increased spacing */}
+        {/* Basic Info */}
         <h3 className="text-2xl font-semibold text-medical-blue">{brandName} <span className="text-lg font-normal text-gray-600">({genericName})</span></h3>
         <p><strong className="text-gray-700">Manufacturer:</strong> {manufacturer}</p>
-        
-        {boxedWarning && (
-          <Alert variant="destructive" className="bg-red-50 border-red-500 text-red-800">
-             <AlertTriangle className="h-4 w-4 !text-red-800" />
-             <AlertTitle className="font-bold">Boxed Warning</AlertTitle>
-             <AlertDescription>{boxedWarning}{boxedWarningTruncated ? '...' : ''}</AlertDescription>
-          </Alert>
-        )}
 
-        <div>
-          <h4 className="font-semibold text-gray-800 mb-1">Indications and Usage:</h4>
-          <p className="text-gray-700 text-justify">{indications}{indicationsTruncated ? '...' : ''}</p>
-        </div>
+        {/* Boxed Warning */}
+        <DisplayBoxedWarning data={result.boxed_warning} />
 
-        {/* Added Sections */}
-        {mechanism !== 'N/A' && (
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-1">Mechanism of Action:</h4>
-            <p className="text-gray-700 text-justify">{mechanism}{mechanismTruncated ? '...' : ''}</p>
-          </div>
-        )}
-        {contraindications !== 'N/A' && (
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-1">Contraindications:</h4>
-            <p className="text-gray-700 text-justify">{contraindications}{contraindicationsTruncated ? '...' : ''}</p>
-          </div>
-        )}
-         {dosageForms !== 'N/A' && (
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-1">Dosage Forms & Strengths:</h4>
-            <p className="text-gray-700 text-justify">{dosageForms}{dosageFormsTruncated ? '...' : ''}</p>
-          </div>
-        )}
-         {adverseReactions !== 'N/A' && (
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-1">Adverse Reactions:</h4>
-            <p className="text-gray-700 text-justify">{adverseReactions}{adverseReactionsTruncated ? '...' : ''}</p>
-          </div>
-        )}
-        {/* End Added Sections */}
-
-        {/* Removed DailyMed Link Section */}
-      </div>
+        {/* Other Fields */}
+        <DisplayField label="Indications and Usage" data={result.indications_and_usage} />
+        <DisplayField label="Mechanism of Action" data={result.mechanism_of_action} />
+        <DisplayField label="Contraindications" data={result.contraindications} />
+        <DisplayField label="Dosage Forms & Strengths" data={result.dosage_forms_and_strengths} />
+        <DisplayField label="Adverse Reactions" data={result.adverse_reactions} />
+        {/* Removed extra closing tags from previous edit */}
+        {/* Removed DailyMed Link Section - This comment was misplaced */}
+      </div> // This closes the main div started for space-y-6
     );
-  };
+  }; // This closes displayResults function
 
 
   return (
@@ -181,9 +210,16 @@ const DrugReference = () => {
           {/* Disclaimer */}
           <Alert variant="destructive" className="mb-8 bg-yellow-50 border-yellow-500 text-yellow-800">
             <AlertTriangle className="h-4 w-4 !text-yellow-800" />
-            <AlertTitle className="font-bold">Disclaimer</AlertTitle>
-            <AlertDescription>
-              This feature is for informational and educational purposes ONLY, utilizing data from OpenFDA (US FDA). Information may not be complete, fully up-to-date, or applicable outside the US. It DOES NOT substitute for professional medical advice, diagnosis, or treatment. Always consult your doctor or pharmacist regarding medications.
+            <AlertTitle className="font-bold">Important Disclaimer</AlertTitle>
+            <AlertDescription className="text-justify"> {/* Added text-justify */}
+              {/* Wrap the disclaimer content in ReactMarkdown */}
+              <ReactMarkdown> 
+                {`This tool provides information primarily sourced from OpenFDA (US FDA). Where official data is unavailable for certain fields, **Artificial Intelligence (AI) may be used to supplement the information.**
+
+All information, whether from official sources or AI, is for **informational and educational purposes ONLY.** It may not be complete, fully up-to-date, or applicable outside the US. **AI-generated content requires extra scrutiny and verification.**
+
+This tool **DOES NOT substitute for professional medical advice, diagnosis, or treatment.** Always consult your doctor or pharmacist regarding medications and health concerns. Never disregard professional medical advice or delay seeking it because of something you have read here.`}
+              </ReactMarkdown>
             </AlertDescription>
           </Alert>
 

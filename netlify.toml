@@ -11,6 +11,13 @@
   # Direktori tempat fungsi Netlify Anda berada
   directory = "netlify/functions"
 
+# Konfigurasi untuk netlify dev
+[dev]
+  # Port tempat framework (Vite) berjalan
+  targetPort = 8080 
+  # Port yang akan diekspos oleh Netlify Dev (opsional, bisa di-override dengan -p)
+  # port = 8888 
+
 # Opsional: Redirects/Rewrites jika diperlukan (misalnya untuk SPA)
 # [[redirects]]
 #   from = "/*"

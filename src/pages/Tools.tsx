@@ -35,21 +35,21 @@ const toolsData = [
     title: 'Disease Library',
     description: 'Comprehensive information on various conditions',
     icon: Book,
-    comingSoon: true
+    comingSoon: false // Changed to false
   },
   {
     id: 5,
     title: 'Clinical Guidelines',
     description: 'Access the latest medical practice guidelines',
     icon: FileSearch,
-    comingSoon: true
+    comingSoon: false // Changed to false
   },
   {
     id: 6,
-    title: 'Lab Interpreter',
-    description: 'Understand and analyze laboratory test results',
-    icon: FlaskConical,
-    comingSoon: true
+    title: 'AI Chatbot', // Changed title
+    description: 'Engage with an AI assistant for medical information and queries', // Changed description
+    icon: Brain, // Changed icon
+    comingSoon: false // Changed comingSoon
   },
   {
     id: 7, // Re-sequenced ID
@@ -96,12 +96,13 @@ const Tools = () => {
                     <span className="text-xs bg-amber-100 text-amber-800 py-1 px-2 rounded-full font-medium">
                       Coming Soon
                     </span>
-                  )}
-                </div>
-                <CardTitle className="mt-2">{tool.title}</CardTitle>
-                <CardDescription>{tool.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
+                  )} {/* Added missing closing parenthesis */}
+                   {/* Removed Coming Soon badge logic here as it's handled by the flag */}
+                 </div>
+                 <CardTitle className="mt-2">{tool.title}</CardTitle>
+                 <CardDescription>{tool.description}</CardDescription>
+               </CardHeader>
+               <CardContent className="flex-grow">
                 {/* Tool content will go here */}
               </CardContent>
               <CardFooter>
@@ -117,14 +118,26 @@ const Tools = () => {
                   <Link to="/tools/nutrition-database" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
-                ) : ( // Default Button for other tools
-                  <Button 
-                    className="w-full bg-medical-teal hover:bg-medical-blue"
-                    disabled={tool.comingSoon}
-                  >
-                    {tool.comingSoon ? 'Not Available Yet' : 'Launch Tool'}
-                  </Button>
-                )}
+                ) : tool.id === 4 ? ( // Disease Library Link
+                  <Link to="/tools/disease-library" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 5 ? ( // Clinical Guidelines Link (Modified)
+                   <Link to="/tools/clinical-guidelines" className="w-full">
+                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                   </Link>
+                 ) : tool.id === 6 ? ( // AI Chatbot Link
+                   <Link to="/tools/ai-chatbot" className="w-full">
+                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                   </Link>
+                 ) : ( // Default Button for other tools
+                   <Button 
+                     className="w-full bg-medical-teal hover:bg-medical-blue"
+                     disabled={tool.comingSoon} // Keep disabled logic for other 'coming soon' tools
+                   >
+                     {tool.comingSoon ? 'Not Available Yet' : 'Launch Tool'}
+                   </Button>
+                 )}
               </CardFooter>
             </Card>
           ))}

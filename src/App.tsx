@@ -20,6 +20,9 @@ import Tools from "./pages/Tools";
 import MedicalCalculator from "./pages/MedicalCalculator";
 import DrugReference from "./pages/DrugReference"; 
 import NutritionDatabase from "./pages/NutritionDatabase"; // Import NutritionDatabase
+import DiseaseLibrary from "./pages/DiseaseLibrary"; // Import DiseaseLibrary
+import ClinicalGuidelines from "./pages/ClinicalGuidelines"; // Import ClinicalGuidelines
+import AIChatbot from "./pages/AIChatbot"; // Import AIChatbot
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -78,9 +81,36 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            {/* Add route for Disease Library */}
+            <Route 
+              path="/tools/disease-library" 
+              element={
+                <ProtectedRoute>
+                  <Layout><DiseaseLibrary /></Layout>
+                 </ProtectedRoute>
+               } 
+             />
+             {/* Add route for Clinical Guidelines */}
+             <Route 
+               path="/tools/clinical-guidelines" 
+               element={
+                 <ProtectedRoute>
+                   <Layout><ClinicalGuidelines /></Layout>
+                 </ProtectedRoute>
+               } 
+             />
+             {/* Add route for AI Chatbot */}
+             <Route 
+               path="/tools/ai-chatbot" 
+               element={
+                 <ProtectedRoute>
+                   <Layout><AIChatbot /></Layout>
+                 </ProtectedRoute>
+               } 
+             />
+             <Route path="*" element={<NotFound />} />
+           </Routes>
+         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
