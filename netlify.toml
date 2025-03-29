@@ -18,8 +18,8 @@
   # Port yang akan diekspos oleh Netlify Dev (opsional, bisa di-override dengan -p)
   # port = 8888 
 
-# Opsional: Redirects/Rewrites jika diperlukan (misalnya untuk SPA)
-# [[redirects]]
-#   from = "/*"
-#   to = "/index.html"
-#   status = 200
+# Redirects/Rewrites untuk SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
