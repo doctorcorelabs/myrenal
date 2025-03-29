@@ -56,15 +56,15 @@ const About = () => {
               <h3 className="text-xl font-bold text-medical-blue mb-4 text-center">Contact Information</h3>
               
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <Mail size={18} className="text-medical-teal mr-3" />
-                  <a 
-                    href="mailto:daivanfebrijuansetiya@gmail.com" 
-                    className="text-gray-700 hover:text-medical-blue transition-colors"
-                  >
-                    daivanfebrijuansetiya@gmail.com
-                  </a>
-                </div>
+                 <div className="flex items-center">
+                   <Mail size={18} className="text-medical-teal mr-3" />
+                   <a
+                     href="mailto:research@daivanlabs.com"
+                     className="text-gray-700 hover:text-medical-blue transition-colors"
+                   >
+                     research@daivanlabs.com
+                   </a>
+                 </div>
                 
                 {/* Removed phone number div */}
                 

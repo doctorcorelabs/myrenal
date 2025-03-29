@@ -33,13 +33,13 @@ const Footer = () => {
           {/* Contact Info */}
           <div>
             <h3 className="text-xl font-bold mb-4 font-heading">Contact</h3>
-            <div className="space-y-3">
-              <p className="flex items-center">
-                <Mail size={16} className="mr-2" />
-                <a href="mailto:daivanfebrijuansetiya@gmail.com" className="text-gray-300 hover:text-white transition-colors">
-                  daivanfebrijuansetiya@gmail.com
-                </a>
-              </p>
+             <div className="space-y-3">
+               <p className="flex items-center">
+                 <Mail size={16} className="mr-2" />
+                 <a href="mailto:research@daivanlabs.com" className="text-gray-300 hover:text-white transition-colors">
+                   research@daivanlabs.com
+                 </a>
+               </p>
               {/* Removed phone number paragraph */}
               <p className="flex items-center">
                 <Linkedin size={16} className="mr-2" />
