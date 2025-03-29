@@ -29,6 +29,7 @@ import LearningCoursera from "./pages/LearningCoursera"; // Import LearningCours
 import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
 import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
 import LearningOther from "./pages/LearningOther"; // Import LearningOther
+import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -103,11 +104,20 @@ const App = () => (
                  <ProtectedRoute>
                    <Layout><ClinicalGuidelines /></Layout>
                  </ProtectedRoute>
-               } 
+               }
+             />
+             {/* Add route for Explore GEMINI */}
+             <Route
+               path="/tools/explore-gemini"
+               element={
+                 <ProtectedRoute>
+                   <Layout><ExploreGemini /></Layout>
+                 </ProtectedRoute>
+               }
              />
              {/* Add route for AI Chatbot */}
              <Route 
-               path="/tools/ai-chatbot" 
+               path="/tools/ai-chatbot"
                element={
                  <ProtectedRoute>
                   <Layout><AIChatbot /></Layout>

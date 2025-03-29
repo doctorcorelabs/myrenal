@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Terminal, Loader2 } from "lucide-react";
+import { Terminal, Loader2, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 
 // --- Interfaces ---
 interface Nutrient {
@@ -284,7 +284,10 @@ const NutritionDatabase = () => {
         {/* Back to Tools Button */}
         <div className="flex justify-center mt-8 mb-4">
           <Link to="/tools">
-            <Button variant="outline">Back to Tools</Button>
+            <Button variant="outline" className="inline-flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Tools
+            </Button>
           </Link>
         </div>
         

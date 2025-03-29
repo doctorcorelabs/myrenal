@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText } from 'lucide-react'; // Added Apple and FileText
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer } from 'lucide-react'; // Added Apple, FileText, and Computer
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -59,7 +59,14 @@ const toolsData = [
     comingSoon: false // Changed comingSoon
   },
   {
-    id: 8,
+    id: 8, // Now Explore GEMINI
+    title: 'Explore GEMINI',
+    description: 'Utilize Google\'s advanced AI for medical research exploration.',
+    icon: Computer, 
+    comingSoon: false 
+  },
+  {
+    id: 9, // Now Learning Resources
     title: 'Learning Resources', // Changed title
     description: 'Access curated educational materials and resources', // Changed description
     icon: Book, // Changed icon
@@ -100,7 +107,7 @@ const Tools = () => {
                    {/* Removed Coming Soon badge logic here as it's handled by the flag */}
                  </div>
                  <CardTitle className="mt-2">{tool.title}</CardTitle>
-                 <CardDescription>{tool.description}</CardDescription>
+                 <CardDescription className="text-justify">{tool.description}</CardDescription> {/* Added text-justify */}
                </CardHeader>
                <CardContent className="flex-grow">
                 {/* Tool content will go here */}
@@ -134,7 +141,11 @@ const Tools = () => {
                    <Link to="/tools/ai-peer-review" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
-                ) : tool.id === 8 ? ( // Learning Resources Link
+                ) : tool.id === 8 ? ( // Explore GEMINI Link (Now ID 8)
+                  <Link to="/tools/explore-gemini" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 9 ? ( // Learning Resources Link (Now ID 9)
                   <Link to="/tools/learning-resources" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
