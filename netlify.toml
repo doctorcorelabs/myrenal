@@ -14,9 +14,11 @@
 # Konfigurasi untuk netlify dev
 [dev]
   # Port tempat framework (Vite) berjalan
-  targetPort = 8080 
+  targetPort = 8080
+  # Explicitly set framework to avoid detection issues
+  framework = "vite"
   # Port yang akan diekspos oleh Netlify Dev (opsional, bisa di-override dengan -p)
-  # port = 8888 
+  # port = 8888
 
 # Redirects/Rewrites untuk SPA
 [[redirects]]
