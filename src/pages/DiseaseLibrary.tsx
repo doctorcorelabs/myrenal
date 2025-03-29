@@ -132,8 +132,24 @@ const DiseaseLibrary = () => {
 
     lines.forEach((line) => {
       const trimmedLine = line.trim();
-      const headingMatch = trimmedLine.match(/^(?:\d+\.\s*)?\*\*(.+?):\*\*/);
+      // Updated regex to match headings without asterisks, but still capture the title
+      const headingMatch = trimmedLine.match(/^(?:\d+\.\s*)?(.+?):(?!\*)/); // Match heading followed by colon, but not if it's bolded (to avoid double matching if AI adds bolding anyway)
+      // Alternative simpler regex if the above is too strict:
+      // const headingMatch = trimmedLine.match(/^(?:\d+\.\s*)?(.+?):/);
       if (headingMatch) {
+        // Check if the matched heading is likely one of our expected sections
+        // This prevents accidentally matching random lines ending with a colon.
+        const potentialTitle = headingMatch[1].trim().toLowerCase();
+        const expectedTitles = ["etiology", "risk factors", "pathogenesis", "clinical manifestations", "physical examination", "supporting investigations", "management"];
+        if (!expectedTitles.some(title => potentialTitle.startsWith(title))) {
+           // If it's not a likely section title, treat it as content
+           if (currentSection) {
+             content += line + '\n';
+           }
+           return; // Skip to next line
+        }
+
+        // It's likely a section title, process it
         if (currentSection) {
           sections[currentSection] = content.trim();
         }
