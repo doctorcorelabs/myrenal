@@ -122,34 +122,47 @@ const DiseaseLibrary = () => {
     }
   };
 
-  // Helper function to parse the detailed info string into sections
-  const parseDetailedInfo = (details: string | null): Record<string, string> => {
+ // Helper function to parse the detailed info string into sections using block extraction
+ const parseDetailedInfo = (details: string | null): Record<string, string> => {
     if (!details) return {};
-    const sections: Record<string, string> = {};
-    const lines = details.split('\n');
-    let currentSection = '';
-    let content = '';
+    // Use Object.create(null) for a cleaner object without prototype chain
+    const sections: Record<string, string> = Object.create(null);
+    // Regex to find main headings (e.g., "1. **Heading:**") globally and capture the heading text
+    const headingRegex = /^\d+\.\s*\*\*\s*(.+?)\s*:\*\*/gm; // g for global, m for multiline
 
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      // Reverted regex to match headings with asterisks as originally intended and confirmed by logs
-      const headingMatch = trimmedLine.match(/^(?:\d+\.\s*)?\*\*(.+?):\*\*/);
-      if (headingMatch) {
-        if (currentSection) {
-          sections[currentSection] = content.trim();
-        }
-        currentSection = headingMatch[1].trim();
-        content = '';
-      } else if (currentSection) {
-        content += line + '\n';
-      }
-    });
-
-    if (currentSection) {
-      sections[currentSection] = content.trim();
+    let match;
+    const matches = [];
+    // Find all heading matches and store their info (text and index)
+    while ((match = headingRegex.exec(details)) !== null) {
+        matches.push({
+            title: match[1].trim(), // Captured group 1 is the heading text
+            index: match.index,
+            length: match[0].length // Length of the full heading match
+        });
     }
+
+    // Iterate through the found headings to extract content between them
+    for (let i = 0; i < matches.length; i++) {
+        const currentMatch = matches[i];
+        const nextMatch = matches[i + 1];
+
+        // Start index of content is after the current heading
+        const contentStartIndex = currentMatch.index + currentMatch.length;
+
+        // End index of content is the start of the next heading, or end of string
+        const contentEndIndex = nextMatch ? nextMatch.index : details.length;
+
+        // Extract the content substring and trim it
+        const content = details.substring(contentStartIndex, contentEndIndex).trim();
+
+        // Use the raw title directly as the key
+        const sectionTitle = currentMatch.title;
+        sections[sectionTitle] = content;
+    }
+
     return sections;
-  };
+ };
+
 
   const detailedSections = parseDetailedInfo(detailedInfo);
 
@@ -263,21 +276,22 @@ const DiseaseLibrary = () => {
           </div>
         )}
 
-        {/* Detailed Information Display or Error */}
-        {!isDetailedLoading && (detailedInfo || detailedError) && (
-          <div className="mt-6 p-4 border rounded-md bg-white">
-             <h3 className="text-lg font-semibold mb-3">Detailed Information for "{searchQuery}":</h3>
-             {detailedError ? (
-               <p className="text-red-600">Error: {detailedError}</p>
+         {/* Detailed Information Display or Error */}
+         {!isDetailedLoading && (detailedInfo || detailedError) && (
+           <div className="mt-6 p-4 border rounded-md bg-white">
+              <h3 className="text-lg font-semibold mb-3">Detailed Information for "{searchQuery}":</h3>
+              {detailedError ? (
+                <p className="text-red-600">Error: {detailedError}</p>
              ) : detailedSections && Object.keys(detailedSections).length > 0 ? (
                <Accordion type="single" collapsible className="w-full">
                  {Object.entries(detailedSections).map(([title, content], index) => (
-                   <AccordionItem value={`item-${index}`} key={title}>
+                   <AccordionItem value={title} key={title}>
                      <AccordionTrigger className="text-base font-medium hover:no-underline">
-                       {index + 1}. {title}
+                       {/* Display the title from the object entry */}
+                       {title}
                      </AccordionTrigger>
                      <AccordionContent className="text-sm text-gray-800 pt-2 pl-4">
-                       {/* Render Accordion Content using ReactMarkdown with justify */}
+                       {/* Restore ReactMarkdown and add text-justify class */}
                        <div className="prose prose-sm max-w-none text-justify">
                          <ReactMarkdown>
                            {content}

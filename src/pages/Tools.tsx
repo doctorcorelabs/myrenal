@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple } from 'lucide-react'; // Added Apple
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText } from 'lucide-react'; // Added Apple and FileText
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -53,17 +53,17 @@ const toolsData = [
   },
   {
     id: 7, // Re-sequenced ID
-    title: 'Diagnosis Assistant', 
-    description: 'Differential diagnosis tool based on symptoms', 
-    icon: Stethoscope, 
-    comingSoon: true
+    title: 'AI Peer-Review', // Changed title
+    description: 'Get AI-powered feedback on your clinical notes or case studies', // Changed description
+    icon: FileText, // Changed icon
+    comingSoon: false // Changed comingSoon
   },
   {
     id: 8,
-    title: 'Vital Signs Tracker',
-    description: 'Record and monitor patient vital signs',
-    icon: HeartPulse,
-    comingSoon: true
+    title: 'Learning Resources', // Changed title
+    description: 'Access curated educational materials and resources', // Changed description
+    icon: Book, // Changed icon
+    comingSoon: false // Changed comingSoon
   }
 ];
 
@@ -130,14 +130,22 @@ const Tools = () => {
                    <Link to="/tools/ai-chatbot" className="w-full">
                      <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                    </Link>
-                 ) : ( // Default Button for other tools
-                   <Button 
-                     className="w-full bg-medical-teal hover:bg-medical-blue"
-                     disabled={tool.comingSoon} // Keep disabled logic for other 'coming soon' tools
-                   >
-                     {tool.comingSoon ? 'Not Available Yet' : 'Launch Tool'}
-                   </Button>
-                 )}
+                 ) : tool.id === 7 ? ( // AI Peer-Review Link
+                   <Link to="/tools/ai-peer-review" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 8 ? ( // Learning Resources Link
+                  <Link to="/tools/learning-resources" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : ( // Default Button for other tools
+                  <Button
+                    className="w-full bg-medical-teal hover:bg-medical-blue"
+                    disabled={tool.comingSoon} // Keep disabled logic for other 'coming soon' tools
+                  >
+                    {tool.comingSoon ? 'Not Available Yet' : 'Launch Tool'}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}

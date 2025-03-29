@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: 'localhost', // Changed from "::"
     port: 8080,
     proxy: { // Add proxy configuration
       // Proxy requests starting with '/.netlify/functions/'

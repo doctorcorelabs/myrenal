@@ -23,6 +23,12 @@ import NutritionDatabase from "./pages/NutritionDatabase"; // Import NutritionDa
 import DiseaseLibrary from "./pages/DiseaseLibrary"; // Import DiseaseLibrary
 import ClinicalGuidelines from "./pages/ClinicalGuidelines"; // Import ClinicalGuidelines
 import AIChatbot from "./pages/AIChatbot"; // Import AIChatbot
+import AIPeerReview from "./pages/AIPeerReview"; // Import AIPeerReview
+import LearningResources from "./pages/LearningResources"; // Import LearningResources
+import LearningCoursera from "./pages/LearningCoursera"; // Import LearningCoursera
+import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
+import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
+import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -104,13 +110,64 @@ const App = () => (
                path="/tools/ai-chatbot" 
                element={
                  <ProtectedRoute>
-                   <Layout><AIChatbot /></Layout>
-                 </ProtectedRoute>
-               } 
-             />
-             <Route path="*" element={<NotFound />} />
-           </Routes>
-         </BrowserRouter>
+                  <Layout><AIChatbot /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add route for AI Peer-Review */}
+            <Route 
+              path="/tools/ai-peer-review" 
+              element={
+                <ProtectedRoute>
+                  <Layout><AIPeerReview /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add route for Learning Resources */}
+            <Route 
+              path="/tools/learning-resources" 
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningResources /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add routes for specific learning resources */}
+            <Route 
+              path="/tools/learning-resources/coursera" 
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningCoursera /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/learning-resources/osmosis" 
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningOsmosis /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/learning-resources/uptodate" 
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningUpToDate /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/learning-resources/other" 
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningOther /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
