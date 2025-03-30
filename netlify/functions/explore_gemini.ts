@@ -1,6 +1,6 @@
-import type { Handler, HandlerEvent, HandlerContext, HandlerResponse } from "@netlify/functions"; // Added HandlerResponse
+import type { Handler, HandlerEvent, HandlerContext, HandlerResponse } from "@netlify/functions";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
-import { PassThrough } from 'stream'; // Import PassThrough stream
+import { PassThrough } from 'stream'; // Re-import PassThrough stream for local dev
 
 // --- System Instructions Text (Mirrored from Frontend) ---
 // Keep this in sync with the frontend definition
@@ -282,54 +282,78 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         safetySettings,
     });
 
-    // --- Node.js PassThrough Stream Implementation ---
-    const passThroughStream = new PassThrough();
+    // --- Conditional Streaming Logic ---
+    const isLocalDev = process.env.NETLIFY_DEV === 'true';
+    console.log(`Environment: ${isLocalDev ? 'Local Development' : 'Deployed'}`);
 
-    // Process the stream asynchronously
-    (async () => {
-      try {
-        console.log("Starting Gemini stream (complex)...");
-        for await (const chunk of streamResult.stream) {
-          // Check for text part
-          const chunkText = chunk.text();
-          if (chunkText) {
-            // console.log("Received text chunk:", chunkText);
-            passThroughStream.write(`TEXT:${chunkText}\n`); // Prefix text chunks
-          }
+    let responseBody: any; // Use 'any' to hold either stream type
 
-          // Check for image part (assuming only one image part per chunk for simplicity)
-          const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-          if (imagePart?.inlineData) {
-             // console.log("Received image chunk:", imagePart.inlineData.mimeType);
-             const imagePayload = {
-                 type: 'image',
-                 mimeType: imagePart.inlineData.mimeType,
-                 data: imagePart.inlineData.data
-             };
-             passThroughStream.write(`JSON:${JSON.stringify(imagePayload)}\n`); // Prefix image JSON
+    if (isLocalDev) {
+      // --- Local Dev: Use PassThrough Stream ---
+      console.log("Using PassThrough stream for local dev.");
+      const passThroughStream = new PassThrough();
+      responseBody = passThroughStream; // Assign stream to responseBody
+
+      (async () => {
+        try {
+          console.log("Starting Gemini stream (PassThrough)...");
+          for await (const chunk of streamResult.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+              passThroughStream.write(`TEXT:${chunkText}\n`);
+            }
+            const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+            if (imagePart?.inlineData) {
+               const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
+               passThroughStream.write(`JSON:${JSON.stringify(imagePayload)}\n`);
+            }
           }
+          console.log("Gemini stream finished (PassThrough).");
+          passThroughStream.end();
+        } catch (streamError: any) {
+          console.error("Error reading Gemini stream (PassThrough):", streamError);
+          passThroughStream.write(`TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`);
+          passThroughStream.destroy(streamError);
         }
-        console.log("Gemini stream finished (complex).");
-        passThroughStream.end(); // Signal end of stream
-      } catch (streamError: any) {
-        console.error("Error reading Gemini stream:", streamError);
-        // Write error marker to stream before destroying (use TEXT prefix for consistency)
-        passThroughStream.write(`TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`);
-        passThroughStream.destroy(streamError); // Destroy stream on error
-      }
-    })(); // Immediately invoke the async function
+      })();
+      // --- End PassThrough Stream Logic ---
+    } else {
+      // --- Deployed: Use Async Generator ---
+      console.log("Using async generator for deployed environment.");
+      const bodyGenerator = async function* () {
+        try {
+          console.log("Starting Gemini stream (async generator)...");
+          for await (const chunk of streamResult.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+              yield `TEXT:${chunkText}\n`;
+            }
+            const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+            if (imagePart?.inlineData) {
+               const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
+               yield `JSON:${JSON.stringify(imagePayload)}\n`;
+            }
+          }
+          console.log("Gemini stream finished (async generator).");
+        } catch (streamError: any) {
+          console.error("Error reading Gemini stream in generator:", streamError);
+          yield `TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`;
+        }
+      };
+      responseBody = bodyGenerator(); // Assign invoked generator to responseBody
+      // --- End Async Generator Logic ---
+    }
 
-    // Return the PassThrough stream as the body
+    // Return the appropriate body based on environment
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        // Netlify should handle Transfer-Encoding automatically for Node streams
       },
-      body: passThroughStream as any, // Cast PassThrough to any to satisfy HandlerResponse['body'] type (string)
+      body: responseBody as any, // Cast the selected body type to any for TS
       isBase64Encoded: false
     };
-    // --- End Node.js PassThrough Stream Implementation ---
+    // --- End Conditional Streaming Logic ---
 
   } catch (error: any) {
     console.error("Error setting up Gemini stream:", error);
