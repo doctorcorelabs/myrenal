@@ -99,8 +99,8 @@ const MedicalNewsSection: React.FC = () => {
           <Carousel
             plugins={[plugin.current]}
             className="w-full max-w-3xl mx-auto" // Center the carousel
-            onMouseEnter={plugin.current.stop}
-            onMouseLeave={plugin.current.reset}
+            onMouseEnter={() => plugin.current.stop()} // Wrap in arrow function
+            onMouseLeave={() => plugin.current.play()} // Change to play and wrap in arrow function
             opts={{
               align: "start",
               loop: true,

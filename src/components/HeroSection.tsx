@@ -116,8 +116,8 @@ const HeroSection = () => {
             align: "start",
             loop: true,
           }}
-          onMouseEnter={plugin.current.stop}
-          onMouseLeave={plugin.current.reset}
+          onMouseEnter={() => plugin.current.stop()} // Wrapped in arrow function
+          onMouseLeave={() => plugin.current.play()} // Wrapped in arrow function
         >
           <CarouselContent className="-ml-4"> {/* Adjust margin for spacing */}
             {toolsData.map((tool, index) => (
