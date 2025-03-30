@@ -1,7 +1,36 @@
-import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen } from 'lucide-react'; // Added more icons
+import React from 'react'; // Import React
+import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import MedicalNewsSection from './MedicalNewsSection';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"; // Import Carousel components
+import Autoplay from "embla-carousel-autoplay"; // Import Autoplay plugin
+
+// Define tool data array
+const toolsData = [
+  { icon: Calculator, title: "Medical Calculator", description: "Calculate BMI, BSA, GFR, and other important clinical values", link: "/tools/medical-calculator" },
+  { icon: Pill, title: "Drug Reference", description: "Access comprehensive drug information database", link: "/tools/drug-reference" },
+  { icon: Apple, title: "Nutrition Database", description: "Explore nutritional information for various food items", link: "/tools/nutrition-database" },
+  { icon: Library, title: "Disease Library", description: "Comprehensive information on various conditions", link: "/tools/disease-library" },
+  { icon: FileText, title: "Clinical Guidelines", description: "Access the latest medical practice guidelines", link: "/tools/clinical-guidelines" },
+  { icon: Bot, title: "AI Chatbot", description: "Engage with an AI assistant for medical information and queries", link: "/tools/ai-chatbot" },
+  { icon: Users, title: "AI Peer-Review", description: "Get AI-powered feedback on your clinical notes or case studies", link: "/tools/ai-peer-review" },
+  { icon: BookOpen, title: "Learning Resources", description: "Access curated educational materials and resources", link: "/tools/learning-resources" },
+  { icon: Network, title: "Interaction Checker", description: "Check for potential drug interactions", link: "/tools/interaction-checker" },
+  { icon: Sparkles, title: "Explore Gemini", description: "Utilize Google's Gemini for advanced medical insights", link: "/tools/explore-gemini" },
+];
 
 const HeroSection = () => {
+  // Initialize Autoplay plugin
+  const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true }) // Removed stopOnMouseEnter: true
+  );
+
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-medical-light to-white pt-20">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
@@ -78,116 +107,55 @@ const HeroSection = () => {
       {/* START: Medical Tools Preview Section */}
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-2xl md:text-3xl font-bold text-center text-medical-blue mb-12">Explore Medical Tools</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {/* Tool Card 1: Medical Calculator */}
-          <Link to="/tools/medical-calculator" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Calculator size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Medical Calculator</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Calculate BMI, BSA, GFR, and other important clinical values</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
+        
+        {/* Carousel Implementation */}
+        <Carousel
+          plugins={[plugin.current]}
+          className="w-full"
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          onMouseEnter={plugin.current.stop}
+          onMouseLeave={plugin.current.reset}
+        >
+          <CarouselContent className="-ml-4"> {/* Adjust margin for spacing */}
+            {toolsData.map((tool, index) => (
+              // Set basis for different screen sizes
+              <CarouselItem key={index} className="pl-4 basis-full md:basis-1/2 lg:basis-1/4"> 
+                <div className="p-1 h-full"> {/* Added padding and full height */}
+                  {/* Tool Card Structure (copied from original grid) */}
+                  <Link 
+                    to={tool.link} 
+                    className="tool-card group block h-full p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1 flex flex-col" // Added h-full and flex flex-col
+                  >
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors flex-shrink-0"> {/* Added flex-shrink-0 */}
+                      <tool.icon size={24} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-medical-blue mb-2">{tool.title}</h3>
+                    <p className="text-sm text-gray-600 mb-4 text-justify flex-grow">{tool.description}</p> {/* Added flex-grow */}
+                    <span className="mt-auto inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors self-start"> {/* Added mt-auto and self-start */}
+                      Launch Tool
+                      <ArrowRight size={16} className="ml-2" />
+                    </span>
+                  </Link>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons outside on larger screens */}
+          <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" />
+        </Carousel>
 
-          {/* Tool Card 2: Drug Reference */}
-          <Link to="/tools/drug-reference" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Pill size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Drug Reference</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Access comprehensive drug information database</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 3: Nutrition Database */}
-          <Link to="/tools/nutrition-database" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Apple size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Nutrition Database</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Explore nutritional information for various food items</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 4: Disease Library */}
-          <Link to="/tools/disease-library" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Library size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Disease Library</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Comprehensive information on various conditions</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 5: Clinical Guidelines */}
-          <Link to="/tools/clinical-guidelines" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <FileText size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Clinical Guidelines</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Access the latest medical practice guidelines</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 6: AI Chatbot */}
-          <Link to="/tools/ai-chatbot" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Bot size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">AI Chatbot</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Engage with an AI assistant for medical information and queries</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 7: AI Peer-Review */}
-          <Link to="/tools/ai-peer-review" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <Users size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">AI Peer-Review</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Get AI-powered feedback on your clinical notes or case studies</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-
-          {/* Tool Card 8: Learning Resources */}
-          <Link to="/tools/learning-resources" className="tool-card group block p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors">
-              <BookOpen size={24} /> {/* Using lucide-react icon */}
-            </div>
-            <h3 className="text-lg font-semibold text-medical-blue mb-2">Learning Resources</h3>
-            <p className="text-sm text-gray-600 mb-4 text-justify">Access curated educational materials and resources</p> {/* Added text-justify */}
-            <span className="inline-flex items-center px-4 py-2 bg-medical-blue text-white text-sm font-medium rounded-md group-hover:bg-opacity-90 transition-colors">
-              Launch Tool
-              <ArrowRight size={16} className="ml-2" />
-            </span>
-          </Link>
-        </div>
-        {/* Add the login message below the tool cards */}
-        <p className="text-center font-bold text-lg text-[#0A2463] mt-4">Ready to explore? Login to access all tools.</p>
+        {/* Add the login message below the carousel */}
+        <p className="text-center font-bold text-lg text-[#0A2463] mt-8">Ready to explore? Login to access all tools.</p> {/* Increased margin-top */}
         {/* Removed the "View All Tools" button container as all tools are now displayed */}
       </div>
       {/* END: Medical Tools Preview Section */}
+
+      {/* START: Medical News Section */}
+      <MedicalNewsSection />
+      {/* END: Medical News Section */}
     </section>
   );
 };
