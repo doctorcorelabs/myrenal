@@ -258,41 +258,140 @@ const ExploreGemini: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload), // Send constructed payload
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
+        // Attempt to read error from body, even if it's potentially a stream
         let errorMsg = `HTTP error! status: ${res.status}`;
         try {
-          const errorData = await res.json();
-          errorMsg = errorData.error || JSON.stringify(errorData); 
-        } catch (jsonError) {
+          const errorText = await res.text(); // Read error as text
           try {
-            errorMsg = await res.text();
-          } catch (textError) { }
+             // Try parsing as JSON first
+             const errorData = JSON.parse(errorText);
+             errorMsg = errorData.error || JSON.stringify(errorData);
+          } catch (jsonParseError) {
+             // If not JSON, use the raw text
+             errorMsg = errorText || errorMsg;
+          }
+        } catch (readError) {
+          // Ignore if reading error body fails
         }
         throw new Error(errorMsg);
       }
 
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await res.json();
-        if (data.responseText) {
-          setResponseText(data.responseText);
-        }
-        if (data.responseImage) {
-          setResponseImage(data.responseImage);
-        }
-        if (!data.responseText && !data.responseImage) {
-           setError("Received an empty response from the model.");
-        }
-      } else {
-        const responseText = await res.text();
-        throw new Error(`Received unexpected response format: ${responseText}`);
+      // --- Streaming Response Handling ---
+      if (!res.body) {
+        throw new Error("Response body is missing.");
       }
 
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let buffer = ''; // Buffer to hold incomplete lines
+      let currentText = ''; // Accumulate text separately
+      let currentImage: ResponseImageData | null = null; // Hold potential image
+
+      while (!done) {
+        try {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            // Append new chunk to buffer and decode
+            buffer += decoder.decode(value, { stream: !done }); // Use stream: true until the last chunk
+
+            // Process buffer line by line
+            let newlineIndex;
+            while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+              const line = buffer.slice(0, newlineIndex).trim(); // Get line and trim whitespace
+              buffer = buffer.slice(newlineIndex + 1); // Remove processed line from buffer
+
+              if (line.startsWith('TEXT:')) {
+                const textChunk = line.substring(5);
+                if (textChunk.startsWith('[STREAM_ERROR]:')) {
+                    console.error("Stream error detected in response:", textChunk);
+                    setError("An error occurred during generation. Please check the console or try again.");
+                    done = true; // Stop processing on error
+                    break;
+                }
+                currentText += textChunk;
+                setResponseText(currentText); // Update text state incrementally
+              } else if (line.startsWith('JSON:')) {
+                try {
+                  const jsonData = JSON.parse(line.substring(5));
+                  if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
+                    // console.log("Received image data via stream");
+                    currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
+                    setResponseImage(currentImage); // Update image state
+                  } else {
+                     console.warn("Received unknown JSON structure:", jsonData);
+                  }
+                } catch (jsonError) {
+                  console.error("Error parsing JSON from stream:", jsonError, "Line:", line);
+                  // Optionally set an error state here
+                }
+              } else if (line) {
+                 // Handle unexpected lines if necessary
+                 console.warn("Received unexpected line in stream:", line);
+              }
+            }
+          }
+          if (done && buffer) {
+             // Process any remaining data in the buffer after the stream ends
+             const finalLine = buffer.trim();
+             if (finalLine.startsWith('TEXT:')) {
+                 const textChunk = finalLine.substring(5);
+                 if (!textChunk.startsWith('[STREAM_ERROR]:')) { // Avoid double-adding error text
+                    currentText += textChunk;
+                    setResponseText(currentText);
+                 }
+             } else if (finalLine.startsWith('JSON:')) {
+                 // Handle final JSON if needed (less likely)
+                 try {
+                    const jsonData = JSON.parse(finalLine.substring(5));
+                    if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
+                       currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
+                       setResponseImage(currentImage);
+                    }
+                 } catch (jsonError) {
+                    console.error("Error parsing final JSON from stream:", jsonError, "Line:", finalLine);
+                 }
+             } else if (finalLine) {
+                 console.warn("Received unexpected final data in stream:", finalLine);
+             }
+          }
+
+        } catch (streamReadError: any) {
+           console.error("Error reading stream:", streamReadError);
+           setError(`Error reading response stream: ${streamReadError.message}`);
+           done = true; // Exit loop on stream read error
+        }
+      }
+      // --- End Complex Streaming Response Handling ---
+
+      // // --- Original JSON Response Handling (Commented Out) ---
+      // const contentType = res.headers.get("content-type");
+      // if (contentType && contentType.indexOf("application/json") !== -1) {
+      //   const data = await res.json();
+      //   if (data.responseText) {
+      //     setResponseText(data.responseText);
+      //   }
+      //   // Temporarily disable image handling for streaming
+      //   // if (data.responseImage) {
+      //   //   setResponseImage(data.responseImage);
+      //   // }
+      //   if (!data.responseText /* && !data.responseImage */) {
+      //      setError("Received an empty response from the model.");
+      //   }
+      // } else {
+      //   const responseText = await res.text();
+      //   throw new Error(`Received unexpected response format: ${responseText}`);
+      // }
+      // // --- End Original JSON Response Handling ---
+
+
     } catch (err: any) {
-      console.error("Error calling Gemini function:", err);
+      console.error("Error in handleSubmit:", err);
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
@@ -402,60 +501,63 @@ const ExploreGemini: React.FC = () => {
 
               {/* Prompt Textarea */}
               <div className="space-y-2">
-                 <Label htmlFor="prompt-input">Enter your prompt</Label>
+                 <Label htmlFor="prompt-input">Enter your prompt</Label> {/* Updated label */}
                  <Textarea
                    id="prompt-input"
-                   placeholder="Ask Gemini anything related to medical topics..."
+                   placeholder="Ask Gemini anything related to medical topics, or describe the uploaded file..."
                    value={prompt}
                    onChange={(e) => setPrompt(e.target.value)}
                    rows={5}
                    className="resize-none"
                    disabled={isLoading}
                  />
-              </div> 
+              </div>
 
-              {/* File Upload Section */}
+              {/* File Upload Section - Re-enabled */}
               <div className="space-y-2">
-                <Label htmlFor="file-upload">Upload File (Optional - Image, PDF, Audio)</Label> 
-                <div className="flex items-center gap-2">
-                   <Input 
-                     id="file-upload" 
-                     type="file" 
-                     accept={allowedFileTypesString} 
-                     ref={fileInputRef}
-                     onChange={handleFileChange} 
-                     className="hidden" 
-                   />
-                   <Button 
-                     type="button" 
-                     variant="outline" 
-                     onClick={() => fileInputRef.current?.click()}
-                     disabled={isLoading}
-                   >
-                     <Upload className="mr-2 h-4 w-4" /> Choose File 
-                   </Button>
-                   {uploadedFileName && (
-                     <>
-                       <div className="flex items-center gap-2 text-sm p-2 border rounded-md bg-muted">
-                         <FileIcon className="h-4 w-4" />
-                         <span className="truncate max-w-[150px]">{uploadedFileName}</span>
-                       </div>
-                       <Button 
-                         type="button" 
-                         variant="ghost" 
-                         size="icon" 
-                         onClick={clearUploadedFile} 
-                         disabled={isLoading}
-                         title="Remove file"
-                       >
-                         <X className="h-4 w-4" />
-                       </Button>
-                     </>
-                   )}
-                 </div>
-               </div>
+                 <Label htmlFor="file-upload">Upload File (Optional - Image, PDF, Audio)</Label>
+                 <div className="flex items-center gap-2">
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      accept={allowedFileTypesString}
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      disabled={isLoading} // Re-enable based on loading state
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()} // Re-enable click
+                      disabled={isLoading} // Re-enable based on loading state
+                    >
+                      <Upload className="mr-2 h-4 w-4" /> Choose File
+                    </Button>
+                    {uploadedFileName && (
+                      <>
+                        <div className="flex items-center gap-2 text-sm p-2 border rounded-md bg-muted">
+                          <FileIcon className="h-4 w-4" />
+                          <span className="truncate max-w-[150px]">{uploadedFileName}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={clearUploadedFile} // Re-enable clear
+                          disabled={isLoading} // Re-enable based on loading state
+                          title="Remove file"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {/* Removed disabled message */}
+              </div>
 
-              <Button type="submit" disabled={isLoading || (!prompt.trim() && !uploadedFile)}> 
+              {/* Update disabled condition for submit button - allow submit if prompt OR file exists */}
+              <Button type="submit" disabled={isLoading || (!prompt.trim() && !uploadedFile)}>
                 {isLoading ? 'Generating...' : 'Submit Prompt'}
               </Button>
             </form>
@@ -477,19 +579,19 @@ const ExploreGemini: React.FC = () => {
               <CardTitle>Gemini Response</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Display Text Response */}
+              {/* Display Text Response (ReactMarkdown handles incremental updates) */}
               {responseText && (
-                <div className="prose prose-sm max-w-none text-justify">
+                <div className="prose prose-sm max-w-none text-justify whitespace-pre-wrap"> {/* Re-added text-justify */}
                   <ReactMarkdown>{responseText}</ReactMarkdown>
                 </div>
               )}
-              {/* Display Image Response */}
+              {/* Display Image Response (Re-enabled) */}
               {responseImage && (
                 <div>
-                  <img 
-                    src={`data:${responseImage.mimeType};base64,${responseImage.data}`} 
-                    alt="Generated by Gemini" 
-                    className="max-w-full h-auto rounded-md" 
+                  <img
+                    src={`data:${responseImage.mimeType};base64,${responseImage.data}`}
+                    alt="Generated by Gemini"
+                    className="max-w-full h-auto rounded-md"
                   />
                 </div>
               )}
