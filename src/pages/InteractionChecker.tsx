@@ -60,12 +60,15 @@ const InteractionChecker = () => {
     setError(null);
     setResults(null);
 
-    // Define the worker URL (adjust if your port differs)
-    const workerUrl = 'http://127.0.0.1:8787';
+    // Define worker URLs based on environment
+    const isProduction = import.meta.env.MODE === 'production';
+    const interactionWorkerUrl = isProduction
+      ? 'https://interaction-checker-worker.daivanfebrijuansetiya.workers.dev'
+      : 'http://127.0.0.1:8787';
 
     try {
-      console.log('Sending drugs to worker:', validDrugs);
-      const response = await fetch(workerUrl, {
+      console.log(`Sending drugs to worker (${isProduction ? 'prod' : 'dev'}):`, validDrugs);
+      const response = await fetch(interactionWorkerUrl, { // Use the correct variable name
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,11 +109,14 @@ const InteractionChecker = () => {
       ) || null
     );
 
-    // Define the Gemini worker URL (ensure this port is correct for gemini-cf-worker)
-    const geminiWorkerUrl = 'http://127.0.0.1:8788'; // Assuming port 8788
+    // Define Gemini worker URL based on environment
+    const isProduction = import.meta.env.MODE === 'production';
+    const geminiWorkerUrl = isProduction
+      ? 'https://gemini-cf-worker.daivanfebrijuansetiya.workers.dev'
+      : 'http://127.0.0.1:8788'; // Assuming port 8788 for local dev
 
     try {
-      console.log(`Sending text to Gemini worker for summarization (interaction index ${index})`);
+      console.log(`Sending text to Gemini worker (${isProduction ? 'prod' : 'dev'}) for summarization (interaction index ${index})`);
       const response = await fetch(geminiWorkerUrl, {
         method: 'POST',
         headers: {
