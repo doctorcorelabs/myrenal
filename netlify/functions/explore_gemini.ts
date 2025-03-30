@@ -300,19 +300,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
             for await (const chunk of streamResult.stream) {
               const chunkText = chunk.text();
               if (chunkText) {
-                passThroughStream.write(`TEXT:${chunkText}\n`);
+                passThroughStream.write(chunkText); // Remove TEXT: prefix
               }
               const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
               if (imagePart?.inlineData) {
                  const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-                 passThroughStream.write(`JSON:${JSON.stringify(imagePayload)}\n`);
+                 passThroughStream.write(JSON.stringify(imagePayload)); // Remove JSON: prefix, keep stringify
               }
             }
             console.log("Gemini stream finished (PassThrough).");
             passThroughStream.end();
           } catch (streamError: any) {
             console.error("Error reading Gemini stream (PassThrough):", streamError);
-            passThroughStream.write(`TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`);
+            // Stream raw error message
+            passThroughStream.write(`[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}`);
             passThroughStream.destroy(streamError);
           }
         })();
@@ -326,18 +327,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
             for await (const chunk of streamResult.stream) {
               const chunkText = chunk.text();
               if (chunkText) {
-                yield `TEXT:${chunkText}\n`;
+                yield chunkText; // Remove TEXT: prefix
               }
               const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
               if (imagePart?.inlineData) {
                  const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-                 yield `JSON:${JSON.stringify(imagePayload)}\n`;
+                 yield JSON.stringify(imagePayload); // Remove JSON: prefix, keep stringify
               }
             }
             console.log("Gemini stream finished (async generator).");
           } catch (streamError: any) {
             console.error("Error reading Gemini stream in generator:", streamError);
-            yield `TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`;
+            // Yield raw error message
+            yield `[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}`;
           }
         };
         responseBody = bodyGenerator(); // Assign invoked generator to responseBody

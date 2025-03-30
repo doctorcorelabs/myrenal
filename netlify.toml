@@ -11,6 +11,10 @@
   # Direktori tempat fungsi Netlify Anda berada
   directory = "netlify/functions"
 
+# Tingkatkan timeout untuk fungsi explore_gemini
+[functions."explore_gemini"]
+  timeout = 25
+
 # Konfigurasi untuk netlify dev
 [dev]
   # Port tempat framework (Vite) berjalan

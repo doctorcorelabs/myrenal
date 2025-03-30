@@ -293,58 +293,39 @@ const ExploreGemini: React.FC = () => {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let done = false;
-        let buffer = '';
         let currentText = '';
-        let currentImage: ResponseImageData | null = null;
+        // Removed buffer and currentImage initialization here
 
         while (!done) {
           try {
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             if (value) {
-              buffer += decoder.decode(value, { stream: !done });
-              let newlineIndex;
-              while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
-                const line = buffer.slice(0, newlineIndex).trim();
-                buffer = buffer.slice(newlineIndex + 1);
+              const chunk = decoder.decode(value, { stream: !done });
 
-                if (line.startsWith('TEXT:')) {
-                  const textChunk = line.substring(5);
-                  if (textChunk.startsWith('[STREAM_ERROR]:')) {
-                      console.error("Stream error detected:", textChunk);
-                      setError("An error occurred during generation.");
-                      done = true; break;
-                  }
-                  currentText += textChunk;
-                  setResponseText(currentText);
-                } else if (line.startsWith('JSON:')) {
-                  try {
-                    const jsonData = JSON.parse(line.substring(5));
-                    if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
-                      currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
-                      setResponseImage(currentImage);
-                    } else { console.warn("Unknown JSON:", jsonData); }
-                  } catch (jsonError) { console.error("JSON parse error:", jsonError, line); }
-                } else if (line) { console.warn("Unexpected line:", line); }
+              // Attempt to parse the chunk as JSON (for potential image data)
+              try {
+                const jsonData = JSON.parse(chunk);
+                if (jsonData && typeof jsonData === 'object' && jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
+                  // It's image data, update the image state
+                  setResponseImage({ mimeType: jsonData.mimeType, data: jsonData.data });
+                  // Optionally clear text if image is received? Or allow both? Assuming allow both for now.
+                } else {
+                  // Parsed successfully but not the expected image format, treat as text
+                  currentText += chunk;
+                  setResponseText(prev => prev + chunk); // Append directly
+                }
+              } catch (jsonParseError) {
+                // Parsing failed, assume it's a text chunk
+                if (chunk.startsWith('[STREAM_ERROR]:')) {
+                    console.error("Stream error detected:", chunk);
+                    setError("An error occurred during generation: " + chunk.substring(15)); // Show error message
+                    done = true; // Stop processing on error
+                } else {
+                    currentText += chunk;
+                    setResponseText(prev => prev + chunk); // Append directly
+                }
               }
-            }
-            if (done && buffer) { // Process remaining buffer
-               const finalLine = buffer.trim();
-               if (finalLine.startsWith('TEXT:')) {
-                   const textChunk = finalLine.substring(5);
-                   if (!textChunk.startsWith('[STREAM_ERROR]:')) {
-                      currentText += textChunk;
-                      setResponseText(currentText);
-                   }
-               } else if (finalLine.startsWith('JSON:')) {
-                   try {
-                      const jsonData = JSON.parse(finalLine.substring(5));
-                      if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
-                         currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
-                         setResponseImage(currentImage);
-                      }
-                   } catch (jsonError) { console.error("Final JSON parse error:", jsonError, finalLine); }
-               } else if (finalLine) { console.warn("Unexpected final data:", finalLine); }
             }
           } catch (streamReadError: any) {
              console.error("Stream read error:", streamReadError);
