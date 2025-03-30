@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Upload, X, File as FileIcon, ArrowLeft } from "lucide-react"; // Added ArrowLeft
-import ReactMarkdown from 'react-markdown'; 
-import { Label } from "@/components/ui/label"; 
-import { Input } from "@/components/ui/input"; 
+import ReactMarkdown from 'react-markdown';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; 
+} from "@/components/ui/select";
 
 // --- System Instructions ---
 const systemInstructions = {
@@ -192,25 +192,25 @@ Transparency: When flagging an issue, explain why it's being flagged (e.g., "Fig
 // Define model options
 const modelOptions = [
   { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" }, 
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
   { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" }, // Added new model
-  { value: "gemini-2.5-pro-exp-03-25", label: "Gemini 2.5 Pro Exp" }, 
+  { value: "gemini-2.5-pro-exp-03-25", label: "Gemini 2.5 Pro Exp" },
 ];
 
 // Interface for file data (uploaded) and image data (response)
-interface FileData { 
+interface FileData {
   mimeType: string;
   data: string; // Base64 encoded data
 }
-interface ResponseImageData { 
+interface ResponseImageData {
   mimeType: string;
-  data: string; 
+  data: string;
 }
 
 // Define allowed MIME types and create accept string
 const allowedMimeTypes = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 
-  'application/pdf', 
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'application/pdf',
   'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/flac'
 ];
 const allowedFileTypesString = allowedMimeTypes.join(',');
@@ -218,23 +218,23 @@ const allowedFileTypesString = allowedMimeTypes.join(',');
 const ExploreGemini: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash"); // Changed default model
-  const [selectedSystemInstructionId, setSelectedSystemInstructionId] = useState<string>("none"); 
+  const [selectedSystemInstructionId, setSelectedSystemInstructionId] = useState<string>("none");
   const [customSystemInstruction, setCustomSystemInstruction] = useState<string>(''); // State for custom instruction text
-  const [uploadedFile, setUploadedFile] = useState<FileData | null>(null); 
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null); 
-  const [responseText, setResponseText] = useState<string>(''); 
-  const [responseImage, setResponseImage] = useState<ResponseImageData | null>(null); 
+  const [uploadedFile, setUploadedFile] = useState<FileData | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState<string>('');
+  const [responseImage, setResponseImage] = useState<ResponseImageData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null); 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setResponseText(''); 
-    setResponseImage(null); 
-    
+    setResponseText('');
+    setResponseImage(null);
+
     // Construct payload
     const payload: any = {
         prompt,
@@ -252,7 +252,8 @@ const ExploreGemini: React.FC = () => {
     }
 
     try {
-      const functionUrl = '/.netlify/functions/explore_gemini'; 
+      // Use the new Cloudflare Worker URL
+      const functionUrl = 'https://gemini-cf-worker.daivanfebrijuansetiya.workers.dev';
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: {
@@ -262,7 +263,7 @@ const ExploreGemini: React.FC = () => {
       });
 
       if (!res.ok) {
-        // Attempt to read error from body, even if it's potentially a stream
+        // Attempt to read error from body
         let errorMsg = `HTTP error! status: ${res.status}`;
         try {
           const errorText = await res.text(); // Read error as text
@@ -280,105 +281,27 @@ const ExploreGemini: React.FC = () => {
         throw new Error(errorMsg);
       }
 
-      // --- Conditional Response Handling ---
-      const useStreaming = selectedModel === "gemini-2.5-pro-exp-03-25";
-
-      if (useStreaming) {
-        // --- Streaming Response Handling ---
-        console.log("Handling response as stream...");
-        if (!res.body) {
-          throw new Error("Response body is missing for streaming.");
+      // --- Standard JSON Response Handling (Cloudflare Worker returns JSON) ---
+      console.log("Handling response as JSON from Cloudflare Worker...");
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await res.json();
+        if (data.responseText) {
+          setResponseText(data.responseText);
         }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let done = false;
-        let currentText = '';
-        // Removed buffer and currentImage initialization here
-
-        while (!done) {
-          try {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-            if (value) {
-              const chunk = decoder.decode(value, { stream: !done });
-
-              // Attempt to parse the chunk as JSON (for potential image data)
-              try {
-                const jsonData = JSON.parse(chunk);
-                if (jsonData && typeof jsonData === 'object' && jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
-                  // It's image data, update the image state
-                  setResponseImage({ mimeType: jsonData.mimeType, data: jsonData.data });
-                  // Optionally clear text if image is received? Or allow both? Assuming allow both for now.
-                } else {
-                  // Parsed successfully but not the expected image format, treat as text
-                  currentText += chunk;
-                  setResponseText(prev => prev + chunk); // Append directly
-                }
-              } catch (jsonParseError) {
-                // Parsing failed, assume it's a text chunk
-                if (chunk.startsWith('[STREAM_ERROR]:')) {
-                    console.error("Stream error detected:", chunk);
-                    setError("An error occurred during generation: " + chunk.substring(15)); // Show error message
-                    done = true; // Stop processing on error
-                } else {
-                    currentText += chunk;
-                    setResponseText(prev => prev + chunk); // Append directly
-                }
-              }
-            }
-          } catch (streamReadError: any) {
-             console.error("Stream read error:", streamReadError);
-             setError(`Stream read error: ${streamReadError.message}`);
-             done = true;
-          }
+        if (data.responseImage) {
+          setResponseImage(data.responseImage);
         }
-        // --- End Streaming Response Handling ---
+        if (!data.responseText && !data.responseImage) {
+           setError("Received an empty response from the model.");
+        }
       } else {
-        // --- Standard JSON Response Handling ---
-        console.log("Handling response as JSON...");
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await res.json();
-          if (data.responseText) {
-            setResponseText(data.responseText);
-          }
-          if (data.responseImage) {
-            setResponseImage(data.responseImage);
-          }
-          if (!data.responseText && !data.responseImage) {
-             setError("Received an empty response from the model.");
-          }
-        } else {
-          const responseText = await res.text();
-          setError(`Received unexpected response format: ${responseText}`);
-          console.error("Unexpected response format:", responseText);
-        }
-        // --- End Standard JSON Response Handling ---
+        // Handle cases where the error response might not be JSON
+        const responseText = await res.text();
+        setError(`Received unexpected response format: ${responseText}`);
+        console.error("Unexpected response format:", responseText);
       }
-      // --- End Conditional Response Handling ---
-
-
-      // // --- Original Code (Now Replaced by Conditional Logic) ---
-      // const contentType = res.headers.get("content-type");
-      // if (contentType && contentType.indexOf("application/json") !== -1) {
-      //   const data = await res.json();
-      //   if (data.responseText) {
-      //     setResponseText(data.responseText);
-      //   }
-      //   // Temporarily disable image handling for streaming
-      //   // if (data.responseImage) {
-      //   //   setResponseImage(data.responseImage);
-      //   // }
-      //   if (!data.responseText /* && !data.responseImage */) {
-      //      setError("Received an empty response from the model.");
-      //   }
-      // } else {
-      //   const responseText = await res.text();
-      //   throw new Error(`Received unexpected response format: ${responseText}`);
-      // }
-      // // --- End Original JSON Response Handling ---
-
+      // --- End Standard JSON Response Handling ---
 
     } catch (err: any) {
       console.error("Error in handleSubmit:", err);
@@ -397,47 +320,47 @@ const ExploreGemini: React.FC = () => {
          setUploadedFile(null);
          setUploadedFileName(null);
          if (fileInputRef.current) {
-             fileInputRef.current.value = ""; 
+             fileInputRef.current.value = "";
          }
          return;
       }
 
-      setError(null); 
-      setUploadedFileName(file.name); 
+      setError(null);
+      setUploadedFileName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64String = (reader.result as string).split(',')[1]; 
-        setUploadedFile({ 
-          mimeType: file.type, 
+        const base64String = (reader.result as string).split(',')[1];
+        setUploadedFile({
+          mimeType: file.type,
           data: base64String,
         });
       };
       reader.onerror = () => {
         setError("Failed to read the selected file.");
-        setUploadedFile(null); 
+        setUploadedFile(null);
         setUploadedFileName(null);
       };
-      reader.readAsDataURL(file); 
+      reader.readAsDataURL(file);
     }
   };
 
   // Clear uploaded file
   const clearUploadedFile = () => {
-    setUploadedFile(null); 
+    setUploadedFile(null);
     setUploadedFileName(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = "";
     }
   };
 
   return (
     <>
-      <PageHeader 
-        title="Explore GEMINI" 
-        subtitle="Leverage Google's advanced AI for medical insights" 
+      <PageHeader
+        title="Explore GEMINI"
+        subtitle="Leverage Google's advanced AI for medical insights"
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Interact with Gemini</CardTitle>
@@ -590,7 +513,7 @@ const ExploreGemini: React.FC = () => {
         )}
 
         {/* Back to Tools Button */}
-        <div className="flex justify-center pt-6"> 
+        <div className="flex justify-center pt-6">
           <Link to="/tools">
             <Button variant="outline" className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
