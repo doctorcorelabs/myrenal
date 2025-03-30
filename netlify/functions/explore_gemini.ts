@@ -1,6 +1,6 @@
 import type { Handler, HandlerEvent, HandlerContext, HandlerResponse } from "@netlify/functions";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
-import { PassThrough } from 'stream'; // Re-import PassThrough stream for local dev
+import { PassThrough } from 'stream'; // Re-added PassThrough import
 
 // --- System Instructions Text (Mirrored from Frontend) ---
 // Keep this in sync with the frontend definition
@@ -167,11 +167,8 @@ Transparency: When flagging an issue, explain why it's being flagged (e.g., "Fig
 };
 // --- End System Instructions Text ---
 
-// No longer need createTextStream helper
-
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => { // Explicit Promise<HandlerResponse>
+const handler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
   if (event.httpMethod !== "POST") {
-    // Return standard JSON error response
     return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }), headers: { 'Content-Type': 'application/json' } };
   }
 
@@ -193,11 +190,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
   let requestBody: RequestBody;
   try {
     requestBody = JSON.parse(event.body || "{}");
-    // Allow only prompt for streaming text for now
-    if (!requestBody.prompt) {
-      throw new Error("Request must include 'prompt' for streaming.");
-    }
-    // Re-enable image upload check - allow prompt OR image OR both
+    // Standard check for prompt OR image
     if (!requestBody.prompt && !requestBody.imageData) {
       throw new Error("Request must include 'prompt' and/or 'imageData'");
     }
@@ -207,17 +200,20 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
     return { statusCode: 400, body: JSON.stringify({ error: `Bad Request: ${error.message}` }), headers: { 'Content-Type': 'application/json' } };
   }
 
-  // Use a Promise to handle the async streaming logic within the sync handler signature
-  // Although Netlify supports async handlers, explicitly returning the stream might require this structure
-  // Update: Netlify *does* support async handlers returning streams, but let's keep the explicit structure for clarity
-  // return new Promise<HandlerResponse>(async (resolve, reject) => { // Removed Promise wrapper, async handler is fine
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Updated validModels array
-    const validModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-exp-03-25"]; 
-    const selectedModelIdentifier = (requestBody.modelName && validModels.includes(requestBody.modelName)) ? requestBody.modelName : "gemini-2.0-flash"; // Changed default fallback
-    console.log(`Using model: ${selectedModelIdentifier}`); 
+    // --- Model Selection Logic ---
+    const validModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-exp-03-25"];
+    const defaultModel = "gemini-1.5-flash"; // Use a fast default
+    const isLocalDev = process.env.NETLIFY_DEV === 'true'; // Keep for logging if needed
+    // Removed duplicate defaultModel declaration
+    const selectedModelIdentifier = (requestBody.modelName && validModels.includes(requestBody.modelName)) ? requestBody.modelName : defaultModel;
+    const useStreaming = selectedModelIdentifier === "gemini-2.5-pro-exp-03-25"; // Condition for streaming
+
+    console.log(`Using model: ${selectedModelIdentifier} (Streaming: ${useStreaming}, Local Dev: ${isLocalDev})`);
+    // --- End Model Selection Logic ---
+
 
     // Determine system instruction: prioritize custom, then ID, then none
     let systemInstructionText: string | undefined = undefined;
@@ -275,85 +271,130 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
     // Construct the user content object
     const userContent: Content = { role: "user", parts: parts };
 
-    // --- Streaming Implementation ---
-    const streamResult = await model.generateContentStream({
-        contents: [userContent],
-        generationConfig,
-        safetySettings,
-    });
+    // --- Conditional Logic: Streaming or Non-Streaming ---
+    let responseBody: any; // To hold stream or JSON string
+    let responseHeaders = {};
+    let isStreamingResponse = false;
 
-    // --- Conditional Streaming Logic ---
-    const isLocalDev = process.env.NETLIFY_DEV === 'true';
-    console.log(`Environment: ${isLocalDev ? 'Local Development' : 'Deployed'}`);
+    if (useStreaming) {
+      // --- Streaming Logic for gemini-2.5-pro-exp-03-25 ---
+      isStreamingResponse = true;
+      responseHeaders = { 'Content-Type': 'text/plain; charset=utf-8' };
+      console.log("Preparing streaming approach for gemini-2.5-pro-exp-03-25...");
 
-    let responseBody: any; // Use 'any' to hold either stream type
+      const streamResult = await model.generateContentStream({
+          contents: [userContent],
+          generationConfig,
+          safetySettings,
+      });
 
-    if (isLocalDev) {
-      // --- Local Dev: Use PassThrough Stream ---
-      console.log("Using PassThrough stream for local dev.");
-      const passThroughStream = new PassThrough();
-      responseBody = passThroughStream; // Assign stream to responseBody
+      if (isLocalDev) {
+        // --- Local Dev: Use PassThrough Stream ---
+        console.log("Using PassThrough stream for local dev.");
+        const passThroughStream = new PassThrough();
+        responseBody = passThroughStream; // Assign stream to responseBody
 
-      (async () => {
-        try {
-          console.log("Starting Gemini stream (PassThrough)...");
-          for await (const chunk of streamResult.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              passThroughStream.write(`TEXT:${chunkText}\n`);
+        (async () => {
+          try {
+            console.log("Starting Gemini stream (PassThrough)...");
+            for await (const chunk of streamResult.stream) {
+              const chunkText = chunk.text();
+              if (chunkText) {
+                passThroughStream.write(`TEXT:${chunkText}\n`);
+              }
+              const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+              if (imagePart?.inlineData) {
+                 const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
+                 passThroughStream.write(`JSON:${JSON.stringify(imagePayload)}\n`);
+              }
             }
-            const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            if (imagePart?.inlineData) {
-               const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-               passThroughStream.write(`JSON:${JSON.stringify(imagePayload)}\n`);
-            }
+            console.log("Gemini stream finished (PassThrough).");
+            passThroughStream.end();
+          } catch (streamError: any) {
+            console.error("Error reading Gemini stream (PassThrough):", streamError);
+            passThroughStream.write(`TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`);
+            passThroughStream.destroy(streamError);
           }
-          console.log("Gemini stream finished (PassThrough).");
-          passThroughStream.end();
-        } catch (streamError: any) {
-          console.error("Error reading Gemini stream (PassThrough):", streamError);
-          passThroughStream.write(`TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`);
-          passThroughStream.destroy(streamError);
-        }
-      })();
-      // --- End PassThrough Stream Logic ---
+        })();
+        // --- End PassThrough Stream Logic ---
+      } else {
+        // --- Deployed: Use Async Generator ---
+        console.log("Using async generator for deployed environment.");
+        const bodyGenerator = async function* () {
+          try {
+            console.log("Starting Gemini stream (async generator)...");
+            for await (const chunk of streamResult.stream) {
+              const chunkText = chunk.text();
+              if (chunkText) {
+                yield `TEXT:${chunkText}\n`;
+              }
+              const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+              if (imagePart?.inlineData) {
+                 const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
+                 yield `JSON:${JSON.stringify(imagePayload)}\n`;
+              }
+            }
+            console.log("Gemini stream finished (async generator).");
+          } catch (streamError: any) {
+            console.error("Error reading Gemini stream in generator:", streamError);
+            yield `TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`;
+          }
+        };
+        responseBody = bodyGenerator(); // Assign invoked generator to responseBody
+        // --- End Async Generator Logic ---
+      }
+      // --- End Streaming Logic ---
     } else {
-      // --- Deployed: Use Async Generator ---
-      console.log("Using async generator for deployed environment.");
-      const bodyGenerator = async function* () {
-        try {
-          console.log("Starting Gemini stream (async generator)...");
-          for await (const chunk of streamResult.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              yield `TEXT:${chunkText}\n`;
-            }
-            const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            if (imagePart?.inlineData) {
-               const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-               yield `JSON:${JSON.stringify(imagePayload)}\n`;
-            }
+      // --- Standard Non-Streaming Implementation (for other models) ---
+      isStreamingResponse = false;
+      responseHeaders = { 'Content-Type': 'application/json' };
+      console.log("Using standard non-streaming approach for other models");
+      const result = await model.generateContent({
+          contents: [userContent], // Use the same inputs
+          generationConfig,
+          safetySettings,
+      });
+
+      console.log("--- Full Gemini API Result ---");
+      console.log(JSON.stringify(result, null, 2));
+      console.log("--- End Full Gemini API Result ---");
+
+      const response = result.response;
+      const responsePayload: { responseText?: string; responseImage?: { mimeType: string; data: string } } = {};
+
+      if (response.candidates && response.candidates.length > 0) {
+          const candidate = response.candidates[0];
+          if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+              candidate.content.parts.forEach(part => {
+                  if (part.text) {
+                      responsePayload.responseText = (responsePayload.responseText || "") + part.text;
+                  }
+                  if (part.inlineData) {
+                      responsePayload.responseImage = {
+                          mimeType: part.inlineData.mimeType,
+                          data: part.inlineData.data
+                      };
+                  }
+              });
           }
-          console.log("Gemini stream finished (async generator).");
-        } catch (streamError: any) {
-          console.error("Error reading Gemini stream in generator:", streamError);
-          yield `TEXT:[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}\n`;
-        }
-      };
-      responseBody = bodyGenerator(); // Assign invoked generator to responseBody
-      // --- End Async Generator Logic ---
+      }
+
+      if (!responsePayload.responseText && !responsePayload.responseImage && response.text) {
+           responsePayload.responseText = response.text();
+      }
+
+      responseBody = JSON.stringify(responsePayload); // Assign JSON string
+      // --- End Standard Non-Streaming Implementation ---
     }
 
-    // Return the appropriate body based on environment
+    // --- Return Unified Response ---
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-      },
-      body: responseBody as any, // Cast the selected body type to any for TS
-      isBase64Encoded: false
+      headers: responseHeaders,
+      body: responseBody as any, // Cast body (stream or string)
+      isBase64Encoded: false // Streaming body is never base64
     };
-    // --- End Conditional Streaming Logic ---
+    // --- End Unified Response ---
 
   } catch (error: any) {
     console.error("Error setting up Gemini stream:", error);

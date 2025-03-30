@@ -280,96 +280,105 @@ const ExploreGemini: React.FC = () => {
         throw new Error(errorMsg);
       }
 
-      // --- Streaming Response Handling ---
-      if (!res.body) {
-        throw new Error("Response body is missing.");
-      }
+      // --- Conditional Response Handling ---
+      const useStreaming = selectedModel === "gemini-2.5-pro-exp-03-25";
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let buffer = ''; // Buffer to hold incomplete lines
-      let currentText = ''; // Accumulate text separately
-      let currentImage: ResponseImageData | null = null; // Hold potential image
+      if (useStreaming) {
+        // --- Streaming Response Handling ---
+        console.log("Handling response as stream...");
+        if (!res.body) {
+          throw new Error("Response body is missing for streaming.");
+        }
 
-      while (!done) {
-        try {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          if (value) {
-            // Append new chunk to buffer and decode
-            buffer += decoder.decode(value, { stream: !done }); // Use stream: true until the last chunk
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        let buffer = '';
+        let currentText = '';
+        let currentImage: ResponseImageData | null = null;
 
-            // Process buffer line by line
-            let newlineIndex;
-            while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
-              const line = buffer.slice(0, newlineIndex).trim(); // Get line and trim whitespace
-              buffer = buffer.slice(newlineIndex + 1); // Remove processed line from buffer
+        while (!done) {
+          try {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            if (value) {
+              buffer += decoder.decode(value, { stream: !done });
+              let newlineIndex;
+              while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+                const line = buffer.slice(0, newlineIndex).trim();
+                buffer = buffer.slice(newlineIndex + 1);
 
-              if (line.startsWith('TEXT:')) {
-                const textChunk = line.substring(5);
-                if (textChunk.startsWith('[STREAM_ERROR]:')) {
-                    console.error("Stream error detected in response:", textChunk);
-                    setError("An error occurred during generation. Please check the console or try again.");
-                    done = true; // Stop processing on error
-                    break;
-                }
-                currentText += textChunk;
-                setResponseText(currentText); // Update text state incrementally
-              } else if (line.startsWith('JSON:')) {
-                try {
-                  const jsonData = JSON.parse(line.substring(5));
-                  if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
-                    // console.log("Received image data via stream");
-                    currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
-                    setResponseImage(currentImage); // Update image state
-                  } else {
-                     console.warn("Received unknown JSON structure:", jsonData);
+                if (line.startsWith('TEXT:')) {
+                  const textChunk = line.substring(5);
+                  if (textChunk.startsWith('[STREAM_ERROR]:')) {
+                      console.error("Stream error detected:", textChunk);
+                      setError("An error occurred during generation.");
+                      done = true; break;
                   }
-                } catch (jsonError) {
-                  console.error("Error parsing JSON from stream:", jsonError, "Line:", line);
-                  // Optionally set an error state here
-                }
-              } else if (line) {
-                 // Handle unexpected lines if necessary
-                 console.warn("Received unexpected line in stream:", line);
+                  currentText += textChunk;
+                  setResponseText(currentText);
+                } else if (line.startsWith('JSON:')) {
+                  try {
+                    const jsonData = JSON.parse(line.substring(5));
+                    if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
+                      currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
+                      setResponseImage(currentImage);
+                    } else { console.warn("Unknown JSON:", jsonData); }
+                  } catch (jsonError) { console.error("JSON parse error:", jsonError, line); }
+                } else if (line) { console.warn("Unexpected line:", line); }
               }
             }
+            if (done && buffer) { // Process remaining buffer
+               const finalLine = buffer.trim();
+               if (finalLine.startsWith('TEXT:')) {
+                   const textChunk = finalLine.substring(5);
+                   if (!textChunk.startsWith('[STREAM_ERROR]:')) {
+                      currentText += textChunk;
+                      setResponseText(currentText);
+                   }
+               } else if (finalLine.startsWith('JSON:')) {
+                   try {
+                      const jsonData = JSON.parse(finalLine.substring(5));
+                      if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
+                         currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
+                         setResponseImage(currentImage);
+                      }
+                   } catch (jsonError) { console.error("Final JSON parse error:", jsonError, finalLine); }
+               } else if (finalLine) { console.warn("Unexpected final data:", finalLine); }
+            }
+          } catch (streamReadError: any) {
+             console.error("Stream read error:", streamReadError);
+             setError(`Stream read error: ${streamReadError.message}`);
+             done = true;
           }
-          if (done && buffer) {
-             // Process any remaining data in the buffer after the stream ends
-             const finalLine = buffer.trim();
-             if (finalLine.startsWith('TEXT:')) {
-                 const textChunk = finalLine.substring(5);
-                 if (!textChunk.startsWith('[STREAM_ERROR]:')) { // Avoid double-adding error text
-                    currentText += textChunk;
-                    setResponseText(currentText);
-                 }
-             } else if (finalLine.startsWith('JSON:')) {
-                 // Handle final JSON if needed (less likely)
-                 try {
-                    const jsonData = JSON.parse(finalLine.substring(5));
-                    if (jsonData.type === 'image' && jsonData.mimeType && jsonData.data) {
-                       currentImage = { mimeType: jsonData.mimeType, data: jsonData.data };
-                       setResponseImage(currentImage);
-                    }
-                 } catch (jsonError) {
-                    console.error("Error parsing final JSON from stream:", jsonError, "Line:", finalLine);
-                 }
-             } else if (finalLine) {
-                 console.warn("Received unexpected final data in stream:", finalLine);
-             }
-          }
-
-        } catch (streamReadError: any) {
-           console.error("Error reading stream:", streamReadError);
-           setError(`Error reading response stream: ${streamReadError.message}`);
-           done = true; // Exit loop on stream read error
         }
+        // --- End Streaming Response Handling ---
+      } else {
+        // --- Standard JSON Response Handling ---
+        console.log("Handling response as JSON...");
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await res.json();
+          if (data.responseText) {
+            setResponseText(data.responseText);
+          }
+          if (data.responseImage) {
+            setResponseImage(data.responseImage);
+          }
+          if (!data.responseText && !data.responseImage) {
+             setError("Received an empty response from the model.");
+          }
+        } else {
+          const responseText = await res.text();
+          setError(`Received unexpected response format: ${responseText}`);
+          console.error("Unexpected response format:", responseText);
+        }
+        // --- End Standard JSON Response Handling ---
       }
-      // --- End Complex Streaming Response Handling ---
+      // --- End Conditional Response Handling ---
 
-      // // --- Original JSON Response Handling (Commented Out) ---
+
+      // // --- Original Code (Now Replaced by Conditional Logic) ---
       // const contentType = res.headers.get("content-type");
       // if (contentType && contentType.indexOf("application/json") !== -1) {
       //   const data = await res.json();
