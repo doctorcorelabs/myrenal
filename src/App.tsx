@@ -30,6 +30,7 @@ import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
 import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
 import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
+import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -173,7 +174,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout><LearningOther /></Layout>
                 </ProtectedRoute>
-              } 
+              }
+            />
+            {/* Add route for Interaction Checker */}
+            <Route
+              path="/tools/interaction-checker"
+              element={
+                <ProtectedRoute>
+                  <Layout><InteractionChecker /></Layout>
+                </ProtectedRoute>
+              }
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

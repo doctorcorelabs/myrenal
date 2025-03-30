@@ -7,7 +7,8 @@ export interface Env {
 
 // Define the expected request body structure (mirroring frontend)
 interface RequestBody {
-	prompt?: string;
+	prompt?: string; // For general queries/image analysis
+	textToSummarize?: string; // For summarization requests
 	modelName?: string;
 	imageData?: { mimeType: string; data: string; };
 	systemInstructionId?: string;
@@ -143,8 +144,9 @@ export default {
 		let requestBody: RequestBody;
 		try {
 			requestBody = await request.json();
-			if (!requestBody.prompt && !requestBody.imageData) {
-				throw new Error("Request must include 'prompt' and/or 'imageData'");
+			// Check if we have either a prompt/image OR text to summarize
+			if (!requestBody.prompt && !requestBody.imageData && !requestBody.textToSummarize) {
+				throw new Error("Request must include 'prompt'/'imageData' OR 'textToSummarize'");
 			}
 		} catch (error: any) {
 			console.error('Error parsing request body:', error);
@@ -171,11 +173,29 @@ export default {
 				systemInstruction: systemInstructionText,
 			});
 
-			const parts: any[] = [];
-			if (requestBody.prompt) {
-				parts.push({ text: requestBody.prompt });
+			// --- Determine the actual prompt based on request type ---
+			let effectivePrompt: string;
+			if (requestBody.textToSummarize) {
+				// Construct summarization prompt
+				effectivePrompt = `Please summarize the following drug interaction information concisely for a healthcare professional, focusing on the key risks and recommendations:\n\n"${requestBody.textToSummarize}"`;
+				console.log("Handling summarization request.");
+			} else if (requestBody.prompt) {
+				// Use the provided prompt for general queries
+				effectivePrompt = requestBody.prompt;
+				console.log("Handling general prompt/image request.");
+			} else {
+				// Should not happen due to earlier check, but handle defensively
+				return createJsonResponse({ error: 'No valid input provided (prompt, imageData, or textToSummarize).' }, 400);
 			}
-			if (requestBody.imageData) {
+			// --- End Prompt Determination ---
+
+
+			const parts: any[] = [];
+			// Add the effective prompt (either original or summarization)
+			parts.push({ text: effectivePrompt });
+
+			// Add image data only if it's NOT a summarization request
+			if (!requestBody.textToSummarize && requestBody.imageData) {
 				if (!requestBody.imageData.mimeType || !requestBody.imageData.data) {
 					throw new Error("Invalid 'imageData' provided.");
 				}

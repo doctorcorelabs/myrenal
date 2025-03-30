@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer } from 'lucide-react'; // Added Apple, FileText, and Computer
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle } from 'lucide-react'; // Added Apple, FileText, Computer, AlertTriangle
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -63,10 +63,17 @@ const toolsData = [
     title: 'Explore GEMINI',
     description: 'Utilize Google\'s advanced AI for medical research exploration.',
     icon: Computer, 
-    comingSoon: false 
+    comingSoon: false
   },
   {
-    id: 9, // Now Learning Resources
+    id: 9, // Now Drug Interaction Checker
+    title: 'Drug Interaction Checker',
+    description: 'Check for potential interactions between multiple drugs',
+    icon: AlertTriangle,
+    comingSoon: false
+  },
+  {
+    id: 10, // Now Learning Resources
     title: 'Learning Resources', // Changed title
     description: 'Access curated educational materials and resources', // Changed description
     icon: Book, // Changed icon
@@ -145,7 +152,11 @@ const Tools = () => {
                   <Link to="/tools/explore-gemini" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
-                ) : tool.id === 9 ? ( // Learning Resources Link (Now ID 9)
+                ) : tool.id === 9 ? ( // Drug Interaction Checker Link (Now ID 9)
+                  <Link to="/tools/interaction-checker" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 10 ? ( // Learning Resources Link (Now ID 10)
                   <Link to="/tools/learning-resources" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
