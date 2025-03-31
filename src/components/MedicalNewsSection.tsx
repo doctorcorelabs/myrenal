@@ -59,9 +59,28 @@ const MedicalNewsSection: React.FC = () => {
       }
     };
 
+    // Initial fetch
     fetchNewsFromSupabase();
-    // No interval needed here anymore, data is fetched once on load
-  }, []); // Empty dependency array means this runs once on component mount
+
+    // Set up Supabase real-time subscription
+    const channel = supabase
+      .channel('latest_medical_news_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'latest_medical_news' },
+        (payload) => {
+          console.log('Change received!', payload);
+          // Refetch news when any change occurs in the table
+          fetchNewsFromSupabase();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []); // Empty dependency array still correct, setup runs once
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '';
