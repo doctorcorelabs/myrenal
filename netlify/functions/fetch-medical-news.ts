@@ -35,6 +35,15 @@ const parser = new Parser();
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// --- DEBUG LOGGING START ---
+console.log(`DEBUG: process.env.SUPABASE_URL exists? ${!!supabaseUrl}`);
+console.log(`DEBUG: process.env.SUPABASE_SERVICE_ROLE_KEY exists? ${!!supabaseKey}`);
+// Avoid logging the full key, but log if it exists
+if (supabaseKey) {
+  console.log(`DEBUG: SUPABASE_SERVICE_ROLE_KEY starts with: ${supabaseKey.substring(0, 5)}...`);
+}
+// --- DEBUG LOGGING END ---
+
 if (!supabaseUrl || !supabaseKey) {
   // Log error in production instead of throwing? Or let Netlify handle the throw.
   console.error("Supabase URL and Service Role Key must be provided in environment variables.");
