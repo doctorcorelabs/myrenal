@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Consolidated imports
+import React, { useState, useEffect, useCallback } from 'react'; // Revert to standard import
 import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
+// Add back useToast import
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, X, Loader2, Sparkles, ArrowLeft } from 'lucide-react'; // Consolidated imports + ArrowLeft
@@ -20,6 +22,7 @@ interface InteractionResult {
 const InteractionChecker = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast(); // Re-initialize useToast
   const [drugs, setDrugs] = useState<string[]>(['', '']); // Start with two input fields
   const [results, setResults] = useState<InteractionResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Loading for initial interaction check
@@ -102,6 +105,27 @@ const InteractionChecker = () => {
 
     const interactionText = results[index].description;
 
+    // --- Add check for empty/whitespace description ---
+    if (!interactionText || interactionText.trim().length === 0) {
+      console.warn(`Attempted to summarize empty description for interaction index ${index}. Aborting.`);
+      // Optionally, provide feedback to the user
+      // We need the toast function here. Let's add it back to the hook dependencies.
+      // Note: This assumes useToast() is available in this scope. If not, we need to import it.
+      // Since useToast was likely removed by the checkout, let's re-add the import and usage.
+      // We'll handle the import in a separate step if needed, assuming it's available for now.
+      // If toast is not defined, this will cause a runtime error, which we can fix next.
+       // We already initialized toast above, so we can use it directly.
+       toast({
+           title: "Cannot Summarize",
+           description: "The interaction description is empty and cannot be summarized.",
+               variant: "destructive",
+           });
+       // Removed the try-catch as toast should be available now.
+      return; // Stop the function here
+    }
+    // --- End check ---
+
+
     // Update state to show loading for this specific item
     setResults(currentResults =>
       currentResults?.map((res, i) =>
@@ -150,7 +174,7 @@ const InteractionChecker = () => {
         ) || null
       );
     }
-  }, [results]); // Dependency array includes results
+  }, [results, toast]); // Add toast to dependency array
 
   // Simple Markdown to HTML converter for bold and italic
   const renderMarkdown = (text: string) => {
