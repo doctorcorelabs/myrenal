@@ -106,6 +106,30 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Simplified success log
     console.log(`Supabase upsert operation completed successfully for ${newsToUpsert.length} attempted items.`);
 
+    // Prune news older than 3 days based on pub_date
+    try {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const dateString = threeDaysAgo.toISOString();
+
+      console.log(`Attempting to delete news items published before ${dateString}...`);
+
+      const { error: deleteError } = await supabase
+        .from('latest_medical_news')
+        .delete()
+        .lt('pub_date', dateString); // Use less than operator
+
+      if (deleteError) {
+        console.error("Supabase delete error:", deleteError);
+        // Decide if this should be a fatal error for the function run
+        // For now, we'll just log it and continue
+      } else {
+        console.log("Successfully pruned old news items.");
+      }
+    } catch (pruneError) {
+      console.error("Error during news pruning:", pruneError);
+      // Log and continue, as the main task (fetching) succeeded
+    }
 
     // Optional: Add logic here to prune old news items from the table if desired
     // e.g., DELETE FROM latest_medical_news WHERE fetched_at < NOW() - INTERVAL '7 days';
