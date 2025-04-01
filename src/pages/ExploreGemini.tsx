@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react"; // Added Paperclip
 import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess.ts'; // Reverted to alias path with .ts
+import { useAuth } from '@/contexts/AuthContext.tsx'; // Import useAuth
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import ReactMarkdown from 'react-markdown';
@@ -243,6 +244,7 @@ const ExploreGemini: React.FC = () => {
   const featureName: FeatureName = 'explore_gemini';
   const { checkAccess, incrementUsage } = useFeatureAccess();
   const { toast } = useToast();
+  const { loading: authLoading } = useAuth(); // Get auth loading state
 
   // State for initial access check
   const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -270,16 +272,29 @@ const ExploreGemini: React.FC = () => {
   const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({}); // Refs for thread file inputs
   const historyEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to bottom of history
 
-  // Initial access check on mount
+  // Initial access check on mount, wait for auth to load
   useEffect(() => {
     const verifyInitialAccess = async () => {
-      setIsCheckingInitialAccess(true);
+      // Don't check access until authentication is resolved
+      if (authLoading) {
+        console.log("Auth context still loading, skipping initial access check for now.");
+        // Optionally set a state here to indicate auth is loading, if needed beyond the initial skeleton
+        // We might still want to set isCheckingInitialAccess to false if auth is loading,
+        // so the main skeleton doesn't show indefinitely if auth takes time.
+        // Let's keep the skeleton showing while auth loads for now.
+        // setIsCheckingInitialAccess(false); // Consider this if auth loading takes long
+        return;
+      }
+
+      console.log("Auth context loaded, proceeding with initial access check.");
+      setIsCheckingInitialAccess(true); // Indicate we are now checking access
       setInitialAccessMessage(null);
       try {
         const result = await checkAccess(featureName);
-        if (result.quota === 0) {
+        if (!result.allowed) { // Check if access is explicitly denied (quota 0 or other reasons)
              setInitialAccessAllowed(false);
-             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+             // Use the specific message from checkAccess if available
+             setInitialAccessMessage(result.message || 'Akses ditolak.');
         } else {
              setInitialAccessAllowed(true);
         }
@@ -293,13 +308,14 @@ const ExploreGemini: React.FC = () => {
           variant: "destructive",
         });
       } finally {
+        // Only set checking to false *after* the check is done
         setIsCheckingInitialAccess(false);
       }
     };
 
     verifyInitialAccess();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [authLoading]); // Add authLoading to dependency array
 
   // Effect to scroll to the bottom when history updates
   useEffect(() => {
@@ -1061,3 +1077,83 @@ const ExploreGemini: React.FC = () => {
 };
 
 export default ExploreGemini;
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+<environment_details>
+# VSCode Visible Files
+src/pages/ExploreGemini.tsx
+
+# VSCode Open Tabs
+src/components/Layout.tsx
+src/pages/Education.tsx
+src/pages/Honors.tsx
+src/pages/Research.tsx
+src/pages/Certifications.tsx
+src/pages/Experience.tsx
+src/pages/MedicalCalculator.tsx
+src/lib/supabaseClient.ts
+src/pages/LearningCoursera.tsx
+src/pages/LearningOsmosis.tsx
+src/pages/LearningUpToDate.tsx
+src/pages/LearningOther.tsx
+netlify/functions/send-contact-email.mjs
+netlify/functions/explore-gemini.py
+netlify/functions/explore_gemini.ts
+src/pages/About.tsx
+src/pages/Contact.tsx
+src/components/Footer.tsx
+netlify/functions/requirements.txt
+netlify/functions/get-disease-details.ts
+netlify/functions/summarize-disease.ts
+netlify/functions/pubmed-guideline-search.ts
+netlify/functions/drug-search.cjs
+cf-worker/interaction-checker-worker/src/index.ts
+src/components/HeroSection.tsx
+src/hooks/useFeatureAccess.ts
+src/pages/AIChatbot.tsx
+src/pages/AIPeerReview.tsx
+src/pages/DiseaseLibrary.tsx
+src/pages/DrugReference.tsx
+src/pages/ClinicalGuidelines.tsx
+src/pages/NutritionDatabase.tsx
+src/pages/LearningResources.tsx
+src/contexts/AuthContext.tsx
+src/pages/SignUp.tsx
+netlify/functions/create-midtrans-transaction.mjs
+netlify/functions/midtrans-webhook-handler.js
+src/components/Navbar.tsx
+src/components/UpgradePlanDialog.tsx
+netlify/functions/create-midtrans-transaction.js
+.env
+src/components/MedicalNewsSection.tsx
+who-data-mcp/src/index.ts
+src/lib/mcpClient.ts
+src/pages/HealthStatistics.tsx
+node_modules/@modelcontextprotocol/sdk/package.json
+src/contexts/McpContext.tsx
+src/lib/mcpSdkProxy.ts
+src/main.tsx
+src/App.tsx
+src/pages/Tools.tsx
+c:/Users/ACER/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+package.json
+vite.config.ts
+src/pages/InteractionChecker.tsx
+netlify/functions/fetch-medical-news.ts
+netlify.toml
+cf-worker/gemini-cf-worker/src/index.ts
+tsconfig.json
+src/pages/ExploreGemini.tsx
+index.html
+.gitignore
+netlify/functions/scrape-mayo-clinic.ts
+
+# Current Time
+4/1/2025, 10:01:31 AM (Asia/Jakarta, UTC+7:00)
+
+# Current Mode
+ACT MODE
+</environment_details>
