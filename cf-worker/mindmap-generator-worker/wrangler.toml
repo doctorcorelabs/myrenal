@@ -1,0 +1,20 @@
+name = "mindmap-generator-worker"
+main = "src/index.ts"
+compatibility_date = "2024-03-20" # Use a recent compatibility date
+
+# Environment variables accessible in the worker
+[vars]
+# Note: For production, it's highly recommended to use secrets for API keys.
+# You would remove this line and add the secret using `wrangler secret put GEMINI_API_KEY`
+# Then, access it via `env.GEMINI_API_KEY` in the code.
+# For local development (`wrangler dev`), you might place the key in a .dev.vars file.
+PLACEHOLDER_FOR_API_KEY_SETUP = "See comments above"
+
+# Example of setting up secrets (preferred for production):
+# [[unsafe.bindings]]
+# name = "GEMINI_API_KEY"
+# type = "secret_text"
+
+# Or using the newer [secrets] directive if supported by your wrangler version
+# [secrets]
+# GEMINI_API_KEY

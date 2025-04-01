@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle } from 'lucide-react'; // Added Apple, FileText, Computer, AlertTriangle
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle, Network } from 'lucide-react'; // Added Network icon
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -78,6 +78,13 @@ const toolsData = [
     description: 'Access curated educational materials and resources', // Changed description
     icon: Book, // Changed icon
     comingSoon: false // Changed comingSoon
+  },
+  {
+    id: 11, // New Tool ID
+    title: 'AI Mind Map Generator',
+    description: 'Generate visual mind maps from any topic using AI. Ideal for study and organizing ideas.',
+    icon: Network, // Use Network icon
+    comingSoon: false
   }
 ];
 
@@ -158,6 +165,10 @@ const Tools = () => {
                   </Link>
                 ) : tool.id === 10 ? ( // Learning Resources Link (Now ID 10)
                   <Link to="/tools/learning-resources" className="w-full">
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
+                  </Link>
+                ) : tool.id === 11 ? ( // AI Mind Map Generator Link (Now ID 11)
+                  <Link to="/tools/ai-mindmap-generator" className="w-full">
                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
                   </Link>
                 ) : ( // Default Button for other tools

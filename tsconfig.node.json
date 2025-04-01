@@ -16,7 +16,10 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true
+    // Removed types and typeRoots as they might not be needed for just vite.config.ts
   },
   "include": ["vite.config.ts"]
+  // Removed exclude as it's not strictly necessary if include is specific
 }

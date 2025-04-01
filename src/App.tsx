@@ -31,6 +31,7 @@ import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToD
 import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
+import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -182,9 +183,18 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><InteractionChecker /></Layout>
-                </ProtectedRoute>
-              }
-            />
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for AI Mind Map Generator */}
+             <Route
+               path="/tools/ai-mindmap-generator"
+               element={
+                 <ProtectedRoute>
+                   <Layout><MindMapMaker /></Layout>
+                 </ProtectedRoute>
+               }
+             />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
