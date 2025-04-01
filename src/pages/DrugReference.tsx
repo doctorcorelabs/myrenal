@@ -216,7 +216,7 @@ const DrugReference = () => {
         <AlertTriangle className="h-4 w-4 !text-red-800" />
         <AlertTitle className="font-bold">Boxed Warning</AlertTitle>
         <AlertDescription> {/* Removed asChild prop */}
-           <div className="prose prose-sm max-w-none"> {/* Add prose classes */}
+           <div className="prose prose-sm max-w-none text-justify"> {/* Add prose classes AND text-justify */}
              <ReactMarkdown>{item.text}</ReactMarkdown>
              {isAi && <span className="text-xs italic text-orange-600 ml-1 block mt-1">(AI generated, verify with a professional)</span>} {/* Make disclaimer block */}
            </div>

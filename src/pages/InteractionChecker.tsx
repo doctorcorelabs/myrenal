@@ -298,12 +298,12 @@ const InteractionChecker = () => {
                       </div>
                     </li>
                   ))}
-                </ul>
-              )}
-               <p className="mt-4 text-sm text-gray-500 italic">
-                 Disclaimer: This tool provides information based on available data and does not substitute for professional medical advice. Always consult with a healthcare provider for clinical decisions.
-               </p>
-            </CardContent>
+                 </ul>
+               )}
+                <p className="mt-4 text-sm text-gray-500 italic text-justify">
+                  Disclaimer: This tool provides information based on available data and does not substitute for professional medical advice. Always consult with a healthcare provider for clinical decisions.
+                </p>
+             </CardContent>
           </Card>
         )}
       </div>
