@@ -244,13 +244,13 @@ const ExploreGemini: React.FC = () => {
   const featureName: FeatureName = 'explore_gemini';
   const { checkAccess, incrementUsage } = useFeatureAccess();
   const { toast } = useToast();
-  const { loading: authLoading } = useAuth(); // Get auth loading state
+  // Removed authLoading and initial access states - relying on ProtectedRoute
 
-  // State for initial access check
-  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true); // Tracks if we are *currently* checking access
-  const [isAuthReady, setIsAuthReady] = useState(false); // Tracks if auth context has finished loading
-  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
-  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+  // State for initial access check - REMOVED
+  // const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  // const [isAuthReady, setIsAuthReady] = useState(false);
+  // const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  // const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
 
   // Component state
   const [prompt, setPrompt] = useState<string>('');
@@ -273,62 +273,7 @@ const ExploreGemini: React.FC = () => {
   const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({});
   const historyEndRef = useRef<HTMLDivElement>(null);
 
-  // Effect 1: Wait for auth context to finish loading
-  useEffect(() => {
-    if (!authLoading) {
-      console.log("Auth context loaded.");
-      setIsAuthReady(true); // Signal that auth state is ready
-    } else {
-      console.log("Auth context still loading...");
-      setIsAuthReady(false); // Ensure it's false while auth is loading
-    }
-  }, [authLoading]);
-
-  // Effect 2: Check access only when auth is ready
-  useEffect(() => {
-    const verifyInitialAccess = async () => {
-      console.log("Auth is ready, proceeding with initial access check.");
-      setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null); // Clear previous messages
-      setInitialAccessAllowed(false); // Assume not allowed until check passes
-      try {
-        // checkAccess itself checks for isAuthenticated internally
-        const result = await checkAccess(featureName);
-        console.log('Initial Access Check Result:', result); // Add detailed log
-        if (result.allowed) {
-          console.log('Access GRANTED');
-          setInitialAccessAllowed(true);
-          setInitialAccessMessage(null); // Clear any previous denial message
-        } else {
-          console.log('Access DENIED:', result.message);
-          setInitialAccessAllowed(false);
-          // Use the specific message from checkAccess if available, otherwise default
-          setInitialAccessMessage(result.message || 'Akses ditolak.');
-        }
-      } catch (error) {
-        console.error("Error checking initial feature access:", error);
-        setInitialAccessAllowed(false);
-        setInitialAccessMessage('Gagal memeriksa akses fitur.');
-        toast({
-          title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsCheckingInitialAccess(false);
-      }
-    };
-
-    // Only run the check if auth is ready
-    if (isAuthReady) {
-      verifyInitialAccess();
-    } else {
-      // If auth is not ready (e.g., on initial load before Effect 1 runs),
-      // ensure we show loading state. isCheckingInitialAccess starts true.
-      console.log("Auth not ready yet, delaying initial access check.");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthReady]); // Run this effect when isAuthReady changes
+  // REMOVED Initial access check useEffect hooks
 
 
   // Effect to scroll to the bottom when history updates
@@ -754,30 +699,13 @@ const ExploreGemini: React.FC = () => {
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
 
-        {/* Initial Loading State */}
-        {isCheckingInitialAccess && (
-           <div className="flex flex-col space-y-3 mt-4">
-             <Skeleton className="h-[300px] w-full rounded-lg" /> {/* Placeholder for form card */}
-             <Skeleton className="h-[150px] w-full rounded-lg" /> {/* Placeholder for results area */}
-           </div>
-         )}
+        {/* REMOVED Initial Loading State & Access Denied Message */}
+        {/* Content is now rendered directly, assuming ProtectedRoute handles auth */}
 
-        {/* Initial Access Denied Message */}
-        {!isCheckingInitialAccess && !initialAccessAllowed && (
-           <Alert variant="destructive" className="mt-4">
-             <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
-             <AlertDescription>
-               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-             </AlertDescription>
-           </Alert>
-         )}
-
-        {/* Render content only if initial access is allowed */}
-        {!isCheckingInitialAccess && initialAccessAllowed && (
-          <>
-            <Card>
-              <CardHeader>
+        {/* Render main content */}
+        <>
+          <Card>
+            <CardHeader>
                 <CardTitle>Interact with Gemini</CardTitle>
           </CardHeader>
           <CardContent>
@@ -1072,8 +1000,147 @@ const ExploreGemini: React.FC = () => {
                  <div ref={historyEndRef} /> {/* Element to scroll to */}
               </div>
             )}
+
+            {/* Exploration Threads (History) Section */}
+            {history.length > 0 && (
+              <div className="mt-10 space-y-6">
+                <h2 className="text-2xl font-semibold tracking-tight text-center border-t pt-6">
+                  Exploration Threads
+                </h2>
+                {history.map((thread) => (
+                  <Card key={thread.id} className="bg-muted/50 shadow-md">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Exploration Thread</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Started: {thread.createdAt.toLocaleString()} | Initial Model: {modelOptions.find(m => m.value === thread.initialModel)?.label || thread.initialModel}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4"> {/* Scrollable content */}
+                      {thread.messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
+                            {/* Display Text */}
+                            {message.text && (
+                              <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+                                <ReactMarkdown>{message.text}</ReactMarkdown>
+                              </div>
+                            )}
+                            {/* Display Attached File Info (for user messages) */}
+                            {message.role === 'user' && message.fileName && (
+                              <div className="mt-2 flex items-center gap-2 text-xs p-1.5 border rounded-md bg-primary/10 text-primary-foreground/80">
+                                <Paperclip className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{message.fileName}</span>
+                              </div>
+                            )}
+                            {/* Display Image (only for model messages) */}
+                            {message.role === 'model' && message.image && (
+                              <div className="mt-2">
+                                <img
+                                  src={`data:${message.image.mimeType};base64,${message.image.data}`}
+                                  alt="Generated by Gemini"
+                                  className="max-w-full h-auto rounded-md"
+                                />
+                              </div>
+                            )}
+                            <p className="text-xs opacity-70 mt-1.5 text-right">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                       {/* Loading indicator within the thread */}
+                       {threadLoading[thread.id] && (
+                         <div className="flex justify-start">
+                            <div className="p-3 rounded-lg bg-background border animate-pulse">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            </div>
+                         </div>
+                       )}
+                       {/* Error display within the thread */}
+                       {threadErrors[thread.id] && (
+                         <Alert variant="destructive" className="mt-2">
+                           <Terminal className="h-4 w-4" />
+                           <AlertTitle>Error in thread</AlertTitle>
+                           <AlertDescription>{threadErrors[thread.id]}</AlertDescription>
+                         </Alert>
+                       )}
+                    </CardContent>
+                    <CardFooter className="border-t pt-4 space-y-3">
+                       {/* File Upload Area for Thread */}
+                       <div className="flex items-center gap-2 w-full">
+                         <Input
+                           id={`file-upload-${thread.id}`}
+                           type="file"
+                           accept={allowedFileTypesString}
+                           ref={el => threadFileInputRefs.current[thread.id] = el} // Assign ref dynamically
+                           onChange={(e) => handleThreadFileChange(thread.id, e)}
+                           className="hidden"
+                           disabled={threadLoading[thread.id]}
+                         />
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => threadFileInputRefs.current[thread.id]?.click()}
+                           disabled={threadLoading[thread.id]}
+                           className="shrink-0"
+                         >
+                           <Paperclip className="mr-2 h-4 w-4" /> Choose File
+                         </Button>
+                         {threadFileNames[thread.id] && (
+                           <>
+                             <div className="flex-grow flex items-center gap-2 text-sm p-2 border rounded-md bg-background overflow-hidden">
+                               <FileIcon className="h-4 w-4 flex-shrink-0" />
+                               <span className="truncate">{threadFileNames[thread.id]}</span>
+                             </div>
+                             <Button
+                               type="button"
+                               variant="ghost"
+                               size="icon"
+                               onClick={() => clearThreadFile(thread.id)}
+                               disabled={threadLoading[thread.id]}
+                               title="Remove file"
+                               className="shrink-0"
+                             >
+                               <X className="h-4 w-4" />
+                             </Button>
+                           </>
+                         )}
+                       </div>
+                       {/* Text Input and Send Button */}
+                       <div className="flex w-full items-center gap-2">
+                         <Textarea
+                           placeholder="Type your follow-up prompt here..."
+                           value={threadInputs[thread.id] || ''}
+                           onChange={(e) => handleThreadInputChange(thread.id, e.target.value)}
+                           rows={2}
+                           className="resize-none flex-grow"
+                           disabled={threadLoading[thread.id]}
+                           onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendInThread(thread.id);
+                              }
+                            }}
+                         />
+                         <Button
+                           size="icon"
+                           onClick={() => handleSendInThread(thread.id)}
+                           disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])} // Disable if loading OR (text and file are empty)
+                           className="shrink-0"
+                         >
+                           <SendHorizonal className="h-4 w-4" />
+                           <span className="sr-only">Send</span>
+                         </Button>
+                       </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+                 <div ref={historyEndRef} /> {/* Element to scroll to */}
+              </div>
+            )}
           </>
-        )} {/* End of initialAccessAllowed block */}
+        {/* REMOVED End of initialAccessAllowed block */}
 
         {/* Back to Tools Button - Kept at the very bottom */}
         <div className="flex justify-center pt-6">
