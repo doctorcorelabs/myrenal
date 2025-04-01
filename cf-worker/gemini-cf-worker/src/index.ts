@@ -13,6 +13,7 @@ interface RequestBody {
 	imageData?: { mimeType: string; data: string; };
 	systemInstructionId?: string;
 	customSystemInstruction?: string;
+	messages?: Content[]; // Add messages array for chat history (Content type from @google/generative-ai)
 }
 
 // Define system instructions (keep in sync with frontend/other backend if needed)
@@ -144,9 +145,9 @@ export default {
 		let requestBody: RequestBody;
 		try {
 			requestBody = await request.json();
-			// Check if we have either a prompt/image OR text to summarize
-			if (!requestBody.prompt && !requestBody.imageData && !requestBody.textToSummarize) {
-				throw new Error("Request must include 'prompt'/'imageData' OR 'textToSummarize'");
+			// Check if we have messages OR prompt/image OR text to summarize
+			if (!requestBody.messages?.length && !requestBody.prompt && !requestBody.imageData && !requestBody.textToSummarize) {
+				throw new Error("Request must include 'messages' OR 'prompt'/'imageData' OR 'textToSummarize'");
 			}
 		} catch (error: any) {
 			console.error('Error parsing request body:', error);
@@ -173,43 +174,6 @@ export default {
 				systemInstruction: systemInstructionText,
 			});
 
-			// --- Determine the actual prompt based on request type ---
-			let effectivePrompt: string;
-			if (requestBody.textToSummarize) {
-				// Construct summarization prompt
-				effectivePrompt = `Please summarize the following drug interaction information concisely for a healthcare professional, focusing on the key risks and recommendations:\n\n"${requestBody.textToSummarize}"`;
-				console.log("Handling summarization request.");
-			} else if (requestBody.prompt) {
-				// Use the provided prompt for general queries
-				effectivePrompt = requestBody.prompt;
-				console.log("Handling general prompt/image request.");
-			} else {
-				// Should not happen due to earlier check, but handle defensively
-				return createJsonResponse({ error: 'No valid input provided (prompt, imageData, or textToSummarize).' }, 400);
-			}
-			// --- End Prompt Determination ---
-
-
-			const parts: any[] = [];
-			// Add the effective prompt (either original or summarization)
-			parts.push({ text: effectivePrompt });
-
-			// Add image data only if it's NOT a summarization request
-			if (!requestBody.textToSummarize && requestBody.imageData) {
-				if (!requestBody.imageData.mimeType || !requestBody.imageData.data) {
-					throw new Error("Invalid 'imageData' provided.");
-				}
-				parts.push({
-					inlineData: {
-						mimeType: requestBody.imageData.mimeType,
-						data: requestBody.imageData.data,
-					},
-				});
-			}
-			if (parts.length === 0) {
-				throw new Error("No content provided.");
-			}
-
 			const generationConfig = { temperature: 0.9, topK: 1, topP: 1, maxOutputTokens: 2048 };
 			const safetySettings = [
 				{ category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -217,14 +181,77 @@ export default {
 				{ category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
 				{ category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 			];
-			const userContent: Content = { role: "user", parts: parts };
+			// --- Determine API call based on input ---
+			let result;
+			if (requestBody.messages && requestBody.messages.length > 0) {
+				// --- Chat History Call ---
+				console.log("Handling chat history request.");
 
-			// --- Standard Non-Streaming Call ---
-			const result = await model.generateContent({
-				contents: [userContent],
-				generationConfig,
-				safetySettings,
-			});
+				// Ensure messages have valid roles and parts (basic validation)
+				const validMessages = requestBody.messages.filter(msg =>
+					(msg.role === 'user' || msg.role === 'model') && Array.isArray(msg.parts) && msg.parts.length > 0
+				);
+				if (validMessages.length !== requestBody.messages.length) {
+					console.warn("Some messages in the history were invalid and filtered out.");
+				}
+				if (validMessages.length === 0) {
+					throw new Error("No valid messages provided in the 'messages' array.");
+				}
+
+				result = await model.generateContent({
+					contents: validMessages, // Pass the validated history
+					generationConfig,
+					safetySettings,
+				});
+
+			} else {
+				// --- Single Turn Call (Fallback if no messages) ---
+				console.log("Handling single turn request (no messages array found).");
+
+				// Determine the actual prompt based on request type
+				let effectivePrompt: string;
+				if (requestBody.textToSummarize) {
+					effectivePrompt = `Please summarize the following drug interaction information concisely for a healthcare professional, focusing on the key risks and recommendations:\n\n"${requestBody.textToSummarize}"`;
+					console.log("Handling summarization request.");
+				} else if (requestBody.prompt) {
+					effectivePrompt = requestBody.prompt;
+					console.log("Handling general prompt/image request.");
+				} else {
+					// This case should ideally not be reached due to the initial check,
+					// but throw a specific error if it does.
+					throw new Error("No valid single-turn input (prompt, imageData, or textToSummarize) found after checking for messages.");
+				}
+
+				const parts: any[] = [];
+				parts.push({ text: effectivePrompt });
+
+				// Add image data only if it's NOT a summarization request
+				if (!requestBody.textToSummarize && requestBody.imageData) {
+					if (!requestBody.imageData.mimeType || !requestBody.imageData.data) {
+						throw new Error("Invalid 'imageData' provided for single turn.");
+					}
+					parts.push({
+						inlineData: {
+							mimeType: requestBody.imageData.mimeType,
+							data: requestBody.imageData.data,
+						},
+					});
+				}
+
+				// Check if parts array is actually populated (should be due to logic above)
+				if (parts.length === 0) {
+					throw new Error("Internal error: No content parts generated for single turn.");
+				}
+
+				const userContent: Content = { role: "user", parts: parts };
+
+				result = await model.generateContent({
+					contents: [userContent], // Pass single user content
+					generationConfig,
+					safetySettings,
+				});
+			}
+			// --- End API Call Logic ---
 
 			const response = result.response;
 			const responsePayload: { responseText?: string; responseImage?: { mimeType: string; data: string } } = {};

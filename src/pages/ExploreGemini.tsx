@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef back
+import { Link } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Upload, X, File as FileIcon, ArrowLeft } from "lucide-react"; // Added ArrowLeft
+import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react"; // Added Paperclip
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess';
+import { useToast } from '@/components/ui/use-toast';
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import ReactMarkdown from 'react-markdown';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -207,6 +210,27 @@ interface ResponseImageData {
   data: string;
 }
 
+// Interface for a single message in a thread
+interface Message {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  image?: ResponseImageData | null; // Optional image from model response
+  file?: FileData | null; // Optional file attached by user
+  fileName?: string | null; // Name of the file attached by user
+  timestamp: Date;
+}
+
+// Interface for an exploration thread (replaces HistoryItem)
+interface ExplorationThread {
+  id: string;
+  initialModel: string; // Model used for the first response
+  initialSystemInstructionId: string; // System instruction used for the first response
+  initialCustomSystemInstruction?: string; // Custom instruction text if used
+  messages: Message[];
+  createdAt: Date;
+}
+
 // Define allowed MIME types and create accept string
 const allowedMimeTypes = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
@@ -216,33 +240,101 @@ const allowedMimeTypes = [
 const allowedFileTypesString = allowedMimeTypes.join(',');
 
 const ExploreGemini: React.FC = () => {
+  const featureName: FeatureName = 'explore_gemini';
+  const { checkAccess, incrementUsage } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for initial access check
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Component state
   const [prompt, setPrompt] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash"); // Changed default model
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash");
   const [selectedSystemInstructionId, setSelectedSystemInstructionId] = useState<string>("none");
-  const [customSystemInstruction, setCustomSystemInstruction] = useState<string>(''); // State for custom instruction text
+  const [customSystemInstruction, setCustomSystemInstruction] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<FileData | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>('');
   const [responseImage, setResponseImage] = useState<ResponseImageData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading for the main submit action
+  const [error, setError] = useState<string | null>(null); // Error for the main submit action
+  const [history, setHistory] = useState<ExplorationThread[]>([]); // State for exploration threads
+  const [threadInputs, setThreadInputs] = useState<{ [threadId: string]: string }>({}); // Input state for each thread
+  const [threadLoading, setThreadLoading] = useState<{ [threadId: string]: boolean }>({}); // Loading state for each thread
+  const [threadErrors, setThreadErrors] = useState<{ [threadId: string]: string | null }>({}); // Error state for each thread
+  const [threadFiles, setThreadFiles] = useState<{ [threadId: string]: FileData | null }>({}); // File state for each thread input
+  const [threadFileNames, setThreadFileNames] = useState<{ [threadId: string]: string | null }>({}); // File name state for each thread input
+  const mainFileInputRef = useRef<HTMLInputElement>(null); // Renamed from fileInputRef
+  const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({}); // Refs for thread file inputs
+  const historyEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to bottom of history
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setResponseText('');
-    setResponseImage(null);
-
-    // Construct payload
-    const payload: any = {
-        prompt,
-        modelName: selectedModel,
-        imageData: uploadedFile,
+  // Initial access check on mount
+  useEffect(() => {
+    const verifyInitialAccess = async () => {
+      setIsCheckingInitialAccess(true);
+      setInitialAccessMessage(null);
+      try {
+        const result = await checkAccess(featureName);
+        if (result.quota === 0) {
+             setInitialAccessAllowed(false);
+             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+        } else {
+             setInitialAccessAllowed(true);
+        }
+      } catch (error) {
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingInitialAccess(false);
+      }
     };
 
-    // Add system instruction based on selection
+    verifyInitialAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Effect to scroll to the bottom when history updates
+  useEffect(() => {
+    historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // --- Action Access Check ---
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({
+        title: "Akses Ditolak",
+        description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
+        variant: "destructive",
+      });
+      return; // Stop submission
+    }
+    // --- End Action Access Check ---
+
+    setIsLoading(true);
+    setError(null);
+    setResponseText(''); // Clear previous main response
+    setResponseImage(null); // Clear previous main image
+
+    // Construct payload for the initial prompt
+    // NOTE: This structure might need adjustment based on the final backend API design
+    // For now, assume it still takes a single prompt for the *initial* interaction.
+    const payload: any = {
+        prompt: prompt, // Send the single initial prompt text
+        modelName: selectedModel,
+        imageData: uploadedFile, // Send initial uploaded file data
+    };
+
+    // Add system instruction for the initial call
     if (selectedSystemInstructionId === "custom") {
         if (customSystemInstruction.trim()) {
             payload.customSystemInstruction = customSystemInstruction;
@@ -281,11 +373,12 @@ const ExploreGemini: React.FC = () => {
         throw new Error(errorMsg);
       }
 
-      // --- Standard JSON Response Handling (Cloudflare Worker returns JSON) ---
-      console.log("Handling response as JSON from Cloudflare Worker...");
+      // --- Response Handling for Initial Prompt ---
+      console.log("Handling initial response from Cloudflare Worker...");
       const contentType = res.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
         const data = await res.json();
+        // Display the initial response in the main area
         if (data.responseText) {
           setResponseText(data.responseText);
         }
@@ -296,19 +389,23 @@ const ExploreGemini: React.FC = () => {
            setError("Received an empty response from the model.");
         }
       } else {
-        // Handle cases where the error response might not be JSON
         const responseText = await res.text();
         setError(`Received unexpected response format: ${responseText}`);
         console.error("Unexpected response format:", responseText);
       }
-      // --- End Standard JSON Response Handling ---
+      // --- End Initial Response Handling ---
 
     } catch (err: any) {
-      console.error("Error in handleSubmit:", err);
-      setError(err.message || 'An unexpected error occurred.');
+      console.error("Error in handleSubmit (initial):", err);
+      setError(err.message || 'An unexpected error occurred during initial submission.');
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading for the main form
     }
+
+    // --- Increment Usage ---
+    // Increment after confirming the submission will proceed
+    await incrementUsage(featureName);
+    // --- End Increment Usage ---
   };
 
   // Handle file selection
@@ -319,8 +416,8 @@ const ExploreGemini: React.FC = () => {
          setError(`Unsupported file type: ${file.type || 'unknown'}. Please upload an image, PDF, or audio file.`);
          setUploadedFile(null);
          setUploadedFileName(null);
-         if (fileInputRef.current) {
-             fileInputRef.current.value = "";
+         if (mainFileInputRef.current) {
+             mainFileInputRef.current.value = "";
          }
          return;
       }
@@ -348,10 +445,276 @@ const ExploreGemini: React.FC = () => {
   const clearUploadedFile = () => {
     setUploadedFile(null);
     setUploadedFileName(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (mainFileInputRef.current) {
+      mainFileInputRef.current.value = "";
     }
   };
+
+  // Handle clicking the "Explore Topic" button on the main response card
+  const handleExploreClick = () => {
+    if (!responseText && !responseImage) return; // Only allow exploring if there's a response
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      text: prompt,
+      // TODO: Potentially add uploaded file info here if needed for context
+      // fileInfo: uploadedFile ? { name: uploadedFileName || 'uploaded_file', type: uploadedFile.mimeType } : undefined,
+      timestamp: new Date(Date.now() - 1000), // Slightly before model response
+    };
+
+    const modelMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'model',
+      text: responseText || '', // Ensure text is always a string
+      image: responseImage,
+      timestamp: new Date(),
+    };
+
+    const newThread: ExplorationThread = {
+      id: crypto.randomUUID(),
+      initialModel: selectedModel,
+      initialSystemInstructionId: selectedSystemInstructionId,
+      initialCustomSystemInstruction: selectedSystemInstructionId === "custom" ? customSystemInstruction : undefined,
+      messages: [userMessage, modelMessage],
+      createdAt: new Date(),
+    };
+
+    setHistory(prev => [...prev, newThread]); // Add to the end of history array
+
+    // Reset current interaction state
+    setPrompt('');
+    setResponseText('');
+    setResponseImage(null);
+    setUploadedFile(null);
+    setUploadedFileName(null);
+    setError(null); // Clear any previous error
+    if (mainFileInputRef.current) {
+      mainFileInputRef.current.value = ""; // Reset file input
+    }
+    // Reset main input/response area
+    setPrompt('');
+    setResponseText('');
+    setResponseImage(null);
+    setUploadedFile(null);
+    setUploadedFileName(null);
+    setError(null);
+    if (mainFileInputRef.current) {
+      mainFileInputRef.current.value = "";
+    }
+    // Keep model/system instruction selected for potential new main prompt
+
+    toast({
+      title: "Added to Exploration History",
+      description: "The response has been saved below.",
+    });
+  };
+
+  // Handle input change within a specific thread's textarea
+  const handleThreadInputChange = (threadId: string, value: string) => {
+    setThreadInputs(prev => ({ ...prev, [threadId]: value }));
+  };
+
+  // Handle file change within a specific thread's input
+  const handleThreadFileChange = (threadId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!allowedMimeTypes.includes(file.type)) {
+         setThreadErrors(prev => ({ ...prev, [threadId]: `Unsupported file type: ${file.type || 'unknown'}.` }));
+         setThreadFiles(prev => ({ ...prev, [threadId]: null }));
+         setThreadFileNames(prev => ({ ...prev, [threadId]: null }));
+         if (threadFileInputRefs.current[threadId]) {
+             threadFileInputRefs.current[threadId]!.value = ""; // Use non-null assertion
+         }
+         return;
+      }
+
+      setThreadErrors(prev => ({ ...prev, [threadId]: null })); // Clear error
+      setThreadFileNames(prev => ({ ...prev, [threadId]: file.name }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setThreadFiles(prev => ({
+          ...prev,
+          [threadId]: {
+            mimeType: file.type,
+            data: base64String,
+          }
+        }));
+      };
+      reader.onerror = () => {
+        setThreadErrors(prev => ({ ...prev, [threadId]: "Failed to read the selected file." }));
+        setThreadFiles(prev => ({ ...prev, [threadId]: null }));
+        setThreadFileNames(prev => ({ ...prev, [threadId]: null }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear uploaded file for a specific thread
+  const clearThreadFile = (threadId: string) => {
+    setThreadFiles(prev => ({ ...prev, [threadId]: null }));
+    setThreadFileNames(prev => ({ ...prev, [threadId]: null }));
+    if (threadFileInputRefs.current[threadId]) {
+      threadFileInputRefs.current[threadId]!.value = ""; // Use non-null assertion
+    }
+  };
+
+
+  // Handle sending a message within a specific thread
+  const handleSendInThread = async (threadId: string) => {
+    const currentThread = history.find(t => t.id === threadId);
+    const newPromptText = threadInputs[threadId]?.trim() || ''; // Default to empty string if undefined/null
+    const currentFile = threadFiles[threadId];
+
+    // Require either text or a file to send
+    if (!currentThread || (!newPromptText && !currentFile)) return;
+
+    // --- Action Access Check (Reuse main hook) ---
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({
+        title: "Akses Ditolak",
+        description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
+        variant: "destructive",
+      });
+      return; // Stop submission
+    }
+    // --- End Action Access Check ---
+
+    setThreadLoading(prev => ({ ...prev, [threadId]: true }));
+    setThreadErrors(prev => ({ ...prev, [threadId]: null }));
+
+    const newUserMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      text: newPromptText,
+      file: currentFile, // Include the file data
+      fileName: threadFileNames[threadId], // Include the file name
+      timestamp: new Date(),
+    };
+
+    // Add user message immediately to the UI
+    const updatedMessages = [...currentThread.messages, newUserMessage];
+    setHistory(prevHistory =>
+      prevHistory.map(t =>
+        t.id === threadId ? { ...t, messages: updatedMessages } : t
+      )
+    );
+
+    // Clear the input and file for this thread
+    setThreadInputs(prev => ({ ...prev, [threadId]: '' }));
+    clearThreadFile(threadId); // Use the helper to clear file state and input ref
+
+    // --- Prepare Payload for Backend (ASSUMES BACKEND CHANGES) ---
+    // Construct the message history to send to the backend, including files in parts
+    const messagesForApi = updatedMessages.map(msg => {
+      const parts: any[] = [];
+      if (msg.text) {
+        parts.push({ text: msg.text });
+      }
+      // Include file data if it exists for this user message
+      if (msg.role === 'user' && msg.file) {
+         parts.push({
+           inlineData: {
+             mimeType: msg.file.mimeType,
+             data: msg.file.data,
+           },
+         });
+      }
+      // Include image data if it exists for this model message (less common to send back, but possible)
+      if (msg.role === 'model' && msg.image) {
+         parts.push({
+            inlineData: {
+               mimeType: msg.image.mimeType,
+               data: msg.image.data,
+            },
+         });
+      }
+      return {
+        role: msg.role,
+        parts: parts,
+      };
+    }).filter(msg => msg.parts.length > 0); // Filter out messages with no parts
+
+    const payload: any = {
+      // Send the message history for context
+      messages: messagesForApi,
+      // Use the model associated with this thread's start
+      modelName: currentThread.initialModel,
+      // Include system instruction if one was set initially for the thread
+      ...(currentThread.initialSystemInstructionId === "custom" && currentThread.initialCustomSystemInstruction
+        ? { customSystemInstruction: currentThread.initialCustomSystemInstruction }
+        : currentThread.initialSystemInstructionId !== "none"
+        ? { systemInstructionId: currentThread.initialSystemInstructionId }
+        : {}),
+      // Note: File uploads are not handled within the thread in this version
+    };
+    // --- End Payload Preparation ---
+
+
+    try {
+      // Use the same Cloudflare Worker URL (assuming it's updated)
+      const functionUrl = 'https://gemini-cf-worker.daivanfebrijuansetiya.workers.dev';
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        let errorMsg = `HTTP error! status: ${res.status}`;
+        try {
+          const errorText = await res.text();
+          errorMsg = JSON.parse(errorText).error || errorText || errorMsg;
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorMsg);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await res.json();
+        const newModelMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'model',
+          text: data.responseText || '',
+          image: data.responseImage || null,
+          timestamp: new Date(),
+        };
+        // Add model response to the thread
+        setHistory(prevHistory =>
+          prevHistory.map(t =>
+            t.id === threadId ? { ...t, messages: [...t.messages, newModelMessage] } : t
+          )
+        );
+      } else {
+        const responseText = await res.text();
+        throw new Error(`Received unexpected response format: ${responseText}`);
+      }
+
+    } catch (err: any) {
+      console.error(`Error sending message in thread ${threadId}:`, err);
+      setThreadErrors(prev => ({ ...prev, [threadId]: err.message || 'An error occurred.' }));
+      // Optionally add an error message to the chat thread itself
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'model', // Display as if model responded with error
+        text: `Error: ${err.message || 'An error occurred.'}`,
+        timestamp: new Date(),
+      };
+       setHistory(prevHistory =>
+         prevHistory.map(t =>
+           t.id === threadId ? { ...t, messages: [...t.messages, errorMessage] } : t
+         )
+       );
+
+    } finally {
+      setThreadLoading(prev => ({ ...prev, [threadId]: false }));
+      // Increment usage after the attempt
+      await incrementUsage(featureName);
+    }
+  };
+
 
   return (
     <>
@@ -361,9 +724,31 @@ const ExploreGemini: React.FC = () => {
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Interact with Gemini</CardTitle>
+        {/* Initial Loading State */}
+        {isCheckingInitialAccess && (
+           <div className="flex flex-col space-y-3 mt-4">
+             <Skeleton className="h-[300px] w-full rounded-lg" /> {/* Placeholder for form card */}
+             <Skeleton className="h-[150px] w-full rounded-lg" /> {/* Placeholder for results area */}
+           </div>
+         )}
+
+        {/* Initial Access Denied Message */}
+        {!isCheckingInitialAccess && !initialAccessAllowed && (
+           <Alert variant="destructive" className="mt-4">
+             <Terminal className="h-4 w-4" />
+             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertDescription>
+               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+             </AlertDescription>
+           </Alert>
+         )}
+
+        {/* Render content only if initial access is allowed */}
+        {!isCheckingInitialAccess && initialAccessAllowed && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Interact with Gemini</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -434,7 +819,7 @@ const ExploreGemini: React.FC = () => {
                       id="file-upload"
                       type="file"
                       accept={allowedFileTypesString}
-                      ref={fileInputRef}
+                      ref={mainFileInputRef} // Use renamed ref
                       onChange={handleFileChange}
                       className="hidden"
                       disabled={isLoading} // Re-enable based on loading state
@@ -442,8 +827,8 @@ const ExploreGemini: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => fileInputRef.current?.click()} // Re-enable click
-                      disabled={isLoading} // Re-enable based on loading state
+                      onClick={() => mainFileInputRef.current?.click()} // Use renamed ref
+                      disabled={isLoading}
                     >
                       <Upload className="mr-2 h-4 w-4" /> Choose File
                     </Button>
@@ -457,8 +842,8 @@ const ExploreGemini: React.FC = () => {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={clearUploadedFile} // Re-enable clear
-                          disabled={isLoading} // Re-enable based on loading state
+                          onClick={clearUploadedFile}
+                          disabled={isLoading}
                           title="Remove file"
                         >
                           <X className="h-4 w-4" />
@@ -466,7 +851,6 @@ const ExploreGemini: React.FC = () => {
                       </>
                     )}
                   </div>
-                  {/* Removed disabled message */}
               </div>
 
               {/* Update disabled condition for submit button - allow submit if prompt OR file exists */}
@@ -475,10 +859,10 @@ const ExploreGemini: React.FC = () => {
               </Button>
             </form>
           </CardContent>
-        </Card>
+            </Card>
 
-        {error && (
-           <Alert variant="destructive">
+            {error && (
+               <Alert variant="destructive">
              <Terminal className="h-4 w-4" />
              <AlertTitle>Error</AlertTitle>
              <AlertDescription>{error}</AlertDescription>
@@ -508,11 +892,160 @@ const ExploreGemini: React.FC = () => {
                   />
                 </div>
               )}
+              {/* Add Explore Button */}
+              {(responseText || responseImage) && !error && !isLoading && (
+                <div className="flex justify-end p-4 border-t">
+                   <Button variant="secondary" onClick={handleExploreClick}>
+                     <Sparkles className="mr-2 h-4 w-4" /> Explore Topic
+                   </Button>
+                 </div>
+              )}
             </CardContent>
-          </Card>
-        )}
+              </Card>
+            )}
 
-        {/* Back to Tools Button */}
+            {/* Exploration Threads (History) Section */}
+            {history.length > 0 && (
+              <div className="mt-10 space-y-6">
+                <h2 className="text-2xl font-semibold tracking-tight text-center border-t pt-6">
+                  Exploration Threads
+                </h2>
+                {history.map((thread) => (
+                  <Card key={thread.id} className="bg-muted/50 shadow-md">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Exploration Thread</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Started: {thread.createdAt.toLocaleString()} | Initial Model: {modelOptions.find(m => m.value === thread.initialModel)?.label || thread.initialModel}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4"> {/* Scrollable content */}
+                      {thread.messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
+                            {/* Display Text */}
+                            {message.text && (
+                              <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+                                <ReactMarkdown>{message.text}</ReactMarkdown>
+                              </div>
+                            )}
+                            {/* Display Attached File Info (for user messages) */}
+                            {message.role === 'user' && message.fileName && (
+                              <div className="mt-2 flex items-center gap-2 text-xs p-1.5 border rounded-md bg-primary/10 text-primary-foreground/80">
+                                <Paperclip className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{message.fileName}</span>
+                              </div>
+                            )}
+                            {/* Display Image (only for model messages) */}
+                            {message.role === 'model' && message.image && (
+                              <div className="mt-2">
+                                <img
+                                  src={`data:${message.image.mimeType};base64,${message.image.data}`}
+                                  alt="Generated by Gemini"
+                                  className="max-w-full h-auto rounded-md"
+                                />
+                              </div>
+                            )}
+                            <p className="text-xs opacity-70 mt-1.5 text-right">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                       {/* Loading indicator within the thread */}
+                       {threadLoading[thread.id] && (
+                         <div className="flex justify-start">
+                            <div className="p-3 rounded-lg bg-background border animate-pulse">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            </div>
+                         </div>
+                       )}
+                       {/* Error display within the thread */}
+                       {threadErrors[thread.id] && (
+                         <Alert variant="destructive" className="mt-2">
+                           <Terminal className="h-4 w-4" />
+                           <AlertTitle>Error in thread</AlertTitle>
+                           <AlertDescription>{threadErrors[thread.id]}</AlertDescription>
+                         </Alert>
+                       )}
+                    </CardContent>
+                    <CardFooter className="border-t pt-4 space-y-3">
+                       {/* File Upload Area for Thread */}
+                       <div className="flex items-center gap-2 w-full">
+                         <Input
+                           id={`file-upload-${thread.id}`}
+                           type="file"
+                           accept={allowedFileTypesString}
+                           ref={el => threadFileInputRefs.current[thread.id] = el} // Assign ref dynamically
+                           onChange={(e) => handleThreadFileChange(thread.id, e)}
+                           className="hidden"
+                           disabled={threadLoading[thread.id]}
+                         />
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => threadFileInputRefs.current[thread.id]?.click()}
+                           disabled={threadLoading[thread.id]}
+                           className="shrink-0"
+                         >
+                           <Paperclip className="mr-2 h-4 w-4" /> Choose File
+                         </Button>
+                         {threadFileNames[thread.id] && (
+                           <>
+                             <div className="flex-grow flex items-center gap-2 text-sm p-2 border rounded-md bg-background overflow-hidden">
+                               <FileIcon className="h-4 w-4 flex-shrink-0" />
+                               <span className="truncate">{threadFileNames[thread.id]}</span>
+                             </div>
+                             <Button
+                               type="button"
+                               variant="ghost"
+                               size="icon"
+                               onClick={() => clearThreadFile(thread.id)}
+                               disabled={threadLoading[thread.id]}
+                               title="Remove file"
+                               className="shrink-0"
+                             >
+                               <X className="h-4 w-4" />
+                             </Button>
+                           </>
+                         )}
+                       </div>
+                       {/* Text Input and Send Button */}
+                       <div className="flex w-full items-center gap-2">
+                         <Textarea
+                           placeholder="Type your follow-up prompt here..."
+                           value={threadInputs[thread.id] || ''}
+                           onChange={(e) => handleThreadInputChange(thread.id, e.target.value)}
+                           rows={2}
+                           className="resize-none flex-grow"
+                           disabled={threadLoading[thread.id]}
+                           onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendInThread(thread.id);
+                              }
+                            }}
+                         />
+                         <Button
+                           size="icon"
+                           onClick={() => handleSendInThread(thread.id)}
+                           disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])} // Disable if loading OR (text and file are empty)
+                           className="shrink-0"
+                         >
+                           <SendHorizonal className="h-4 w-4" />
+                           <span className="sr-only">Send</span>
+                         </Button>
+                       </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+                 <div ref={historyEndRef} /> {/* Element to scroll to */}
+              </div>
+            )}
+          </>
+        )} {/* End of initialAccessAllowed block */}
+
+        {/* Back to Tools Button - Kept at the very bottom */}
         <div className="flex justify-center pt-6">
           <Link to="/tools">
             <Button variant="outline" className="inline-flex items-center gap-2">
