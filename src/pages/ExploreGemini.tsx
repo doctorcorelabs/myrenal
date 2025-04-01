@@ -247,7 +247,8 @@ const ExploreGemini: React.FC = () => {
   const { loading: authLoading } = useAuth(); // Get auth loading state
 
   // State for initial access check
-  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true); // Tracks if we are *currently* checking access
+  const [isAuthReady, setIsAuthReady] = useState(false); // Tracks if auth context has finished loading
   const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
   const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
 
@@ -268,35 +269,35 @@ const ExploreGemini: React.FC = () => {
   const [threadErrors, setThreadErrors] = useState<{ [threadId: string]: string | null }>({}); // Error state for each thread
   const [threadFiles, setThreadFiles] = useState<{ [threadId: string]: FileData | null }>({}); // File state for each thread input
   const [threadFileNames, setThreadFileNames] = useState<{ [threadId: string]: string | null }>({}); // File name state for each thread input
-  const mainFileInputRef = useRef<HTMLInputElement>(null); // Renamed from fileInputRef
-  const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({}); // Refs for thread file inputs
-  const historyEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to bottom of history
+  const mainFileInputRef = useRef<HTMLInputElement>(null);
+  const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({});
+  const historyEndRef = useRef<HTMLDivElement>(null);
 
-  // Initial access check on mount, wait for auth to load
+  // Effect 1: Wait for auth context to finish loading
+  useEffect(() => {
+    if (!authLoading) {
+      console.log("Auth context loaded.");
+      setIsAuthReady(true); // Signal that auth state is ready
+    } else {
+      console.log("Auth context still loading...");
+      setIsAuthReady(false); // Ensure it's false while auth is loading
+    }
+  }, [authLoading]);
+
+  // Effect 2: Check access only when auth is ready
   useEffect(() => {
     const verifyInitialAccess = async () => {
-      // Don't check access until authentication is resolved
-      if (authLoading) {
-        console.log("Auth context still loading, skipping initial access check for now.");
-        // Optionally set a state here to indicate auth is loading, if needed beyond the initial skeleton
-        // We might still want to set isCheckingInitialAccess to false if auth is loading,
-        // so the main skeleton doesn't show indefinitely if auth takes time.
-        // Let's keep the skeleton showing while auth loads for now.
-        // setIsCheckingInitialAccess(false); // Consider this if auth loading takes long
-        return;
-      }
-
-      console.log("Auth context loaded, proceeding with initial access check.");
-      setIsCheckingInitialAccess(true); // Indicate we are now checking access
+      console.log("Auth is ready, proceeding with initial access check.");
+      setIsCheckingInitialAccess(true);
       setInitialAccessMessage(null);
       try {
+        // checkAccess itself checks for isAuthenticated internally
         const result = await checkAccess(featureName);
-        if (!result.allowed) { // Check if access is explicitly denied (quota 0 or other reasons)
-             setInitialAccessAllowed(false);
-             // Use the specific message from checkAccess if available
-             setInitialAccessMessage(result.message || 'Akses ditolak.');
+        if (!result.allowed) {
+          setInitialAccessAllowed(false);
+          setInitialAccessMessage(result.message || 'Akses ditolak.');
         } else {
-             setInitialAccessAllowed(true);
+          setInitialAccessAllowed(true);
         }
       } catch (error) {
         console.error("Error checking initial feature access:", error);
@@ -308,14 +309,20 @@ const ExploreGemini: React.FC = () => {
           variant: "destructive",
         });
       } finally {
-        // Only set checking to false *after* the check is done
         setIsCheckingInitialAccess(false);
       }
     };
 
-    verifyInitialAccess();
+    // Only run the check if auth is ready
+    if (isAuthReady) {
+      verifyInitialAccess();
+    } else {
+      // If auth is not ready (e.g., on initial load before Effect 1 runs),
+      // ensure we show loading state. isCheckingInitialAccess starts true.
+      console.log("Auth not ready yet, delaying initial access check.");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading]); // Add authLoading to dependency array
+  }, [isAuthReady]); // Run this effect when isAuthReady changes
 
   // Effect to scroll to the bottom when history updates
   useEffect(() => {
