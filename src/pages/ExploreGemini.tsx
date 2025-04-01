@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react"; // Added Paperclip
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess.ts'; // Added .ts extension
+import { useFeatureAccess, FeatureName } from '../hooks/useFeatureAccess.ts'; // Changed to relative path
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import ReactMarkdown from 'react-markdown';
