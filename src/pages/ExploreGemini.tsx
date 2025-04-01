@@ -289,15 +289,21 @@ const ExploreGemini: React.FC = () => {
     const verifyInitialAccess = async () => {
       console.log("Auth is ready, proceeding with initial access check.");
       setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null);
+      setInitialAccessMessage(null); // Clear previous messages
+      setInitialAccessAllowed(false); // Assume not allowed until check passes
       try {
         // checkAccess itself checks for isAuthenticated internally
         const result = await checkAccess(featureName);
-        if (!result.allowed) {
-          setInitialAccessAllowed(false);
-          setInitialAccessMessage(result.message || 'Akses ditolak.');
-        } else {
+        console.log('Initial Access Check Result:', result); // Add detailed log
+        if (result.allowed) {
+          console.log('Access GRANTED');
           setInitialAccessAllowed(true);
+          setInitialAccessMessage(null); // Clear any previous denial message
+        } else {
+          console.log('Access DENIED:', result.message);
+          setInitialAccessAllowed(false);
+          // Use the specific message from checkAccess if available, otherwise default
+          setInitialAccessMessage(result.message || 'Akses ditolak.');
         }
       } catch (error) {
         console.error("Error checking initial feature access:", error);
@@ -323,6 +329,7 @@ const ExploreGemini: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthReady]); // Run this effect when isAuthReady changes
+
 
   // Effect to scroll to the bottom when history updates
   useEffect(() => {
