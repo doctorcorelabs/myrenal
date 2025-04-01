@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react"; // Added Paperclip
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess.ts'; // Reverted to alias path with .ts
+// import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess.ts'; // Commented out quota check import
 import { useAuth } from '@/contexts/AuthContext.tsx'; // Import useAuth
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -241,10 +241,10 @@ const allowedMimeTypes = [
 const allowedFileTypesString = allowedMimeTypes.join(',');
 
 const ExploreGemini: React.FC = () => {
-  const featureName: FeatureName = 'explore_gemini';
-  const { checkAccess, incrementUsage } = useFeatureAccess();
+  // const featureName: FeatureName = 'explore_gemini'; // Commented out quota check related const
+  // const { checkAccess, incrementUsage } = useFeatureAccess(); // Commented out quota check hook usage
   const { toast } = useToast();
-  // Removed authLoading and initial access states - relying on ProtectedRoute
+  // const { loading: authLoading } = useAuth(); // Commented out - no longer needed for initial check
 
   // State for initial access check - REMOVED
   // const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -283,16 +283,16 @@ const ExploreGemini: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- Action Access Check ---
-    const accessResult = await checkAccess(featureName);
-    if (!accessResult.allowed) {
-      toast({
-        title: "Akses Ditolak",
-        description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
-        variant: "destructive",
-      });
-      return; // Stop submission
-    }
+    // --- Action Access Check --- REMOVED
+    // const accessResult = await checkAccess(featureName);
+    // if (!accessResult.allowed) {
+    //   toast({
+    //     title: "Akses Ditolak",
+    //     description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
+    //     variant: "destructive",
+    //   });
+    //   return; // Stop submission
+    // }
     // --- End Action Access Check ---
 
     setIsLoading(true);
@@ -377,9 +377,9 @@ const ExploreGemini: React.FC = () => {
       setIsLoading(false); // Stop loading for the main form
     }
 
-    // --- Increment Usage ---
+    // --- Increment Usage --- REMOVED
     // Increment after confirming the submission will proceed
-    await incrementUsage(featureName);
+    // await incrementUsage(featureName);
     // --- End Increment Usage ---
   };
 
@@ -545,16 +545,16 @@ const ExploreGemini: React.FC = () => {
     // Require either text or a file to send
     if (!currentThread || (!newPromptText && !currentFile)) return;
 
-    // --- Action Access Check (Reuse main hook) ---
-    const accessResult = await checkAccess(featureName);
-    if (!accessResult.allowed) {
-      toast({
-        title: "Akses Ditolak",
-        description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
-        variant: "destructive",
-      });
-      return; // Stop submission
-    }
+    // --- Action Access Check (Reuse main hook) --- REMOVED
+    // const accessResult = await checkAccess(featureName);
+    // if (!accessResult.allowed) {
+    //   toast({
+    //     title: "Akses Ditolak",
+    //     description: accessResult.message || 'Anda tidak dapat mengirim prompt saat ini.',
+    //     variant: "destructive",
+    //   });
+    //   return; // Stop submission
+    // }
     // --- End Action Access Check ---
 
     setThreadLoading(prev => ({ ...prev, [threadId]: true }));
@@ -685,8 +685,8 @@ const ExploreGemini: React.FC = () => {
 
     } finally {
       setThreadLoading(prev => ({ ...prev, [threadId]: false }));
-      // Increment usage after the attempt
-      await incrementUsage(featureName);
+      // Increment usage after the attempt - REMOVED
+      // await incrementUsage(featureName);
     }
   };
 
@@ -860,145 +860,6 @@ const ExploreGemini: React.FC = () => {
               )}
             </CardContent>
               </Card>
-            )}
-
-            {/* Exploration Threads (History) Section */}
-            {history.length > 0 && (
-              <div className="mt-10 space-y-6">
-                <h2 className="text-2xl font-semibold tracking-tight text-center border-t pt-6">
-                  Exploration Threads
-                </h2>
-                {history.map((thread) => (
-                  <Card key={thread.id} className="bg-muted/50 shadow-md">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Exploration Thread</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        Started: {thread.createdAt.toLocaleString()} | Initial Model: {modelOptions.find(m => m.value === thread.initialModel)?.label || thread.initialModel}
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4"> {/* Scrollable content */}
-                      {thread.messages.map((message) => (
-                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
-                            {/* Display Text */}
-                            {message.text && (
-                              <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-                                <ReactMarkdown>{message.text}</ReactMarkdown>
-                              </div>
-                            )}
-                            {/* Display Attached File Info (for user messages) */}
-                            {message.role === 'user' && message.fileName && (
-                              <div className="mt-2 flex items-center gap-2 text-xs p-1.5 border rounded-md bg-primary/10 text-primary-foreground/80">
-                                <Paperclip className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{message.fileName}</span>
-                              </div>
-                            )}
-                            {/* Display Image (only for model messages) */}
-                            {message.role === 'model' && message.image && (
-                              <div className="mt-2">
-                                <img
-                                  src={`data:${message.image.mimeType};base64,${message.image.data}`}
-                                  alt="Generated by Gemini"
-                                  className="max-w-full h-auto rounded-md"
-                                />
-                              </div>
-                            )}
-                            <p className="text-xs opacity-70 mt-1.5 text-right">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                       {/* Loading indicator within the thread */}
-                       {threadLoading[thread.id] && (
-                         <div className="flex justify-start">
-                            <div className="p-3 rounded-lg bg-background border animate-pulse">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            </div>
-                         </div>
-                       )}
-                       {/* Error display within the thread */}
-                       {threadErrors[thread.id] && (
-                         <Alert variant="destructive" className="mt-2">
-                           <Terminal className="h-4 w-4" />
-                           <AlertTitle>Error in thread</AlertTitle>
-                           <AlertDescription>{threadErrors[thread.id]}</AlertDescription>
-                         </Alert>
-                       )}
-                    </CardContent>
-                    <CardFooter className="border-t pt-4 space-y-3">
-                       {/* File Upload Area for Thread */}
-                       <div className="flex items-center gap-2 w-full">
-                         <Input
-                           id={`file-upload-${thread.id}`}
-                           type="file"
-                           accept={allowedFileTypesString}
-                           ref={el => threadFileInputRefs.current[thread.id] = el} // Assign ref dynamically
-                           onChange={(e) => handleThreadFileChange(thread.id, e)}
-                           className="hidden"
-                           disabled={threadLoading[thread.id]}
-                         />
-                         <Button
-                           type="button"
-                           variant="outline"
-                           size="sm"
-                           onClick={() => threadFileInputRefs.current[thread.id]?.click()}
-                           disabled={threadLoading[thread.id]}
-                           className="shrink-0"
-                         >
-                           <Paperclip className="mr-2 h-4 w-4" /> Choose File
-                         </Button>
-                         {threadFileNames[thread.id] && (
-                           <>
-                             <div className="flex-grow flex items-center gap-2 text-sm p-2 border rounded-md bg-background overflow-hidden">
-                               <FileIcon className="h-4 w-4 flex-shrink-0" />
-                               <span className="truncate">{threadFileNames[thread.id]}</span>
-                             </div>
-                             <Button
-                               type="button"
-                               variant="ghost"
-                               size="icon"
-                               onClick={() => clearThreadFile(thread.id)}
-                               disabled={threadLoading[thread.id]}
-                               title="Remove file"
-                               className="shrink-0"
-                             >
-                               <X className="h-4 w-4" />
-                             </Button>
-                           </>
-                         )}
-                       </div>
-                       {/* Text Input and Send Button */}
-                       <div className="flex w-full items-center gap-2">
-                         <Textarea
-                           placeholder="Type your follow-up prompt here..."
-                           value={threadInputs[thread.id] || ''}
-                           onChange={(e) => handleThreadInputChange(thread.id, e.target.value)}
-                           rows={2}
-                           className="resize-none flex-grow"
-                           disabled={threadLoading[thread.id]}
-                           onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendInThread(thread.id);
-                              }
-                            }}
-                         />
-                         <Button
-                           size="icon"
-                           onClick={() => handleSendInThread(thread.id)}
-                           disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])} // Disable if loading OR (text and file are empty)
-                           className="shrink-0"
-                         >
-                           <SendHorizonal className="h-4 w-4" />
-                           <span className="sr-only">Send</span>
-                         </Button>
-                       </div>
-                    </CardFooter>
-                  </Card>
-                ))}
-                 <div ref={historyEndRef} /> {/* Element to scroll to */}
-              </div>
             )}
 
             {/* Exploration Threads (History) Section */}
