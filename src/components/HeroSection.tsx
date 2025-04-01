@@ -32,44 +32,51 @@ const HeroSection = () => {
   );
 
   return (
-    <section className="relative min-h-screen bg-gradient-to-b from-medical-light to-white pt-20">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+    <section className="relative bg-gradient-to-b from-medical-light to-white pt-20"> {/* Removed min-h-screen */}
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-32"> {/* Adjusted padding */}
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center"> {/* Adjusted gap */}
           <div className="flex flex-col order-2 md:order-1">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-medical-blue mb-4 animate-fade-in whitespace-nowrap"> {/* Reduced font size slightly, kept nowrap */}
+            {/* Reverted to breakpoint sizes, centered mobile, removed justify */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-medical-blue mb-4 animate-fade-in text-center md:text-left whitespace-nowrap"> 
               Daivan Febri Juan Setiya
             </h1>
-            <p className="text-xl text-gray-600 mb-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+             {/* Reverted to breakpoint sizes, centered mobile, removed justify */}
+            <p className="text-lg sm:text-xl text-gray-600 mb-6 animate-slide-up text-center md:text-left" style={{ animationDelay: '0.2s' }}>
               Medical Student | Researcher | Beasiswa Unggulan Awardee
             </p>
-            <div className="h-1 w-32 bg-medical-teal mb-8 animate-slide-up" style={{ animationDelay: '0.3s' }}></div>
-            <p className="text-gray-700 mb-8 leading-relaxed animate-slide-up text-justify" style={{ animationDelay: '0.4s' }}> {/* Added text-justify */}
+            <div className="h-1 w-32 bg-medical-teal mb-8 animate-slide-up mx-auto md:mx-0" style={{ animationDelay: '0.3s' }}></div> {/* Centered divider on mobile */}
+            {/* Removed fluid font size, added base size, kept justify */}
+            <p className="text-base text-gray-700 mb-8 leading-relaxed animate-slide-up text-justify" style={{ animationDelay: '0.4s' }}> 
               "A third year undergraduate student majoring in Medicine at Islamic University of Indonesia. 
               Deeply passionate about acquiring new knowledge and having diverse experiences. 
               Aiming to enhance the health standards in Indonesia, bring about sustainable change, 
               and create lasting positive impacts."
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: '0.5s' }}>
+            {/* Added items-center for mobile centering */}
+            <div className="flex flex-col sm:flex-row gap-4 animate-slide-up items-center" style={{ animationDelay: '0.5s' }}>
+              {/* Reverted to breakpoint padding */}
               <Link 
                 to="/about" 
-                className="px-6 py-3 bg-medical-blue text-white rounded-md hover:bg-opacity-90 transition-all flex items-center justify-center"
+                className="px-4 py-2 sm:px-6 sm:py-3 bg-medical-blue text-white rounded-md hover:bg-opacity-90 transition-all flex items-center justify-center"
               >
                 View Full Profile
                 <ArrowRight size={16} className="ml-2" />
               </Link>
+              {/* Reverted to breakpoint padding */}
               <Link 
                 to="/contact" 
-                className="px-6 py-3 border border-medical-blue text-medical-blue rounded-md hover:bg-medical-blue hover:text-white transition-all flex items-center justify-center"
+                className="px-4 py-2 sm:px-6 sm:py-3 border border-medical-blue text-medical-blue rounded-md hover:bg-medical-blue hover:text-white transition-all flex items-center justify-center"
               >
                 Contact Me
               </Link>
             </div>
           </div>
           <div className="flex justify-center order-1 md:order-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+             {/* Restored original image size */}
             <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-white shadow-xl">
-              <img 
-                src="/profile.jpg" 
-                alt="Daivan Febri Juan Setiya" 
+              <img
+                src="/profile.jpg"
+                alt="Daivan Febri Juan Setiya"
                 className="w-full h-full object-cover"
               />
             </div>

@@ -42,8 +42,21 @@
     @apply border-border;
   }
 
+  html {
+    height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #root { /* Assuming your React app mounts to an element with id="root" in index.html */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
   }
 
   h1, h2, h3, h4, h5, h6 {

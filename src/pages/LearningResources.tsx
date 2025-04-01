@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react'; // Added useEffect, useState
 import { Link } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react'; // Import ArrowLeft icon
+import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 
 const resources = [
   {
@@ -33,6 +37,47 @@ const resources = [
 ];
 
 const LearningResources: React.FC = () => {
+  const featureName: FeatureName = 'learning_resources';
+  const { checkAccess } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for initial access check
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Initial access check on mount
+  useEffect(() => {
+    const verifyInitialAccess = async () => {
+      setIsCheckingInitialAccess(true);
+      setInitialAccessMessage(null);
+      try {
+        const result = await checkAccess(featureName);
+        // Learning Resources are only allowed if quota is not 0 (i.e., Researcher level)
+        if (result.quota === 0) {
+             setInitialAccessAllowed(false);
+             setInitialAccessMessage(result.message || 'Akses ditolak. Fitur ini hanya untuk level Researcher.');
+        } else {
+             setInitialAccessAllowed(true);
+        }
+      } catch (error) {
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingInitialAccess(false);
+      }
+    };
+
+    verifyInitialAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
   return (
     <>
       <PageHeader
@@ -40,25 +85,52 @@ const LearningResources: React.FC = () => {
         subtitle="Curated educational materials and resources based on personal learning experiences"
       />
       <div className="container max-w-7xl mx-auto px-4 py-12">
-        {/* Changed lg:grid-cols-3 to lg:grid-cols-2 for better balance with 4 items */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6"> 
-          {resources.map((resource) => (
-            <Card key={resource.id} className="flex flex-col h-full transition-all duration-300 hover:shadow-lg">
-              <CardHeader>
-                <CardTitle>{resource.title}</CardTitle>
-                <CardDescription>{resource.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                {/* Placeholder for potential future content within the card */}
-              </CardContent>
-              <CardFooter>
-                <Link to={resource.path} className="w-full">
-                  <Button className="w-full bg-medical-teal hover:bg-medical-blue">Explore</Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+
+        {/* Initial Loading State */}
+        {isCheckingInitialAccess && (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+             {[...Array(4)].map((_, i) => ( // Render 4 skeletons
+               <Skeleton key={i} className="h-[200px] w-full rounded-lg" />
+             ))}
+           </div>
+         )}
+
+        {/* Initial Access Denied Message */}
+        {!isCheckingInitialAccess && !initialAccessAllowed && (
+           <Alert variant="destructive" className="mt-4">
+             <Terminal className="h-4 w-4" />
+             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertDescription>
+               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini. Fitur ini hanya tersedia untuk level Researcher.'}
+             </AlertDescription>
+           </Alert>
+         )}
+
+        {/* Render content only if initial access is allowed */}
+        {!isCheckingInitialAccess && initialAccessAllowed && (
+          <>
+            {/* Changed lg:grid-cols-3 to lg:grid-cols-2 for better balance with 4 items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+              {resources.map((resource) => (
+                <Card key={resource.id} className="flex flex-col h-full transition-all duration-300 hover:shadow-lg">
+                  <CardHeader>
+                    <CardTitle>{resource.title}</CardTitle>
+                    <CardDescription>{resource.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    {/* Placeholder for potential future content within the card */}
+                  </CardContent>
+                  <CardFooter>
+                    <Link to={resource.path} className="w-full">
+                      <Button className="w-full bg-medical-teal hover:bg-medical-blue">Explore</Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </>
+        )} {/* End of initialAccessAllowed block */}
+
         {/* Add Back to Tools button */}
         <div className="mt-12 text-center"> 
           <Link to="/tools">

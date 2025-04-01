@@ -1,9 +1,13 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react'; // Added useEffect
 import { Link } from 'react-router-dom'; // Import Link
 import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowLeft, Loader2, Info } from 'lucide-react'; // Import Loader2 and Info icon
+import { Search, ArrowLeft, Loader2, Info, Terminal } from 'lucide-react'; // Import Loader2, Info, Terminal
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import {
   Accordion,
   AccordionContent,
@@ -18,17 +22,77 @@ interface SearchResultLinks {
 }
 
 const DiseaseLibrary = () => {
+  const featureName: FeatureName = 'disease_library';
+  const { checkAccess, incrementUsage } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for initial access check
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Component state
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResultLinks | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null); // Renamed state
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [apiError, setApiError] = useState<string | null>(null); // Renamed state
-  const [detailedInfo, setDetailedInfo] = useState<string | null>(null); // State for detailed info
-  const [isDetailedLoading, setIsDetailedLoading] = useState<boolean>(false); // Loading state for detailed info
-  const [detailedError, setDetailedError] = useState<string | null>(null); // Error state for detailed info
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state for search action
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [detailedInfo, setDetailedInfo] = useState<string | null>(null);
+  const [isDetailedLoading, setIsDetailedLoading] = useState<boolean>(false);
+  const [detailedError, setDetailedError] = useState<string | null>(null);
+
+  // Initial access check on mount
+  useEffect(() => {
+    const verifyInitialAccess = async () => {
+      setIsCheckingInitialAccess(true);
+      setInitialAccessMessage(null);
+      try {
+        // Check access without intending to increment yet
+        const result = await checkAccess(featureName);
+        // We only care if they have *any* access (quota > 0 or null)
+        // The specific remaining count doesn't matter here, only for the search action itself.
+        // We use result.quota !== 0 check to determine if the level allows access at all.
+        if (result.quota === 0) { // Explicitly denied by level
+             setInitialAccessAllowed(false);
+             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+        } else {
+             setInitialAccessAllowed(true); // Allow rendering the search UI
+        }
+
+      } catch (error) {
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingInitialAccess(false);
+      }
+    };
+
+    verifyInitialAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
+
+    // --- Action Access Check ---
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({
+        title: "Akses Ditolak",
+        description: accessResult.message || 'Anda tidak dapat melakukan pencarian saat ini.',
+        variant: "destructive",
+      });
+      return; // Stop the search
+    }
+    // --- End Action Access Check ---
+
     const trimmedQuery = searchQuery.trim();
     if (!trimmedQuery) {
       setSearchResults(null);
@@ -80,9 +144,21 @@ const DiseaseLibrary = () => {
     } finally {
       setIsLoading(false);
     }
+
+    // --- Increment Usage ---
+    // Increment only after confirming the search will proceed
+    await incrementUsage(featureName);
+    // Optionally show remaining quota after successful search
+    // if (accessResult.remaining !== null) {
+    //    const remainingAfterIncrement = accessResult.remaining - 1;
+    //    toast({ title: "Info", description: `Sisa kuota pencarian hari ini: ${remainingAfterIncrement}` });
+    // }
+    // --- End Increment Usage ---
   };
 
   // Function to fetch detailed information
+  // TODO: Consider if 'Explore More' should also consume a quota or have its own.
+  // For now, it doesn't consume the 'disease_library' quota.
   const handleExploreMore = async () => {
     if (!searchQuery) return;
 
@@ -175,8 +251,30 @@ const DiseaseLibrary = () => {
 
       <div className="container max-w-4xl mx-auto px-4 py-12">
 
-        {/* Disclaimer */}
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 text-justify" role="alert">
+        {/* Initial Loading State */}
+        {isCheckingInitialAccess && (
+           <div className="flex flex-col space-y-3 mt-4">
+             <Skeleton className="h-[60px] w-full rounded-lg" /> {/* Placeholder for form */}
+             <Skeleton className="h-[100px] w-full rounded-lg" /> {/* Placeholder for results area */}
+           </div>
+         )}
+
+        {/* Initial Access Denied Message */}
+        {!isCheckingInitialAccess && !initialAccessAllowed && (
+           <Alert variant="destructive" className="mt-4">
+             <Terminal className="h-4 w-4" />
+             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertDescription>
+               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+             </AlertDescription>
+           </Alert>
+         )}
+
+        {/* Render content only if initial access is allowed */}
+        {!isCheckingInitialAccess && initialAccessAllowed && (
+          <>
+            {/* Disclaimer */}
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 text-justify" role="alert">
           <p className="font-bold">IMPORTANT DISCLAIMER:</p>
           <p>This tool provides links to external search results on authoritative sources (Mayo Clinic, MedlinePlus) for general informational purposes ONLY. It DOES NOT constitute medical advice, diagnosis, or treatment recommendation. Always consult with a qualified healthcare professional for any health concerns or before making any decisions related to your health or treatment.</p>
         </div>
@@ -201,7 +299,7 @@ const DiseaseLibrary = () => {
           </Button>
         </form>
 
-        {/* Loading Indicator */}
+            {/* Loading Indicator */}
         {isLoading && (
           <div className="flex justify-center items-center mt-6">
             <Loader2 className="h-6 w-6 animate-spin text-medical-teal" />
@@ -308,6 +406,8 @@ const DiseaseLibrary = () => {
              <p className="text-xs text-gray-500 mt-4 italic text-justify">Disclaimer: This detailed information was generated by AI and is for informational purposes only. Always consult the original sources and a healthcare professional.</p>
           </div>
         )}
+          </>
+        )} {/* End of initialAccessAllowed block */}
 
       </div>
 

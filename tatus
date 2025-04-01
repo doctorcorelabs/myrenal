@@ -1,0 +1,198 @@
+[33mcommit c407a3075fd8252088719afd41487d43043b894e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Tue Apr 1 03:39:56 2025 +0700
+
+    Revert medical news fetch interval to every 6 hours
+
+[33mcommit ce1758bba611af26fc550334d47689dc3d9806c9[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Tue Apr 1 03:24:59 2025 +0700
+
+    Implement Supabase Realtime for Medical News
+
+[33mcommit f93592a21f50bc45fb7bb5ab5e718fc06d4ef5d1[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Tue Apr 1 03:01:12 2025 +0700
+
+    Update medical news fetch interval to every 3 minutes
+
+[33mcommit 531de0a3b59a2a3042f80c8e6c482b32c16f4eaa[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Tue Apr 1 02:58:25 2025 +0700
+
+    Add debug logging for Supabase env vars
+
+[33mcommit 8166d5eb4f8e9f8aa252c615cad5dca407a32f19[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Mon Mar 31 19:37:03 2025 +0700
+
+    Update medical news function: run every 4 hours and prune old news
+
+[33mcommit ffb6475afdc518775cd9ccc2b4f9bea4f75202ad[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 20:31:44 2025 +0700
+
+    Fix auto play
+
+[33mcommit 59ddd5fefde1c66f70e1dea9cb29821954b38730[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 20:22:07 2025 +0700
+
+    Medical News
+
+[33mcommit 234a1a0c7e34691c14f962666edd945fe4a720d8[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 14:36:40 2025 +0700
+
+    Fix drug interaction
+
+[33mcommit 2e063d312f7d52f97db455f8c403fe03e0bd6fb6[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 14:25:24 2025 +0700
+
+    drug interaction checker
+
+[33mcommit 57bd06a0602169b1488b33e7f0ad4daaf5bbadc8[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 12:25:36 2025 +0700
+
+    test fix gemini 2.5
+
+[33mcommit b20bdd1ab1bf7f2e1e6df81abd25c22f5cfa25db[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 11:28:17 2025 +0700
+
+    attempt 2 gemini 2.5
+
+[33mcommit 4fd0a554d200d5b620d24b64d31ecf85890f5e9e[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 11:16:00 2025 +0700
+
+    attempt gemini 2.5
+
+[33mcommit 6b2d76b1ff7429039fa947d0f5c8a596539a7c41[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 08:32:13 2025 +0700
+
+    fix bug gemini 2.5
+
+[33mcommit 9eee3ff77576b06f37a4c77141d42efa1803f3b3[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sun Mar 30 08:20:58 2025 +0700
+
+    update bug gemini 2.5
+
+[33mcommit 8b575f5bf6acad277070b7e084a101ea4487ce58[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 23:48:55 2025 +0700
+
+    gemini
+
+[33mcommit 78e62d4061e3750e618e306182c28f556da06b10[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 19:03:47 2025 +0700
+
+    Update project files
+
+[33mcommit 9c20a6422f0a974770f9d893f4557f151a07392d[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 17:51:07 2025 +0700
+
+    Update project files
+
+[33mcommit af31c371b1782bc3e4ef09bf4cd80651cf3b9a6a[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 16:55:30 2025 +0700
+
+    Fix: Explicitly set framework for netlify dev
+
+[33mcommit 406756b72e19fdba1e94f86517a83b977cca5506[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 16:47:34 2025 +0700
+
+    Fix: Revert disease details parser to handle bold headings
+
+[33mcommit b4b4edc1335a984b76bfc66e7bb3f60e7fa08a88[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 16:43:33 2025 +0700
+
+    Fix: Update parser for disease details headings
+
+[33mcommit e9efce02fe1885f7bed321a3da6f9a8602be170a[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 16:27:58 2025 +0700
+
+    Fix: Add Netlify SPA redirect rule
+
+[33mcommit fe9982dc7f66dbe7c6d805d41447b650b1e445e3[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 16:17:26 2025 +0700
+
+    6 features
+
+[33mcommit 7dc5c2a1876a6618e4eb3145de357f04e659fdd4[m
+Merge: 17e6a5c 3e584d1
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 06:19:16 2025 +0700
+
+    Finish merge and untrack .env
+
+[33mcommit 17e6a5cc0061fcb730a7e38db7b897c6e92a764c[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 06:04:00 2025 +0700
+
+    feat: Implement Nutrition Database feature with FDC API
+
+[33mcommit 3e584d1e4c12ca0e3113f4384d67cc846096a49e[m
+Author: ddaiivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 04:56:21 2025 +0700
+
+    Update README.md
+
+[33mcommit a93e7fdeb061edac78feb417e00479259d3f1d1e[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 04:50:43 2025 +0700
+
+    Fix: Use module.exports in drug-search.cjs
+
+[33mcommit 1a3215c67cc0b7813b73b83370fcfe23ed95b006[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 04:42:23 2025 +0700
+
+    Rename drug-search function to .cjs for CommonJS compatibility
+
+[33mcommit 549c37a5463e242d088d8e18b8bf952739dae3e8[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 04:27:16 2025 +0700
+
+    Downgrade node-fetch to v2 for Netlify compatibility
+
+[33mcommit 69d08313fa414d29d32e7e0e2907f40368ea3b2d[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Sat Mar 29 04:14:42 2025 +0700
+
+    Update drug-search logging and other project changes
+
+[33mcommit b63851688dfae27d012750e4cc5053804a3c9911[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Fri Mar 28 23:20:09 2025 +0700
+
+    Add detailed logging to drug-search function
+
+[33mcommit 3e1151e57ad4ce74b01ca09540dda34583dcd5ce[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Fri Mar 28 23:12:40 2025 +0700
+
+    Add netlify.toml for explicit configuration
+
+[33mcommit 11ae94d25d1db2d04a9c3a50d5fa32a4709a5f9c[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Fri Mar 28 20:52:33 2025 +0700
+
+    feat: Add Express server for Node.js hosting and update API calls
+
+[33mcommit 647b5d67c9f4ce05088a0640228fee2e293718ba[m
+Author: daivan <daivanfebrijuansetiya@gmail.com>
+Date:   Fri Mar 28 20:33:28 2025 +0700
+
+    first commit

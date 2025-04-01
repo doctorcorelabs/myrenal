@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
+import { useState, useEffect } from 'react'; // Added useEffect
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Terminal, Loader2, ArrowLeft } from "lucide-react"; // Added ArrowLeft
+import { Terminal, Loader2, ArrowLeft } from "lucide-react";
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 
 // --- Interfaces ---
 interface Nutrient {
@@ -48,23 +51,79 @@ interface FdcApiResponse {
 
 // --- Component ---
 const NutritionDatabase = () => {
+  const featureName: FeatureName = 'nutrition_database';
+  const { checkAccess, incrementUsage } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for initial access check
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Component state
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
-  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false); // Loading for search action
+  const [searchError, setSearchError] = useState<string | null>(null); // Error for search action
 
   const [selectedFoodDetails, setSelectedFoodDetails] = useState<FoodDetail | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false); // Loading for detail fetch
+  const [detailError, setDetailError] = useState<string | null>(null); // Error for detail fetch
 
   const apiKey = import.meta.env.VITE_FDC_API_KEY;
   const searchApiUrl = 'https://api.nal.usda.gov/fdc/v1/foods/search';
   const detailApiUrlBase = 'https://api.nal.usda.gov/fdc/v1/food/';
 
+  // Initial access check on mount
+  useEffect(() => {
+    const verifyInitialAccess = async () => {
+      setIsCheckingInitialAccess(true);
+      setInitialAccessMessage(null);
+      try {
+        const result = await checkAccess(featureName);
+        if (result.quota === 0) {
+             setInitialAccessAllowed(false);
+             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+        } else {
+             setInitialAccessAllowed(true);
+        }
+      } catch (error) {
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingInitialAccess(false);
+      }
+    };
+
+    verifyInitialAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+
   // --- Search Logic ---
   const handleSearch = async () => {
+    // --- Action Access Check ---
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({
+        title: "Akses Ditolak",
+        description: accessResult.message || 'Anda tidak dapat melakukan pencarian saat ini.',
+        variant: "destructive",
+      });
+      return; // Stop the search
+    }
+    // --- End Action Access Check ---
+
     if (!query.trim()) {
-      setSearchError('Please enter a food item to search.');
+      // Use toast or keep setSearchError
+      toast({ title: "Input Error", description: "Please enter a food item to search.", variant: "default" });
+      // setSearchError('Please enter a food item to search.');
       setResults([]);
       return;
     }
@@ -93,9 +152,15 @@ const NutritionDatabase = () => {
     } finally {
       setIsLoadingSearch(false);
     }
+
+    // --- Increment Usage ---
+    await incrementUsage(featureName);
+    // --- End Increment Usage ---
   };
 
   // --- Detail Fetch Logic ---
+  // TODO: Consider if viewing details should consume a quota.
+  // For now, it doesn't consume the 'nutrition_database' quota.
   const fetchFoodDetails = async (fdcId: number) => {
     if (!apiKey) {
       setDetailError('API key is missing.');
@@ -138,11 +203,34 @@ const NutritionDatabase = () => {
     <>
       <PageHeader 
         title="Nutrition Database" 
-        subtitle="Search the FoodData Central database for nutritional information" 
+        subtitle="Search the FoodData Central database for nutritional information"
       />
       <div className="container max-w-7xl mx-auto px-4 py-12 space-y-6">
-        {/* Search Bar */}
-        <div className="flex w-full max-w-lg items-center space-x-2 mx-auto">
+
+        {/* Initial Loading State */}
+        {isCheckingInitialAccess && (
+           <div className="flex flex-col space-y-3 mt-4">
+             <Skeleton className="h-[50px] w-full max-w-lg mx-auto rounded-lg" /> {/* Placeholder for search bar */}
+             <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for results area */}
+           </div>
+         )}
+
+        {/* Initial Access Denied Message */}
+        {!isCheckingInitialAccess && !initialAccessAllowed && (
+           <Alert variant="destructive" className="mt-4">
+             <Terminal className="h-4 w-4" />
+             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertDescription>
+               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+             </AlertDescription>
+           </Alert>
+         )}
+
+        {/* Render content only if initial access is allowed */}
+        {!isCheckingInitialAccess && initialAccessAllowed && (
+          <>
+            {/* Search Bar */}
+            <div className="flex w-full max-w-lg items-center space-x-2 mx-auto">
           <Input 
             type="text" 
             placeholder="Search for a food item (e.g., Apple)" 
@@ -279,7 +367,9 @@ const NutritionDatabase = () => {
               </Card>
             ))}
           </div>
-        )}
+            )}
+          </>
+        )} {/* End of initialAccessAllowed block */}
 
         {/* Back to Tools Button */}
         <div className="flex justify-center mt-8 mb-4">

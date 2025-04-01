@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, UserPlus, LogOut, User, Wrench } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { Menu, X, LogIn, UserPlus, LogOut, User, Wrench, ArrowUpCircle } from 'lucide-react'; // Added ArrowUpCircle
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast'; // Added useToast
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator, // Added Separator
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -14,12 +16,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { UpgradePlanDialog } from './UpgradePlanDialog'; // Import the dialog
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Mobile menu state
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false); // State for dialog
   const location = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, level, isAuthenticated, logout } = useAuth(); // Added level
+  const navigate = useNavigate(); // Added navigate
+  const { toast } = useToast(); // Added toast
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -53,7 +59,33 @@ const Navbar = () => {
     logout();
   };
 
+  // Placeholder function for initiating upgrade (calls placeholder in AuthContext or similar)
+  const handleUpgradeClick = useCallback(async () => {
+    if (!user) return; // Should not happen if button is shown, but good practice
+
+    // TODO: Replace this with the actual call to initiateStripeCheckout
+    // This might involve moving initiateStripeCheckout from SignUp to AuthContext
+    // or creating a dedicated function/hook for it.
+    console.log(`Upgrade clicked for user: ${user.id}, email: ${user.email}`);
+    // This function now primarily opens the dialog.
+    // The placeholder toast is removed from here as the dialog handles the next step.
+    // toast({
+    //   title: "Upgrade Feature Placeholder",
+    //   description: "Implement payment gateway checkout initiation here.", // Generic text
+    // });
+    // Example of calling a placeholder function (assuming it exists)
+    // try {
+    //   await initiateStripeCheckout(user.id, user.email || '', 'Premium'); // Or prompt user for Premium/Researcher
+    // } catch (error: any) {
+    //   toast({ title: "Error", description: error.message, variant: "destructive" });
+    // }
+    // For now, just open the dialog
+    setIsUpgradeDialogOpen(true);
+  }, [user, toast]); // Dependencies
+
+
   return (
+    <> {/* Wrap with Fragment to include Dialog */}
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'py-4 bg-transparent'}`}>
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
@@ -109,7 +141,18 @@ const Navbar = () => {
                       <span>Tools</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer">
+                  {/* Conditionally show Upgrade Plan item */}
+                  {level === 'Free' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleUpgradeClick} className="flex items-center gap-2 cursor-pointer text-green-600 focus:text-green-700 focus:bg-green-50">
+                        <ArrowUpCircle className="h-4 w-4" />
+                        <span>Upgrade Plan</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
                   </DropdownMenuItem>
@@ -183,10 +226,22 @@ const Navbar = () => {
             <div className="pt-4 border-t border-gray-200">
               {isAuthenticated ? (
                 <div className="space-y-2">
-                  <div className="text-sm text-gray-500">Signed in as {user?.email || 'User'}</div> {/* Changed user.name to user.email */}
+                  <div className="text-sm text-gray-500 px-2">Signed in as {user?.email || 'User'}</div>
+                  <div className="text-xs text-gray-400 px-2 capitalize">Level: {level || 'Unknown'}</div>
+                   {/* Conditionally show Upgrade Plan button for Free users */}
+                   {level === 'Free' && (
+                     <Button
+                       variant="ghost"
+                       onClick={handleUpgradeClick}
+                       className="w-full flex items-center justify-start gap-2 text-left py-2 text-green-600 hover:bg-green-50 hover:text-green-700"
+                     >
+                       <ArrowUpCircle className="h-5 w-5" />
+                       <span>Upgrade Plan</span>
+                     </Button>
+                   )}
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 text-left py-2 text-red-600"
+                    className="w-full flex items-center gap-2 text-left py-2 text-red-600 hover:bg-red-50 hover:text-red-700"
                   >
                     <LogOut className="h-5 w-5" />
                     <span>Sign Out</span>
@@ -224,6 +279,9 @@ const Navbar = () => {
         </nav>
       )}
     </header>
+    {/* Render the Dialog component */}
+    <UpgradePlanDialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen} />
+    </>
   );
 };
 

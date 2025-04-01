@@ -9,9 +9,9 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col flex-grow bg-white"> {/* Changed h-full to flex-grow */}
       <Navbar />
-      <main className="flex-grow pb-20"> {/* Added pb-20 for bottom padding */}
+      <main className="flex-grow bg-white"> {/* Removed pb-20 */}
         {children}
       </main>
       <Footer />

@@ -3,10 +3,14 @@ import axios from 'axios';
 import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react'; // Ensure ArrowLeft is imported
+import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight, ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox"; 
 import { Link } from 'react-router-dom'; // Ensure Link is imported
@@ -23,24 +27,81 @@ interface GuidelineResult {
 const RESULTS_PER_PAGE = 30;
 
 const ClinicalGuidelines = () => {
+    const featureName: FeatureName = 'clinical_guidelines';
+    const { checkAccess, incrementUsage } = useFeatureAccess();
+    const { toast } = useToast();
+
+    // State for initial access check
+    const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+    const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+    const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+    // Component state
     const [keywords, setKeywords] = useState('');
     const [results, setResults] = useState<GuidelineResult[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false); // Loading state for search action
     const [error, setError] = useState<string | null>(null);
     const [searchPerformed, setSearchPerformed] = useState(false);
-    
-    const [currentPage, setCurrentPage] = useState(1); 
-    const [targetPage, setTargetPage] = useState(1); 
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [targetPage, setTargetPage] = useState(1);
     const [totalResults, setTotalResults] = useState(0);
-    const [dateFilter, setDateFilter] = useState('none'); 
-    const [sortBy, setSortBy] = useState('relevance'); 
-    const [freeFullTextOnly, setFreeFullTextOnly] = useState(false); 
+    const [dateFilter, setDateFilter] = useState('none');
+    const [sortBy, setSortBy] = useState('relevance');
+    const [freeFullTextOnly, setFreeFullTextOnly] = useState(false);
 
     const totalPages = totalResults > 0 ? Math.ceil(totalResults / RESULTS_PER_PAGE) : 0;
 
+    // Initial access check on mount
+    useEffect(() => {
+        const verifyInitialAccess = async () => {
+          setIsCheckingInitialAccess(true);
+          setInitialAccessMessage(null);
+          try {
+            const result = await checkAccess(featureName);
+            if (result.quota === 0) {
+                 setInitialAccessAllowed(false);
+                 setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+            } else {
+                 setInitialAccessAllowed(true);
+            }
+          } catch (error) {
+            console.error("Error checking initial feature access:", error);
+            setInitialAccessAllowed(false);
+            setInitialAccessMessage('Gagal memeriksa akses fitur.');
+            toast({
+              title: "Error",
+              description: "Tidak dapat memverifikasi akses fitur saat ini.",
+              variant: "destructive",
+            });
+          } finally {
+            setIsCheckingInitialAccess(false);
+          }
+        };
+
+        verifyInitialAccess();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []); // Run only once on mount
+
+
     const fetchPageData = async (pageToFetch: number) => {
+        // --- Action Access Check (for subsequent page fetches) ---
+        // We assume initial access was granted to reach this point,
+        // but we still check quota for fetching more pages.
+        const accessResult = await checkAccess(featureName);
+        if (!accessResult.allowed) {
+          toast({
+            title: "Akses Ditolak",
+            description: accessResult.message || 'Anda tidak dapat memuat halaman selanjutnya saat ini.',
+            variant: "destructive",
+          });
+          setIsLoading(false); // Ensure loading stops if denied
+          return;
+        }
+        // --- End Action Access Check ---
+
         const trimmedKeywords = keywords.trim();
-        if (trimmedKeywords === '') return; 
+        if (trimmedKeywords === '') return;
 
         setIsLoading(true);
         setError(null);
@@ -86,12 +147,29 @@ const ClinicalGuidelines = () => {
         } finally {
             setIsLoading(false);
         }
+
+        // --- Increment Usage (for subsequent page fetches) ---
+        // Increment after successfully fetching a new page's data
+        await incrementUsage(featureName);
+        // --- End Increment Usage ---
     };
 
     const performPubmedSearch = async (resetPage = true) => {
+        // --- Action Access Check (for initial search) ---
+        const accessResult = await checkAccess(featureName);
+        if (!accessResult.allowed) {
+          toast({
+            title: "Akses Ditolak",
+            description: accessResult.message || 'Anda tidak dapat melakukan pencarian saat ini.',
+            variant: "destructive",
+          });
+          return; // Stop the search
+        }
+        // --- End Action Access Check ---
+
         const trimmedKeywords = keywords.trim();
         if (trimmedKeywords === '') {
-            alert('Please enter keywords to search for guidelines.');
+            toast({ title: "Input Required", description: "Please enter keywords to search." }); // Use toast instead of alert
             return;
         }
         
@@ -147,6 +225,11 @@ const ClinicalGuidelines = () => {
              setTotalResults(0);
              setIsLoading(false);
         }
+
+        // --- Increment Usage (for initial search) ---
+        // Increment after confirming the search will proceed
+        await incrementUsage(featureName);
+        // --- End Increment Usage ---
     };
 
 
@@ -211,8 +294,30 @@ const ClinicalGuidelines = () => {
             />
             <div className="container max-w-7xl mx-auto px-4 py-12">
 
-                {/* PubMed Guideline Search Feature */}
-                <div className="pubmed-search-feature p-5 border border-gray-200 dark:border-gray-700 rounded-md mb-6 shadow-sm bg-card">
+                {/* Initial Loading State */}
+                {isCheckingInitialAccess && (
+                   <div className="flex flex-col space-y-3 mt-4">
+                     <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for search card */}
+                     <Skeleton className="h-[300px] w-full rounded-lg" /> {/* Placeholder for results area */}
+                   </div>
+                 )}
+
+                {/* Initial Access Denied Message */}
+                {!isCheckingInitialAccess && !initialAccessAllowed && (
+                   <Alert variant="destructive" className="mt-4">
+                     <Terminal className="h-4 w-4" />
+                     <AlertTitle>Akses Ditolak</AlertTitle>
+                     <AlertDescription>
+                       {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+                     </AlertDescription>
+                   </Alert>
+                 )}
+
+                {/* Render content only if initial access is allowed */}
+                {!isCheckingInitialAccess && initialAccessAllowed && (
+                  <>
+                    {/* PubMed Guideline Search Feature */}
+                    <div className="pubmed-search-feature p-5 border border-gray-200 dark:border-gray-700 rounded-md mb-6 shadow-sm bg-card">
                      <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
                         <Search className="h-5 w-5 text-primary" />
                         Search PubMed for Guidelines
@@ -292,9 +397,9 @@ const ClinicalGuidelines = () => {
                             </Label>
                         </div>
                     </div>
-                </div>
+                    </div>
 
-                {/* Results Section */}
+                    {/* Results Section */}
                 <div className="results-section mt-8">
                     {/* Loading/Error/No Results States */}
                     {isLoading && ( <div className="flex justify-center items-center gap-2 text-muted-foreground py-4"><Loader2 className="h-5 w-5 animate-spin" /><span>Searching PubMed...</span></div> )}
@@ -355,14 +460,16 @@ const ClinicalGuidelines = () => {
                 </div>
 
                  {/* Back to Tools Button */}
-                 <div className="mt-12 text-center"> 
+                 <div className="mt-12 text-center">
                     <Button variant="outline" asChild>
-                        <Link to="/tools" className="inline-flex items-center"> {/* Added flex and items-center */}
+                        <Link to="/tools" className="inline-flex items-center">
                             <ArrowLeft className="mr-2 h-4 w-4" /> {/* Added icon */}
                             Back to Tools
                         </Link>
                     </Button>
-                </div>
+                 </div>
+                </>
+               )} {/* End of initialAccessAllowed block */}
             </div>
         </>
     );

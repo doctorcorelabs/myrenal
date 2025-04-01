@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+// Label might not be used, but keep for now
+// import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Loader2, Terminal } from 'lucide-react'; // Added Terminal
+import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import ReactMarkdown from 'react-markdown'; // Import react-markdown
 import PageHeader from '../components/PageHeader';
 
@@ -33,13 +37,68 @@ interface DrugResult {
 
 
 const DrugReference = () => {
+  const featureName: FeatureName = 'drug_reference';
+  const { checkAccess, incrementUsage } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for initial access check
+  const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Component state
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [results, setResults] = useState<DrugResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state for search action
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState<boolean>(false);
 
+  // Initial access check on mount
+  useEffect(() => {
+    const verifyInitialAccess = async () => {
+      setIsCheckingInitialAccess(true);
+      setInitialAccessMessage(null);
+      try {
+        const result = await checkAccess(featureName);
+        // Check if quota is explicitly 0 (denied by level)
+        if (result.quota === 0) {
+             setInitialAccessAllowed(false);
+             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
+        } else {
+             setInitialAccessAllowed(true); // Allow rendering the search UI
+        }
+      } catch (error) {
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingInitialAccess(false);
+      }
+    };
+
+    verifyInitialAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+
   const handleSearch = async () => {
+    // --- Action Access Check ---
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({
+        title: "Akses Ditolak",
+        description: accessResult.message || 'Anda tidak dapat melakukan pencarian saat ini.',
+        variant: "destructive",
+      });
+      return; // Stop the search
+    }
+    // --- End Action Access Check ---
+
     if (!searchTerm.trim()) {
       setError('Please enter a drug name.');
       setResults(null);
@@ -96,6 +155,11 @@ const DrugReference = () => {
       // This block always executes
       setIsLoading(false);
     }
+
+    // --- Increment Usage ---
+    // Increment after confirming the search will proceed
+    await incrementUsage(featureName);
+    // --- End Increment Usage ---
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -202,13 +266,36 @@ const DrugReference = () => {
     <div>
       <PageHeader 
         title="Drug Reference" 
-        subtitle="Search US FDA drug label information via OpenFDA." 
+        subtitle="Search US FDA drug label information via OpenFDA."
       />
-      
+
       <div className="container-custom">
         <div className="max-w-4xl mx-auto">
-          {/* Disclaimer */}
-          <Alert variant="destructive" className="mb-8 bg-yellow-50 border-yellow-500 text-yellow-800">
+
+          {/* Initial Loading State */}
+          {isCheckingInitialAccess && (
+             <div className="flex flex-col space-y-3 mt-8">
+               <Skeleton className="h-[120px] w-full rounded-lg" /> {/* Placeholder for search card */}
+               <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for results card */}
+             </div>
+           )}
+
+          {/* Initial Access Denied Message */}
+          {!isCheckingInitialAccess && !initialAccessAllowed && (
+             <Alert variant="destructive" className="mt-8">
+               <Terminal className="h-4 w-4" />
+               <AlertTitle>Akses Ditolak</AlertTitle>
+               <AlertDescription>
+                 {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+               </AlertDescription>
+             </Alert>
+           )}
+
+          {/* Render content only if initial access is allowed */}
+          {!isCheckingInitialAccess && initialAccessAllowed && (
+            <>
+              {/* Disclaimer */}
+              <Alert variant="destructive" className="mb-8 bg-yellow-50 border-yellow-500 text-yellow-800">
             <AlertTriangle className="h-4 w-4 !text-yellow-800" />
             <AlertTitle className="font-bold">Important Disclaimer</AlertTitle>
             <AlertDescription className="text-justify"> {/* Added text-justify */}
@@ -274,9 +361,11 @@ This tool **DOES NOT substitute for professional medical advice, diagnosis, or t
                  )}
              </CardContent>
           </Card>
+            </>
+          )} {/* End of initialAccessAllowed block */}
 
           {/* Back Button */}
-          <div className="mt-12 flex justify-center"> 
+          <div className="mt-12 flex justify-center">
             <Link to="/tools">
               <Button variant="outline" className="flex items-center gap-2">
                 <ArrowLeft size={16} />
