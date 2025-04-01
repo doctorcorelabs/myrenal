@@ -923,11 +923,12 @@ const ExploreGemini: React.FC = () => {
                            <Terminal className="h-4 w-4" />
                            <AlertTitle>Error in thread</AlertTitle>
                            <AlertDescription>{threadErrors[thread.id]}</AlertDescription>
-                         </Alert>
+                        </Alert>
                        )}
                     </CardContent>
-                    <CardFooter className="border-t pt-4 space-y-3">
-                       {/* File Upload Area for Thread */}
+                    {/* Modified CardFooter for new layout */}
+                    <CardFooter className="border-t pt-4 flex flex-col items-end">
+                       {/* File Upload Area for Thread (Remains First) */}
                        <div className="flex items-center gap-2 w-full">
                          <Input
                            id={`file-upload-${thread.id}`}
@@ -968,14 +969,13 @@ const ExploreGemini: React.FC = () => {
                            </>
                          )}
                        </div>
-                       {/* Text Input and Send Button */}
-                       <div className="flex w-full items-center gap-2">
-                         <Textarea
+                       {/* Text Input Area (Now Second) */}
+                       <Textarea
                            placeholder="Type your follow-up prompt here..."
                            value={threadInputs[thread.id] || ''}
                            onChange={(e) => handleThreadInputChange(thread.id, e.target.value)}
                            rows={2}
-                           className="resize-none flex-grow"
+                           className="mt-3 resize-none w-full" // Added margin and full width
                            disabled={threadLoading[thread.id]}
                            onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
@@ -984,16 +984,16 @@ const ExploreGemini: React.FC = () => {
                               }
                             }}
                          />
-                         <Button
+                       {/* Send Button (Now Third) */}
+                       <Button
                            size="icon"
                            onClick={() => handleSendInThread(thread.id)}
                            disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])} // Disable if loading OR (text and file are empty)
-                           className="shrink-0"
+                           className="mt-3 shrink-0" // Added margin
                          >
                            <SendHorizonal className="h-4 w-4" />
                            <span className="sr-only">Send</span>
                          </Button>
-                       </div>
                     </CardFooter>
                   </Card>
                 ))}
