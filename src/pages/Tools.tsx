@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle, Network } from 'lucide-react'; // Added Network icon
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle, Network, ClipboardList } from 'lucide-react'; // Added ClipboardList icon
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 
@@ -14,6 +14,7 @@ const toolsData = [
     title: 'Medical Calculator',
     description: 'Calculate BMI, BSA, GFR, and other important clinical values',
     icon: Calculator,
+    path: '/tools/medical-calculator',
     comingSoon: false
   },
   {
@@ -21,70 +22,88 @@ const toolsData = [
     title: 'Drug Reference',
     description: 'Access comprehensive drug information database',
     icon: Pill,
-    comingSoon: false // Changed to false
+    path: '/tools/drug-reference',
+    comingSoon: false
   },
   {
-    id: 3, // Re-sequenced ID
-    title: 'Nutrition Database', 
-    description: 'Explore nutritional information for various food items', 
-    icon: Apple, 
-    comingSoon: false // Changed to false
+    id: 3,
+    title: 'Nutrition Database',
+    description: 'Explore nutritional information for various food items',
+    icon: Apple,
+    path: '/tools/nutrition-database',
+    comingSoon: false
   },
   {
     id: 4,
     title: 'Disease Library',
     description: 'Comprehensive information on various conditions',
     icon: Book,
-    comingSoon: false // Changed to false
+    path: '/tools/disease-library',
+    comingSoon: false
   },
   {
     id: 5,
     title: 'Clinical Guidelines',
     description: 'Access the latest medical practice guidelines',
     icon: FileSearch,
-    comingSoon: false // Changed to false
+    path: '/tools/clinical-guidelines',
+    comingSoon: false
   },
   {
     id: 6,
-    title: 'AI Chatbot', // Changed title
-    description: 'Engage with an AI assistant for medical information and queries', // Changed description
-    icon: Brain, // Changed icon
-    comingSoon: false // Changed comingSoon
-  },
-  {
-    id: 7, // Re-sequenced ID
-    title: 'AI Peer-Review', // Changed title
-    description: 'Get AI-powered feedback on your clinical notes or case studies', // Changed description
-    icon: FileText, // Changed icon
-    comingSoon: false // Changed comingSoon
-  },
-  {
-    id: 8, // Now Explore GEMINI
-    title: 'Explore GEMINI',
-    description: 'Utilize Google\'s advanced AI for medical research exploration.',
-    icon: Computer, 
+    title: 'AI Chatbot',
+    description: 'Engage with an AI assistant for medical information and queries',
+    icon: Brain,
+    path: '/tools/ai-chatbot',
     comingSoon: false
   },
   {
-    id: 9, // Now Drug Interaction Checker
+    id: 7,
+    title: 'AI Peer-Review',
+    description: 'Get AI-powered feedback on your clinical notes or case studies',
+    icon: FileText,
+    path: '/tools/ai-peer-review',
+    comingSoon: false
+  },
+  {
+    id: 8,
+    title: 'Explore GEMINI',
+    description: 'Utilize Google\'s advanced AI for medical research exploration.',
+    icon: Computer,
+    path: '/tools/explore-gemini',
+    comingSoon: false
+  },
+  {
+    id: 9,
     title: 'Drug Interaction Checker',
     description: 'Check for potential interactions between multiple drugs',
     icon: AlertTriangle,
+    path: '/tools/interaction-checker',
     comingSoon: false
   },
   {
-    id: 11, // New Tool ID (Moved Up)
+    id: 11, // Keep ID 11 for Mind Map
     title: 'AI Mind Map Generator',
     description: 'Generate visual mind maps from any topic using AI.',
-    icon: Network, // Use Network icon
+    icon: Network,
+    path: '/tools/ai-mindmap-generator',
     comingSoon: false
   },
   {
-    id: 10, // Now Learning Resources (Moved Down)
-    title: 'Learning Resources', // Changed title
-    description: 'Access curated educational materials and resources', // Changed description
-    icon: Book, // Changed icon
-    comingSoon: false // Changed comingSoon
+    id: 12, // New ID for Scoring Hub
+    title: 'Clinical Scoring Hub',
+    description: 'Access various validated clinical scoring calculators.',
+    icon: ClipboardList,
+    path: '/tools/clinical-scoring-hub',
+    comingSoon: false
+  },
+  {
+    id: 10, // Keep ID 10 for Learning Resources
+    title: 'Learning Resources',
+    description: 'Access curated educational materials and resources',
+    icon: Book,
+    path: '/tools/learning-resources',
+    comingSoon: false
   }
 ];
 
@@ -127,57 +146,19 @@ const Tools = () => {
                 {/* Tool content will go here */}
               </CardContent>
               <CardFooter>
-                {tool.id === 1 ? ( // Medical Calculator Link
-                  <Link to="/tools/medical-calculator" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 2 ? ( // Drug Reference Link
-                  <Link to="/tools/drug-reference" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 3 ? ( // Nutrition Database Link
-                  <Link to="/tools/nutrition-database" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 4 ? ( // Disease Library Link
-                  <Link to="/tools/disease-library" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 5 ? ( // Clinical Guidelines Link (Modified)
-                   <Link to="/tools/clinical-guidelines" className="w-full">
-                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                   </Link>
-                 ) : tool.id === 6 ? ( // AI Chatbot Link
-                   <Link to="/tools/ai-chatbot" className="w-full">
-                     <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                   </Link>
-                 ) : tool.id === 7 ? ( // AI Peer-Review Link
-                   <Link to="/tools/ai-peer-review" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 8 ? ( // Explore GEMINI Link (Now ID 8)
-                  <Link to="/tools/explore-gemini" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 9 ? ( // Drug Interaction Checker Link (Now ID 9)
-                  <Link to="/tools/interaction-checker" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 10 ? ( // Learning Resources Link (Now ID 10)
-                  <Link to="/tools/learning-resources" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : tool.id === 11 ? ( // AI Mind Map Generator Link (Now ID 11)
-                  <Link to="/tools/ai-mindmap-generator" className="w-full">
-                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">Launch Tool</Button>
-                  </Link>
-                ) : ( // Default Button for other tools
+                {tool.comingSoon ? (
                   <Button
-                    className="w-full bg-medical-teal hover:bg-medical-blue"
-                    disabled={tool.comingSoon} // Keep disabled logic for other 'coming soon' tools
+                    className="w-full bg-gray-400 cursor-not-allowed" // Style disabled button
+                    disabled
                   >
-                    {tool.comingSoon ? 'Not Available Yet' : 'Launch Tool'}
+                    Coming Soon
                   </Button>
+                ) : (
+                  <Link to={tool.path || '#'} className="w-full"> {/* Use tool.path, fallback to '#' */}
+                    <Button className="w-full bg-medical-teal hover:bg-medical-blue">
+                      Launch Tool
+                    </Button>
+                  </Link>
                 )}
               </CardFooter>
             </Card>
