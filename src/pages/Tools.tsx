@@ -73,18 +73,18 @@ const toolsData = [
     comingSoon: false
   },
   {
-    id: 10, // Now Learning Resources
+    id: 11, // New Tool ID (Moved Up)
+    title: 'AI Mind Map Generator',
+    description: 'Generate visual mind maps from any topic using AI.',
+    icon: Network, // Use Network icon
+    comingSoon: false
+  },
+  {
+    id: 10, // Now Learning Resources (Moved Down)
     title: 'Learning Resources', // Changed title
     description: 'Access curated educational materials and resources', // Changed description
     icon: Book, // Changed icon
     comingSoon: false // Changed comingSoon
-  },
-  {
-    id: 11, // New Tool ID
-    title: 'AI Mind Map Generator',
-    description: 'Generate visual mind maps from any topic using AI. Ideal for study and organizing ideas.',
-    icon: Network, // Use Network icon
-    comingSoon: false
   }
 ];
 

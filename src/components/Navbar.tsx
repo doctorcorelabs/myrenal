@@ -141,8 +141,8 @@ const Navbar = () => {
                       <span>Tools</span>
                     </Link>
                   </DropdownMenuItem>
-                  {/* Conditionally show Upgrade Plan item */}
-                  {level === 'Free' && (
+                  {/* Conditionally show Upgrade Plan item - Temporarily Disabled */}
+                  {/* {level === 'Free' && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleUpgradeClick} className="flex items-center gap-2 cursor-pointer text-green-600 focus:text-green-700 focus:bg-green-50">
@@ -150,8 +150,9 @@ const Navbar = () => {
                         <span>Upgrade Plan</span>
                       </DropdownMenuItem>
                     </>
-                  )}
-                  <DropdownMenuSeparator />
+                  )} */}
+                  {/* <DropdownMenuSeparator /> */} {/* Also hide separator if upgrade is the only item between separators */}
+                  <DropdownMenuSeparator /> {/* Keep this separator before Sign Out */}
                   <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
@@ -227,9 +228,9 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 px-2">Signed in as {user?.email || 'User'}</div>
-                  <div className="text-xs text-gray-400 px-2 capitalize">Level: {level || 'Unknown'}</div>
-                   {/* Conditionally show Upgrade Plan button for Free users */}
-                   {level === 'Free' && (
+                  {/* <div className="text-xs text-gray-400 px-2 capitalize">Level: {level || 'Unknown'}</div> */} {/* Temporarily hide level */}
+                   {/* Conditionally show Upgrade Plan button for Free users - Temporarily Disabled */}
+                   {/* {level === 'Free' && (
                      <Button
                        variant="ghost"
                        onClick={handleUpgradeClick}
@@ -238,7 +239,7 @@ const Navbar = () => {
                        <ArrowUpCircle className="h-5 w-5" />
                        <span>Upgrade Plan</span>
                      </Button>
-                   )}
+                   )} */}
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 text-left py-2 text-red-600 hover:bg-red-50 hover:text-red-700"

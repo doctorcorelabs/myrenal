@@ -2,7 +2,8 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Keep CardHeader here for now, might be used elsewhere implicitly by Card
+import PageHeader from '@/components/PageHeader'; // Import PageHeader
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,8 @@ import MindMapCanvas from '@/components/MindMapCanvas';
 import { Node, Edge, Position } from 'reactflow';
 import dagre from 'dagre';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import { Link } from 'react-router-dom'; // Import Link
+import { ArrowLeft } from 'lucide-react'; // Import ArrowLeft
 
 // Import Custom Nodes
 import RootNode from '@/components/mindmap/RootNode';
@@ -222,15 +225,17 @@ const MindMapMaker: React.FC = () => {
   // --- Download JSON Handler Removed ---
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Mind Map Generator</CardTitle>
-          <CardDescription>Enter a topic to generate a visual mind map using AI.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Input and Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 mb-4 items-center flex-wrap">
+    <> {/* Wrap in fragment */}
+      <PageHeader
+        title="AI Mind Map Generator"
+        subtitle="Generate visual mind maps from any topic using AI."
+      />
+      <div className="container mx-auto p-4 md:p-6 lg:p-8"> {/* Removed mt-12 */}
+        <Card> {/* Removed top margin from Card */}
+          {/* CardHeader removed */}
+          <CardContent className="mt-6"> {/* Keep internal margin for now */}
+            {/* Input and Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 items-center flex-wrap">
             <Input
               type="text"
               placeholder="Enter your topic (e.g., Diabetes Mellitus Type 2)"
@@ -329,7 +334,18 @@ const MindMapMaker: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Back to Tools Button */}
+      <div className="flex justify-center mt-8 mb-4">
+        <Link to="/tools">
+          <Button variant="outline" className="inline-flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tools
+          </Button>
+        </Link>
+      </div>
     </div>
+  </> // Add missing closing fragment tag
   );
 };
 

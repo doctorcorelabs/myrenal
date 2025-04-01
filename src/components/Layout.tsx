@@ -11,7 +11,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="flex flex-col flex-grow bg-white"> {/* Changed h-full to flex-grow */}
       <Navbar />
-      <main className="flex-grow bg-white"> {/* Removed pb-20 */}
+      <main className="flex-grow bg-white pt-6"> {/* Added top padding */}
         {children}
       </main>
       <Footer />

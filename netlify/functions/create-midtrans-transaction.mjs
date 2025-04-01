@@ -1,10 +1,10 @@
 import midtransClient from 'midtrans-client';
 
-// Define plan types (should match frontend)
-type Plan = 'Premium' | 'Researcher';
+// Define plan types (should match frontend) - Removed TS type alias
+// type Plan = 'Premium' | 'Researcher';
 
 // --- IMPORTANT: Replace with your actual prices in IDR ---
-const PLAN_PRICES: Record<Plan, number> = {
+const PLAN_PRICES = { // Removed TS type annotation
   Premium: 50000, // Example: 50,000 IDR
   Researcher: 150000, // Example: 150,000 IDR
 };
@@ -19,6 +19,18 @@ const snap = new midtransClient.Snap({
 });
 
 export const handler = async (event) => {
+  // --- TEMPORARILY DISABLED ---
+  console.log('create-midtrans-transaction.mjs called, but payment is temporarily disabled.');
+  return {
+    statusCode: 503, // Service Unavailable
+    headers: {
+      'Access-Control-Allow-Origin': '*', // Keep CORS headers for consistency
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ error: 'Payment processing is temporarily disabled.' }),
+  };
+  // --- END TEMPORARY DISABLE ---
+
   // Allow OPTIONS request for CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -52,7 +64,7 @@ export const handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing or invalid parameters (userId, userEmail, plan)' }) };
     }
 
-    const grossAmount = PLAN_PRICES[plan as Plan];
+    const grossAmount = PLAN_PRICES[plan]; // Removed TS type assertion
     if (!grossAmount) {
        return { statusCode: 400, body: JSON.stringify({ error: `Invalid plan specified: ${plan}` }) };
     }
@@ -116,7 +128,7 @@ export const handler = async (event) => {
       body: JSON.stringify({ token: transactionToken }),
     };
 
-  } catch (error: any) {
+  } catch (error) { // Removed TS type annotation
     console.error('Error creating Midtrans transaction:', error);
     // Check if it's a Midtrans API error
     const errorMessage = error.ApiResponse?.message || error.message || 'Failed to create payment transaction.';

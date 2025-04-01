@@ -23,6 +23,18 @@ const snap = new midtransClient.Snap({
 });
 
 exports.handler = async (event) => {
+  // --- TEMPORARILY DISABLED ---
+  console.log('create-midtrans-transaction.js called, but payment is temporarily disabled.');
+  return {
+    statusCode: 503, // Service Unavailable
+    headers: {
+      'Access-Control-Allow-Origin': '*', // Keep CORS headers for consistency
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ error: 'Payment processing is temporarily disabled.' }),
+  };
+  // --- END TEMPORARY DISABLE ---
+
   // Allow OPTIONS request for CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
