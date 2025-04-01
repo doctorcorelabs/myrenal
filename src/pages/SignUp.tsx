@@ -34,14 +34,15 @@ const SignUp = () => {
 
     try {
       // Call register function from AuthContext
-      const { data, error } = await register(email, password);
+      // register returns the data object { user, session } or throws an error
+      const signUpData = await register(email, password);
 
-      if (error) throw error; // Re-throw Supabase specific error
+      // Error handling is done within the register function or caught below.
 
       // Trigger handles profile creation. Check if email confirmation is needed.
-      // Note: data.user might be null if email confirmation is required.
-      // data.session will likely be null until email is confirmed.
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
+      // Note: signUpData.user might be null if email confirmation is required.
+      // signUpData.session will likely be null until email is confirmed.
+      if (signUpData?.user && signUpData.user.identities && signUpData.user.identities.length === 0) {
          // This means email confirmation is required by Supabase settings
          toast({
            title: "Check your email",
