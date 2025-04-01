@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useAuth, UserLevel } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast'; // Assuming you use shadcn/ui toast
+import { useAuth, UserLevel } from '@/contexts/AuthContext'; // Keep useAuth for toast, maybe fallback?
+import { useToast } from '@/components/ui/use-toast';
+import { User as SupabaseUser } from '@supabase/supabase-js'; // Import SupabaseUser type
 
 // Define feature names consistently (used as keys and in DB)
 export type FeatureName =
@@ -38,70 +39,94 @@ interface AccessCheckResult {
   level: UserLevel | null;
 }
 
+// Helper function (can be moved or kept here) - similar to AuthContext
+const fetchUserProfileForCheck = async (supabaseUser: SupabaseUser): Promise<{ level: UserLevel | null }> => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('level')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile in checkAccess:', error);
+        return { level: null }; // Indicate error or inability to fetch level
+      }
+      // Default to 'Free' if profile exists but level is null, or if profile doesn't exist yet
+      return { level: profile?.level as UserLevel ?? 'Free' };
+    } catch (err) {
+      console.error('Exception fetching profile in checkAccess:', err);
+      return { level: null };
+    }
+};
+
+
 export function useFeatureAccess() {
-  const { user, level, isAuthenticated } = useAuth();
+  // Keep useAuth primarily for toast or potentially as a fallback, but checkAccess will re-verify
   const { toast } = useToast();
+  // const { user: contextUser, level: contextLevel, isAuthenticated: contextIsAuthenticated } = useAuth(); // Can keep for comparison/logging if needed
 
   const checkAccess = useCallback(async (featureName: FeatureName): Promise<AccessCheckResult> => {
     const defaultDenied: AccessCheckResult = { allowed: false, remaining: 0, message: 'Authentication required.', quota: 0, currentUsage: 0, level: null };
 
-    if (!isAuthenticated || !user || !level) {
+    // --- Direct Supabase Auth Check ---
+    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !currentUser) {
+      console.error('checkAccess: Auth error or no user found.', authError);
       return defaultDenied;
     }
+    // --- End Direct Supabase Auth Check ---
+
+    // --- Fetch Profile Level Directly ---
+    const profileData = await fetchUserProfileForCheck(currentUser);
+    const currentLevel = profileData.level;
+
+    if (!currentLevel) {
+        console.error(`checkAccess: Could not determine user level for user ${currentUser.id}.`);
+        // Decide how to handle - deny access or default to Free? Let's deny for safety.
+        return { ...defaultDenied, message: 'Gagal memverifikasi level pengguna.' };
+    }
+    // --- End Fetch Profile Level ---
 
     const featureQuotas = quotas[featureName];
     if (!featureQuotas) {
       console.error(`Quota definition missing for feature: ${featureName}`);
-      return { ...defaultDenied, message: 'Feature configuration error.' };
+      return { ...defaultDenied, message: 'Feature configuration error.', level: currentLevel };
     }
 
-    const userQuota = featureQuotas[level];
+    const userQuota = featureQuotas[currentLevel]; // Use freshly fetched level
 
-    // Handle immediate denial based on level (quota is 0)
+    // Handle immediate denial based on fetched level (quota is 0)
     if (userQuota === 0) {
-        const message = level === 'Free' || level === 'Premium'
+        const message = currentLevel === 'Free' || currentLevel === 'Premium'
             ? `Fitur '${featureName.replace(/_/g, ' ')}' memerlukan level Researcher.`
             : `Anda tidak memiliki akses ke fitur '${featureName.replace(/_/g, ' ')}'.`;
-      return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: level };
+      return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: currentLevel };
     }
 
-    // If quota is null (unlimited), allow access immediately
+    // If quota is null (unlimited based on fetched level), allow access immediately
     if (userQuota === null) {
-      return { allowed: true, remaining: null, message: null, quota: null, currentUsage: 0, level: level }; // Current usage doesn't matter for unlimited
+      return { allowed: true, remaining: null, message: null, quota: null, currentUsage: 0, level: currentLevel }; // Current usage doesn't matter for unlimited
     }
 
-    // Fetch current usage from Supabase function
+    // Fetch current usage from Supabase function using the confirmed user ID
     try {
-      const { data, error } = await supabase.rpc('get_user_level_and_usage', {
-        user_id_param: user.id,
+      const { data, error: usageError } = await supabase.rpc('get_user_level_and_usage', {
+        user_id_param: currentUser.id, // Use ID from getUser()
         feature_name_param: featureName,
       });
 
-      if (error) {
-        console.error(`Error fetching usage for ${featureName}:`, error);
-        return { ...defaultDenied, message: 'Gagal memeriksa kuota penggunaan.' };
+      if (usageError) {
+        console.error(`Error fetching usage for ${featureName}:`, usageError);
+        return { ...defaultDenied, message: 'Gagal memeriksa kuota penggunaan.', level: currentLevel };
       }
 
       // The function returns an array, we expect one result
       const usageData = data?.[0];
       const currentUsage = usageData?.usage_count ?? 0;
-      const fetchedLevel = usageData?.user_level as UserLevel ?? level; // Use fetched level if available, fallback to context
-
-       // Double check level consistency if needed
-       if (fetchedLevel !== level) {
-           console.warn(`Level mismatch between context (${level}) and DB (${fetchedLevel}) for user ${user.id}. Using DB level.`);
-           // Potentially update context level here if desired, or just use DB level for check
-       }
-       const actualQuota = quotas[featureName]?.[fetchedLevel] ?? 0; // Use potentially updated level
-
-       if (actualQuota === 0) {
-            const message = `Fitur '${featureName.replace(/_/g, ' ')}' memerlukan level yang lebih tinggi.`;
-            return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: currentUsage, level: fetchedLevel };
-       }
-       if (actualQuota === null) { // Unlimited based on DB level
-            return { allowed: true, remaining: null, message: null, quota: null, currentUsage: currentUsage, level: fetchedLevel };
-       }
-
+      // We already fetched the level reliably above, so use currentLevel
+      const actualQuota = userQuota; // userQuota was determined using currentLevel
 
       const remaining = actualQuota - currentUsage;
 
@@ -112,7 +137,7 @@ export function useFeatureAccess() {
           message: `Kuota harian (${actualQuota}) untuk fitur '${featureName.replace(/_/g, ' ')}' telah tercapai. Upgrade untuk penggunaan lebih lanjut atau coba lagi besok.`,
           quota: actualQuota,
           currentUsage: currentUsage,
-          level: fetchedLevel
+          level: currentLevel
         };
       } else {
         return {
@@ -121,24 +146,32 @@ export function useFeatureAccess() {
           message: null,
           quota: actualQuota,
           currentUsage: currentUsage,
-          level: fetchedLevel
+          level: currentLevel
         };
       }
     } catch (err) {
       console.error(`Exception fetching usage for ${featureName}:`, err);
-      return { ...defaultDenied, message: 'Terjadi kesalahan saat memeriksa kuota.' };
+      return { ...defaultDenied, message: 'Terjadi kesalahan saat memeriksa kuota.', level: currentLevel };
     }
-  }, [isAuthenticated, user, level, supabase]); // Include supabase if its instance could change, though unlikely
+  }, [supabase]); // Dependency is now only supabase client instance
 
   const incrementUsage = useCallback(async (featureName: FeatureName) => {
-    if (!isAuthenticated || !user) {
-      console.warn('Attempted to increment usage while not authenticated.');
+    // Re-check auth directly here too for robustness
+    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !currentUser) {
+      console.warn('Attempted to increment usage while not authenticated (checked again).');
+      toast({
+          title: "Error",
+          description: `Gagal mencatat penggunaan: Autentikasi tidak valid.`,
+          variant: "destructive",
+        });
       return;
     }
 
     try {
       const { error } = await supabase.rpc('increment_usage', {
-        user_id_param: user.id,
+        user_id_param: currentUser.id, // Use ID from getUser()
         feature_name_param: featureName,
       });
 
@@ -159,7 +192,7 @@ export function useFeatureAccess() {
           variant: "destructive",
         });
     }
-  }, [isAuthenticated, user, supabase, toast]); // Include supabase and toast
+  }, [supabase, toast]); // Include supabase and toast
 
   return { checkAccess, incrementUsage };
 }
