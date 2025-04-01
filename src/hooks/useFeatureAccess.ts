@@ -27,7 +27,7 @@ const quotas: Record<FeatureName, Record<UserLevel, number | null>> = {
   interaction_checker: { Free: 5, Premium: 15, Researcher: null },
   explore_gemini: { Free: 5, Premium: 20, Researcher: 50 },
   nutrition_database: { Free: 10, Premium: 20, Researcher: null },
-  learning_resources: { Free: 0, Premium: 0, Researcher: null }, // No access for Free/Premium
+  learning_resources: { Free: null, Premium: null, Researcher: null }, // Temporarily allow all levels
 };
 
 interface AccessCheckResult {

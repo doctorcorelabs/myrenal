@@ -1,5 +1,5 @@
 import React from 'react'; // Import React
-import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles } from 'lucide-react';
+import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles, BrainCircuit } from 'lucide-react'; // Added BrainCircuit
 import { Link } from 'react-router-dom';
 import MedicalNewsSection from './MedicalNewsSection';
 import {
@@ -23,6 +23,7 @@ const toolsData = [
   { icon: BookOpen, title: "Learning Resources", description: "Access curated educational materials and resources", link: "/tools/learning-resources" },
   { icon: Network, title: "Interaction Checker", description: "Check for potential drug interactions", link: "/tools/interaction-checker" },
   { icon: Sparkles, title: "Explore Gemini", description: "Utilize Google's Gemini for advanced medical insights", link: "/tools/explore-gemini" },
+  { icon: BrainCircuit, title: "AI Mind Map Generator", description: "Visually organize complex medical topics with AI assistance.", link: "/tools/mind-map-maker" }, // Added AI Mind Map Generator
 ];
 
 const HeroSection = () => {
