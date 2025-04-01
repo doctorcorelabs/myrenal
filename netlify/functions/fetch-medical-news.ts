@@ -115,11 +115,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Simplified success log
     console.log(`Supabase upsert operation completed successfully for ${newsToUpsert.length} attempted items.`);
 
-    // Prune news older than 3 days based on pub_date
+    // Prune news older than 1 month based on pub_date
     try {
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      const dateString = threeDaysAgo.toISOString();
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      // Handle edge cases like setting month to -1 if current month is January
+      // Or day differences (e.g., March 31st -> Feb 28th/29th)
+      // setMonth usually handles this reasonably well.
+
+      const dateString = oneMonthAgo.toISOString();
 
       console.log(`Attempting to delete news items published before ${dateString}...`);
 
