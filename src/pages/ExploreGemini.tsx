@@ -882,7 +882,7 @@ const ExploreGemini: React.FC = () => {
                           <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
                             {/* Display Text */}
                             {message.text && (
-                              <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+                              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-justify"> {/* Added text-justify */}
                                 <ReactMarkdown>{message.text}</ReactMarkdown>
                               </div>
                             )}
