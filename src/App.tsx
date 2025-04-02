@@ -33,6 +33,7 @@ import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
 import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
 import ClinicalScoringHub from "./pages/ClinicalScoringHub"; // Import ClinicalScoringHub
+// Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -193,18 +194,19 @@ const App = () => (
                element={
                  <ProtectedRoute>
                    <Layout><MindMapMaker /></Layout>
-                </ProtectedRoute>
-              }
-            />
-            {/* Add route for Clinical Scoring Hub */}
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for Clinical Scoring Hub */}
             <Route
               path="/tools/clinical-scoring-hub"
               element={
                 <ProtectedRoute>
                   <Layout><ClinicalScoringHub /></Layout>
-                </ProtectedRoute>
-              }
-            />
+                 </ProtectedRoute>
+               }
+             />
+             {/* Removed Stream Interaction route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -1,7 +1,9 @@
 import React from 'react'; // Import React
-import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles, BrainCircuit, ClipboardList } from 'lucide-react'; // Added ClipboardList
+import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles, BrainCircuit, ClipboardList, ExternalLink } from 'lucide-react'; // Added ClipboardList and ExternalLink
 import { Link } from 'react-router-dom';
 import MedicalNewsSection from './MedicalNewsSection';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Button } from '@/components/ui/button'; // Added Button import
 import {
   Carousel,
   CarouselContent,
@@ -10,6 +12,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"; // Import Carousel components
 import Autoplay from "embla-carousel-autoplay"; // Import Autoplay plugin
+
 
 // Define tool data array
 const toolsData = [
@@ -27,10 +30,17 @@ const toolsData = [
   { icon: ClipboardList, title: "Clinical Scoring Hub", description: "Access various validated clinical scoring calculators.", link: "/tools/clinical-scoring-hub" }, // Added Clinical Scoring Hub
 ];
 
+// Website Project Images
+const websiteImages = ['/tb1.png', '/tb2.png', '/tb3.png', '/tb4.png'];
+
 const HeroSection = () => {
-  // Initialize Autoplay plugin
-  const plugin = React.useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true }) // Removed stopOnMouseEnter: true
+  // Initialize Autoplay plugin for Tools Carousel
+  const toolsAutoplayPlugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
+  );
+  // Initialize Autoplay plugin for Website Project Carousel
+  const websiteAutoplayPlugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
   return (
@@ -113,20 +123,71 @@ const HeroSection = () => {
         </div>
       </div>
 
+      {/* Website Project Section */}
+      <section className="py-12 md:py-20 lg:py-24 bg-muted">
+        <div className="container px-4 md:px-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-center text-medical-blue mb-12">
+            Website Project
+          </h2>
+          <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle>TBControl Platform</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Carousel 
+                className="w-full mb-6"
+                plugins={[websiteAutoplayPlugin.current]} // Use separate plugin instance
+                opts={{ // Add options
+                  align: "start",
+                  loop: true,
+                }}
+                onMouseEnter={() => websiteAutoplayPlugin.current.stop()} // Restore hover handler with correct instance
+                onMouseLeave={() => websiteAutoplayPlugin.current.play()} // Restore hover handler with correct instance
+              >
+                <CarouselContent>
+                  {websiteImages.map((src, index) => (
+                    <CarouselItem key={index}>
+                      <img
+                        src={src}
+                        alt={`TBControl Screenshot ${index + 1}`}
+                        className="w-full h-auto object-contain rounded-md border"
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-10" />
+                <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-10" />
+              </Carousel>
+              <p className="text-muted-foreground text-justify">
+                Developed TBControl, a dedicated web platform aimed at increasing Tuberculosis awareness and providing accessible support. Key features include comprehensive TB information, an interactive symptom checker, details on screening options, advanced tools, and a health facilities directory, all designed to help users 'Know the Symptoms, Stop the Spread'.
+              </p>
+              <div className="mt-4 flex justify-center"> {/* Add flex and justify-center */}
+                <a href="https://tbcontrol.daivanlabs.site/" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline">
+                    Visit Website
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* START: Medical Tools Preview Section */}
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-2xl md:text-3xl font-bold text-center text-medical-blue mb-12">Explore Medical Tools</h2>
         
         {/* Carousel Implementation */}
         <Carousel
-          plugins={[plugin.current]}
+          plugins={[toolsAutoplayPlugin.current]} // Use tools plugin instance
           className="w-full"
           opts={{
             align: "start",
             loop: true,
           }}
-          onMouseEnter={() => plugin.current.stop()} // Wrapped in arrow function
-          onMouseLeave={() => plugin.current.play()} // Wrapped in arrow function
+          onMouseEnter={() => toolsAutoplayPlugin.current.stop()} // Use tools instance handler
+          onMouseLeave={() => toolsAutoplayPlugin.current.play()} // Use tools instance handler
         >
           <CarouselContent className="-ml-4"> {/* Adjust margin for spacing */}
             {toolsData.map((tool, index) => (

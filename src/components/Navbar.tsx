@@ -141,6 +141,7 @@ const Navbar = () => {
                       <span>Tools</span>
                     </Link>
                   </DropdownMenuItem>
+                  {/* Removed Stream Interaction link */}
                   {/* Conditionally show Upgrade Plan item - Temporarily Disabled */}
                   {/* {level === 'Free' && (
                     <>
