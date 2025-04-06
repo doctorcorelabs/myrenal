@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react'; // Removed useRef
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
+  DialogTrigger, // Added DialogTrigger
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -127,7 +128,7 @@ const MindMapMaker: React.FC = () => {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [dialogInputValue, setDialogInputValue] = useState('');
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>('TB');
-  // Removed mindMapRef
+  const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false); // State for advanced modal
 
   const nodeTypes = useMemo(() => ({
     rootNode: RootNode,
@@ -335,8 +336,42 @@ const MindMapMaker: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Back to Tools Button */}
-      <div className="flex justify-center mt-8 mb-4">
+      {/* Advanced Mind Map Modal */}
+      <Dialog open={isAdvancedModalOpen} onOpenChange={setIsAdvancedModalOpen}>
+        {/* Trigger is placed below */}
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col"> {/* Adjust size as needed */}
+          <DialogHeader>
+            <DialogTitle>Advanced Mind Map Generator</DialogTitle>
+            <DialogDescription>
+              Interact with the advanced mind map tool below. Close this dialog when finished.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow border rounded-md overflow-hidden">
+            <iframe
+              src="https://medimind.daivanlabs.site/"
+              title="Advanced Mind Map Generator"
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+            />
+          </div>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Buttons Section */}
+      <div className="flex flex-col items-center gap-4 mt-8 mb-4"> {/* Changed to flex-col and removed justify-center (items-center handles horizontal centering in flex-col) */}
+        {/* Advanced Mind Map Button */}
+        <Button onClick={() => setIsAdvancedModalOpen(true)}>
+          Advanced Mind Map Generator
+        </Button>
+
+        {/* Back to Tools Button */}
         <Link to="/tools">
           <Button variant="outline" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
