@@ -95,7 +95,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center"> {/* Removed justify-between and w-full */}
+          <nav className="hidden xl:flex items-center"> {/* Removed justify-between and w-full */}
             {/* Main navLinks group */}
             <div className="flex items-center space-x-6"> {/* Spacing for main links */}
               {navLinks.map((link) => (
@@ -189,7 +189,7 @@ const Navbar = () => {
           </nav> {/* End of nav */}
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-4">
+          <div className="xl:hidden flex items-center space-x-4">
             {isAuthenticated && (
               <Link to="/tools" className="text-medical-teal">
                 <Wrench size={24} />
@@ -208,7 +208,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <nav className="md:hidden bg-white px-4 py-4 shadow-md animate-fade-in">
+        <nav className="xl:hidden bg-white px-4 py-4 shadow-md animate-fade-in">
           <div className="flex flex-col space-y-4">
             {navLinks.map((link) => (
               <Link
