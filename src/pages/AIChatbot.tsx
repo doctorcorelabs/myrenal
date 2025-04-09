@@ -3,24 +3,28 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
 import { useEffect, useState } from 'react';
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton"; // For loading state
+import { Skeleton } from "@/components/ui/skeleton";
 const AIChatbot = () => {
   const featureName: FeatureName = 'ai_chatbot';
-  const { checkAccess, incrementUsage } = useFeatureAccess();
+  // Get isLoadingToggles from the hook
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true); // Still track page-specific check
   const [accessAllowed, setAccessAllowed] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const verifyAccess = async () => {
-      setIsCheckingAccess(true);
-      setAccessMessage(null); // Clear previous message
-      try {
-        const result = await checkAccess(featureName);
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyAccess = async () => {
+        setIsCheckingAccess(true); // Start page-specific check
+        setAccessMessage(null);
+        try {
+          const result = await checkAccess(featureName);
         setAccessAllowed(result.allowed);
         if (result.allowed) {
           // Increment usage only if access is granted
@@ -44,13 +48,16 @@ const AIChatbot = () => {
           variant: "destructive",
         });
       } finally {
-        setIsCheckingAccess(false);
-      }
-    };
-
-    verifyAccess();
+          setIsCheckingAccess(false); // Finish page-specific check
+        }
+      };
+      verifyAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only on mount
+  }, [isLoadingToggles]); // Re-run when hook loading state changes
+
+  // Determine overall loading state
+  const isLoading = isCheckingAccess || isLoadingToggles;
 
   return (
     <>
@@ -61,16 +68,16 @@ const AIChatbot = () => {
        {/* Make this container grow and use flexbox for the iframe */}
        <div className="container max-w-7xl mx-auto px-4 flex flex-col flex-grow">
 
-         {/* Loading State */}
-         {isCheckingAccess && (
+         {/* Show Skeleton if overall loading is true */}
+         {isLoading && (
             <div className="flex flex-col space-y-3 mt-4">
               <Skeleton className="h-[50px] w-full rounded-lg" />
               <Skeleton className="h-[600px] w-full rounded-lg" />
             </div>
           )}
 
-         {/* Access Denied Message */}
-         {!isCheckingAccess && !accessAllowed && (
+         {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+         {!isLoading && !accessAllowed && (
             <Alert variant="destructive" className="mt-4">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Akses Ditolak</AlertTitle>
@@ -80,10 +87,10 @@ const AIChatbot = () => {
             </Alert>
           )}
 
-         {/* Feature Content (Iframe) - Render only if access allowed */}
-         {!isCheckingAccess && accessAllowed && (
+         {/* Feature Content (Iframe) - Render only if NOT loading and access IS allowed */}
+         {!isLoading && accessAllowed && (
            <iframe
-             className="flex-grow mt-4" // Make iframe grow and add top margin
+             className="flex-grow mt-4"
              src="https://udify.app/chatbot/75qYJluLWB08Iupl"
              style={{ width: '100%', border: 'none', minHeight: '700px' }} // Removed fixed height, keep minHeight
               allow="microphone">

@@ -9,7 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Terminal, Loader2, ArrowLeft } from "lucide-react";
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 
@@ -52,7 +53,8 @@ interface FdcApiResponse {
 // --- Component ---
 const NutritionDatabase = () => {
   const featureName: FeatureName = 'nutrition_database';
-  const { checkAccess, incrementUsage } = useFeatureAccess();
+  // Get isLoadingToggles from the hook
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
 
   // State for initial access check
@@ -76,11 +78,13 @@ const NutritionDatabase = () => {
 
   // Initial access check on mount
   useEffect(() => {
-    const verifyInitialAccess = async () => {
-      setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null);
-      try {
-        const result = await checkAccess(featureName);
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyInitialAccess = async () => {
+        setIsCheckingInitialAccess(true); // Start page-specific check
+        setInitialAccessMessage(null);
+        try {
+          const result = await checkAccess(featureName);
         if (result.quota === 0) {
              setInitialAccessAllowed(false);
              setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
@@ -97,13 +101,13 @@ const NutritionDatabase = () => {
           variant: "destructive",
         });
       } finally {
-        setIsCheckingInitialAccess(false);
-      }
-    };
-
-    verifyInitialAccess();
+          setIsCheckingInitialAccess(false); // Finish page-specific check
+        }
+      };
+      verifyInitialAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [isLoadingToggles]); // Re-run when hook loading state changes
 
 
   // --- Search Logic ---
@@ -207,16 +211,16 @@ const NutritionDatabase = () => {
       />
       <div className="container max-w-7xl mx-auto px-4 py-12 space-y-6">
 
-        {/* Initial Loading State */}
-        {isCheckingInitialAccess && (
+        {/* Show Skeleton if overall loading is true */}
+        {(isCheckingInitialAccess || isLoadingToggles) && (
            <div className="flex flex-col space-y-3 mt-4">
-             <Skeleton className="h-[50px] w-full max-w-lg mx-auto rounded-lg" /> {/* Placeholder for search bar */}
-             <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for results area */}
+             <Skeleton className="h-[50px] w-full max-w-lg mx-auto rounded-lg" />
+             <Skeleton className="h-[200px] w-full rounded-lg" />
            </div>
          )}
 
-        {/* Initial Access Denied Message */}
-        {!isCheckingInitialAccess && !initialAccessAllowed && (
+        {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+        {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
            <Alert variant="destructive" className="mt-4">
              <Terminal className="h-4 w-4" />
              <AlertTitle>Akses Ditolak</AlertTitle>
@@ -226,8 +230,8 @@ const NutritionDatabase = () => {
            </Alert>
          )}
 
-        {/* Render content only if initial access is allowed */}
-        {!isCheckingInitialAccess && initialAccessAllowed && (
+        {/* Render content only if NOT loading and access IS allowed */}
+        {!(isCheckingInitialAccess || isLoadingToggles) && initialAccessAllowed && (
           <>
             {/* Search Bar */}
             <div className="flex w-full max-w-lg items-center space-x-2 mx-auto">

@@ -4,7 +4,8 @@ import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -38,7 +39,8 @@ const resources = [
 
 const LearningResources: React.FC = () => {
   const featureName: FeatureName = 'learning_resources';
-  const { checkAccess } = useFeatureAccess();
+  // Get isLoadingToggles from the hook
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
 
   // State for initial access check
@@ -48,11 +50,13 @@ const LearningResources: React.FC = () => {
 
   // Initial access check on mount
   useEffect(() => {
-    const verifyInitialAccess = async () => {
-      setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null);
-      try {
-        const result = await checkAccess(featureName);
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyInitialAccess = async () => {
+        setIsCheckingInitialAccess(true); // Start page-specific check
+        setInitialAccessMessage(null);
+        try {
+          const result = await checkAccess(featureName);
         // Learning Resources are only allowed if quota is not 0 (i.e., Researcher level)
         if (result.quota === 0) {
              setInitialAccessAllowed(false);
@@ -70,13 +74,16 @@ const LearningResources: React.FC = () => {
           variant: "destructive",
         });
       } finally {
-        setIsCheckingInitialAccess(false);
-      }
-    };
-
-    verifyInitialAccess();
+          setIsCheckingInitialAccess(false); // Finish page-specific check
+        }
+      };
+      verifyInitialAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [isLoadingToggles]); // Re-run when hook loading state changes
+
+  // Determine overall loading state
+  const isLoading = isCheckingInitialAccess || isLoadingToggles;
 
   return (
     <>
@@ -86,17 +93,17 @@ const LearningResources: React.FC = () => {
       />
       <div className="container max-w-7xl mx-auto px-4 py-12">
 
-        {/* Initial Loading State */}
-        {isCheckingInitialAccess && (
+        {/* Show Skeleton if overall loading is true */}
+        {isLoading && (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-             {[...Array(4)].map((_, i) => ( // Render 4 skeletons
+             {[...Array(4)].map((_, i) => (
                <Skeleton key={i} className="h-[200px] w-full rounded-lg" />
              ))}
            </div>
          )}
 
-        {/* Initial Access Denied Message */}
-        {!isCheckingInitialAccess && !initialAccessAllowed && (
+        {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+        {!isLoading && !initialAccessAllowed && (
            <Alert variant="destructive" className="mt-4">
              <Terminal className="h-4 w-4" />
              <AlertTitle>Akses Ditolak</AlertTitle>
@@ -106,8 +113,8 @@ const LearningResources: React.FC = () => {
            </Alert>
          )}
 
-        {/* Render content only if initial access is allowed */}
-        {!isCheckingInitialAccess && initialAccessAllowed && (
+        {/* Render content only if NOT loading and access IS allowed */}
+        {!isLoading && initialAccessAllowed && (
           <>
             {/* Changed lg:grid-cols-3 to lg:grid-cols-2 for better balance with 4 items */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">

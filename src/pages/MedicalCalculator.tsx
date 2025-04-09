@@ -1,16 +1,19 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Terminal } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
+import { useToast } from '@/components/ui/use-toast';
+import { Skeleton } from "@/components/ui/skeleton";
 
 // --- Helper Functions ---
-
 // BMI Calculation
 const calculateBMI = (weightKg: number, heightM: number): number | null => {
   if (heightM <= 0 || weightKg <= 0) return null;
@@ -35,9 +38,9 @@ const calculateBSA = (weightKg: number, heightCm: number): number | null => {
 // BSA Interpretation
 const interpretBSA = (bsa: number | null): { text: string; color: string } => {
   if (bsa === null) return { text: '', color: 'text-gray-500' };
-  return { 
-    text: `BSA is often used by clinicians for drug dosing or physiological assessments. Typical adult values range from 1.5 to 2.2 m².`, 
-    color: 'text-gray-600' 
+  return {
+    text: `BSA is often used by clinicians for drug dosing or physiological assessments. Typical adult values range from 1.5 to 2.2 m².`,
+    color: 'text-gray-600'
   };
 };
 
@@ -81,20 +84,19 @@ const calculateIBW_Devine = (heightCm: number, sex: 'male' | 'female'): number |
 // IBW Interpretation
 const interpretIBW = (ibw: number | null): { text: string; color: string } => {
   if (ibw === null) return { text: '', color: 'text-gray-500' };
-  return { 
-    text: `This is an estimation using the Devine formula. IBW is often used for ventilator settings or certain drug dosages.`, 
-    color: 'text-gray-600' 
+  return {
+    text: `This is an estimation using the Devine formula. IBW is often used for ventilator settings or certain drug dosages.`,
+    color: 'text-gray-600'
   };
 };
 
 // AdjBW Calculation
 const calculateAdjBW = (actualWeightKg: number, idealWeightKg: number): number | null => {
   if (actualWeightKg <= 0 || idealWeightKg <= 0) return null;
-  // Only calculate if ABW > 120% of IBW (common threshold)
   if (actualWeightKg > idealWeightKg * 1.2) {
     return idealWeightKg + 0.4 * (actualWeightKg - idealWeightKg);
   }
-  return null; // Return null if not significantly overweight, as AdjBW is less relevant
+  return null;
 };
 
 // AdjBW Interpretation
@@ -105,9 +107,9 @@ const interpretAdjBW = (adjbw: number | null, abw: number, ibw: number): { text:
     }
     return { text: '', color: 'text-gray-500' };
   }
-  return { 
-    text: `AdjBW estimates a relevant body mass for dosing certain drugs in obese patients. It's used when Actual Weight significantly exceeds Ideal Weight.`, 
-    color: 'text-gray-600' 
+  return {
+    text: `AdjBW estimates a relevant body mass for dosing certain drugs in obese patients. It's used when Actual Weight significantly exceeds Ideal Weight.`,
+    color: 'text-gray-600'
   };
 };
 
@@ -122,16 +124,15 @@ const calculateBMR_MifflinStJeor = (weightKg: number, heightCm: number, age: num
 // BMR Interpretation
 const interpretBMR = (bmr: number | null): { text: string; color: string } => {
   if (bmr === null) return { text: '', color: 'text-gray-500' };
-  return { 
-    text: `This is the estimated minimum calories your body needs at rest. Total daily energy needs depend on activity levels.`, 
-    color: 'text-gray-600' 
+  return {
+    text: `This is the estimated minimum calories your body needs at rest. Total daily energy needs depend on activity levels.`,
+    color: 'text-gray-600'
   };
 };
 
 // Corrected Calcium Calculation
 const calculateCorrectedCalcium = (totalCalciumMgDl: number, albuminGdl: number): number | null => {
   if (totalCalciumMgDl <= 0 || albuminGdl <= 0) return null;
-  // Using standard formula: Corrected Ca = Total Ca + 0.8 * (4.0 - Albumin)
   return totalCalciumMgDl + 0.8 * (4.0 - albuminGdl);
 };
 
@@ -140,7 +141,6 @@ const interpretCorrectedCalcium = (correctedCa: number | null, totalCa: number, 
   if (correctedCa === null) return { text: '', color: 'text-gray-500' };
   let interpretation = `Corrected for Albumin (${albumin.toFixed(1)} g/dL). This estimates calcium if albumin were normal (4.0 g/dL). `;
   let color = 'text-gray-600';
-  // Typical normal range check (can vary slightly)
   if (correctedCa < 8.5) {
     interpretation += 'Result is below the typical normal range (approx. 8.5-10.5 mg/dL).';
     color = 'text-blue-600';
@@ -154,10 +154,16 @@ const interpretCorrectedCalcium = (correctedCa: number | null, totalCa: number, 
   return { text: interpretation, color: color };
 };
 
-
 // --- Component ---
-
 const MedicalCalculator = () => {
+  const featureName: FeatureName = 'medical_calculator';
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for access check result
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
   // BMI State
   const [bmiWeight, setBmiWeight] = useState<string>('');
   const [bmiHeight, setBmiHeight] = useState<string>('');
@@ -183,8 +189,8 @@ const MedicalCalculator = () => {
   const [ibwResult, setIbwResult] = useState<number | null>(null);
   const [ibwInterpretation, setIbwInterpretation] = useState<{ text: string; color: string }>({ text: '', color: '' });
 
-  // AdjBW State (Needs Actual Weight, can reuse BMI or BSA weight)
-  const [adjBwActualWeight, setAdjBwActualWeight] = useState<string>(''); // Or use bmiWeight/bsaWeight
+  // AdjBW State
+  const [adjBwActualWeight, setAdjBwActualWeight] = useState<string>('');
   const [adjBwResult, setAdjBwResult] = useState<number | null>(null);
   const [adjBwInterpretation, setAdjBwInterpretation] = useState<{ text: string; color: string }>({ text: '', color: '' });
 
@@ -201,12 +207,43 @@ const MedicalCalculator = () => {
   const [ccAlbumin, setCcAlbumin] = useState<string>('');
   const [ccResult, setCcResult] = useState<number | null>(null);
   const [ccInterpretation, setCcInterpretation] = useState<{ text: string; color: string }>({ text: '', color: '' });
-  
+
   // Error State
   const [error, setError] = useState<string>('');
 
-  // --- Calculation Handlers ---
-  const handleBmiCalculate = () => {
+  // Initial access check on mount
+  useEffect(() => {
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyInitialAccess = async () => {
+        setInitialAccessMessage(null); // Clear message before check
+        try {
+          const result = await checkAccess(featureName);
+          setInitialAccessAllowed(result.allowed);
+          if (!result.allowed) {
+            setInitialAccessMessage(result.message || 'Akses ditolak.');
+          }
+        } catch (error) {
+          console.error("Error checking initial feature access:", error);
+          setInitialAccessAllowed(false);
+          setInitialAccessMessage('Gagal memeriksa akses fitur.');
+          toast({
+            title: "Error",
+            description: "Tidak dapat memverifikasi akses fitur saat ini.",
+            variant: "destructive",
+          });
+        }
+      };
+      verifyInitialAccess();
+    }
+  }, [isLoadingToggles]); // Simplify dependency array
+
+  // --- Calculation Handlers (with Access Check) ---
+  const handleBmiCalculate = async () => {
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+    }
     setError('');
     const weightNum = parseFloat(bmiWeight);
     const heightNum = parseFloat(bmiHeight);
@@ -217,9 +254,14 @@ const MedicalCalculator = () => {
     const heightM = heightNum / 100;
     const result = calculateBMI(weightNum, heightM);
     setBmiResult(result); setBmiInterpretation(interpretBMI(result));
+    await incrementUsage(featureName);
   };
 
-  const handleBsaCalculate = () => {
+  const handleBsaCalculate = async () => {
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+    }
     setError('');
     const weightNum = parseFloat(bsaWeight);
     const heightNum = parseFloat(bsaHeight);
@@ -229,9 +271,14 @@ const MedicalCalculator = () => {
     }
     const result = calculateBSA(weightNum, heightNum);
     setBsaResult(result); setBsaInterpretation(interpretBSA(result));
+    await incrementUsage(featureName);
   };
 
-  const handleGfrCalculate = () => {
+  const handleGfrCalculate = async () => {
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+    }
     setError('');
     const creatinineNum = parseFloat(gfrCreatinine);
     const ageNum = parseInt(gfrAge, 10);
@@ -241,9 +288,14 @@ const MedicalCalculator = () => {
     }
     const result = calculateGFR_CKDEPI(creatinineNum, ageNum, gfrSex);
     setGfrResult(result); setGfrInterpretation(interpretGFR(result));
+    await incrementUsage(featureName);
   };
 
-  const handleIbwCalculate = () => {
+  const handleIbwCalculate = async () => {
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+    }
     setError('');
     const heightNum = parseFloat(ibwHeight);
     if (isNaN(heightNum) || heightNum <= 0 || !ibwSex) {
@@ -252,12 +304,17 @@ const MedicalCalculator = () => {
     }
     const result = calculateIBW_Devine(heightNum, ibwSex);
     setIbwResult(result); setIbwInterpretation(interpretIBW(result));
+    await incrementUsage(featureName);
   };
 
-  const handleAdjBwCalculate = () => {
+  const handleAdjBwCalculate = async () => {
+    const accessResult = await checkAccess(featureName);
+    if (!accessResult.allowed) {
+      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+    }
     setError('');
-    const actualWeightNum = parseFloat(adjBwActualWeight); // Using dedicated state for clarity
-    const ibwNum = ibwResult; // Use the calculated IBW
+    const actualWeightNum = parseFloat(adjBwActualWeight);
+    const ibwNum = ibwResult;
     if (isNaN(actualWeightNum) || actualWeightNum <= 0) {
        setError('AdjBW: Please enter a valid positive Actual Body Weight (kg).');
        setAdjBwResult(null); setAdjBwInterpretation({ text: '', color: '' }); return;
@@ -268,9 +325,16 @@ const MedicalCalculator = () => {
     }
     const result = calculateAdjBW(actualWeightNum, ibwNum);
     setAdjBwResult(result); setAdjBwInterpretation(interpretAdjBW(result, actualWeightNum, ibwNum));
+    if (result !== null) {
+        await incrementUsage(featureName);
+    }
   };
 
-  const handleBmrCalculate = () => {
+  const handleBmrCalculate = async () => {
+     const accessResult = await checkAccess(featureName);
+     if (!accessResult.allowed) {
+       toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+     }
      setError('');
      const weightNum = parseFloat(bmrWeight);
      const heightNum = parseFloat(bmrHeight);
@@ -281,9 +345,14 @@ const MedicalCalculator = () => {
      }
      const result = calculateBMR_MifflinStJeor(weightNum, heightNum, ageNum, bmrSex);
      setBmrResult(result); setBmrInterpretation(interpretBMR(result));
+     await incrementUsage(featureName);
   };
 
-  const handleCorrectedCalciumCalculate = () => {
+  const handleCorrectedCalciumCalculate = async () => {
+     const accessResult = await checkAccess(featureName);
+     if (!accessResult.allowed) {
+       toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+     }
      setError('');
      const totalCaNum = parseFloat(ccTotalCalcium);
      const albuminNum = parseFloat(ccAlbumin);
@@ -293,17 +362,42 @@ const MedicalCalculator = () => {
      }
      const result = calculateCorrectedCalcium(totalCaNum, albuminNum);
      setCcResult(result); setCcInterpretation(interpretCorrectedCalcium(result, totalCaNum, albuminNum));
+     await incrementUsage(featureName);
   };
 
   return (
     <div>
-      <PageHeader 
-        title="Medical Calculator" 
-        subtitle="Calculate common clinical values. For informational purposes only." 
+      <PageHeader
+        title="Medical Calculator"
+        subtitle="Calculate common clinical values. For informational purposes only."
       />
-      
+
       <div className="container-custom">
-        {/* Disclaimer */}
+
+        {/* Show Skeleton only based on the hook's loading state */}
+        {isLoadingToggles && (
+           <div className="flex flex-col space-y-3 mt-8">
+             <Skeleton className="h-[50px] w-full rounded-lg" />
+             <Skeleton className="h-[250px] w-full rounded-lg" />
+             <Skeleton className="h-[250px] w-full rounded-lg" />
+           </div>
+         )}
+
+        {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
+        {!isLoadingToggles && !initialAccessAllowed && (
+           <Alert variant="destructive" className="mt-8">
+             <Terminal className="h-4 w-4" />
+             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertDescription>
+               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+             </AlertDescription>
+           </Alert>
+         )}
+
+        {/* Render content only if NOT loading and access IS allowed */}
+        {!isLoadingToggles && initialAccessAllowed && (
+         <>
+            {/* Disclaimer */}
         <Alert variant="destructive" className="mb-8 bg-red-50 border-red-500 text-red-800">
           <AlertTriangle className="h-4 w-4 !text-red-800" />
           <AlertTitle className="font-bold">Disclaimer</AlertTitle>
@@ -321,7 +415,7 @@ const MedicalCalculator = () => {
         )}
 
         {/* Changed grid layout for more calculators */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"> 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* BMI Calculator */}
           <Card className="flex flex-col">
             <CardHeader>
@@ -543,6 +637,8 @@ const MedicalCalculator = () => {
             </Button>
           </Link>
         </div>
+       </>
+      )} {/* End of initialAccessAllowed block */}
       </div>
     </div>
   );

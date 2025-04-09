@@ -1,273 +1,137 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react'; // Import useState
+import {
+  AlertDialog, // Keep AlertDialog imports for the main dialog structure
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+// Removed: import { useAuth } from '@/contexts/AuthContext';
+// Removed: import { useToast } from "@/hooks/use-toast"; // No longer using toast
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogClose,
-} from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X as XIcon, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog"; // Import Dialog components
+import { Button } from "@/components/ui/button"; // Import Button
 
-// Define plan types
-type Plan = 'Premium' | 'Researcher';
+// This component now expects to be rendered inside an <AlertDialog>
+const UpgradePlanDialogContent = () => {
+  // Removed: const { upgradeToResearcher } = useAuth();
+  // Removed: const { toast } = useToast();
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false); // State for confirmation dialog
 
-// Feature comparison data
-const featureData = [
-  { feature: 'AI Chatbot', free: '10 queries/day', premium: '30 queries/day', researcher: 'Unlimited' },
-  { feature: 'AI Peer Review', free: '5 reviews/day', premium: '15 reviews/day', researcher: 'Unlimited' },
-  { feature: 'Disease Library', free: '10 searches/day', premium: '20 searches/day', researcher: 'Unlimited' },
-  { feature: 'Drug Reference', free: '10 searches/day', premium: '20 searches/day', researcher: 'Unlimited' },
-  { feature: 'Clinical Guidelines', free: '5 searches/day', premium: '50 searches/day', researcher: 'Unlimited' },
-  { feature: 'Interaction Checker', free: '5 checks/day', premium: '15 checks/day', researcher: 'Unlimited' },
-  { feature: 'Explore Gemini', free: '5 queries/day', premium: '20 queries/day', researcher: '50 queries/day' },
-  { feature: 'Medical Calculator', free: 'Unlimited', premium: 'Unlimited', researcher: 'Unlimited' },
-  { feature: 'Nutrition Database', free: '10 searches/day', premium: '20 searches/day', researcher: 'Unlimited' },
-  { feature: 'Learning Resources', free: 'No Access', premium: 'No Access', researcher: 'Full Access' },
-  { feature: 'Medical News', free: 'Unlimited', premium: 'Unlimited', researcher: 'Unlimited' },
-];
+  const paymentUrl = "http://lynk.id/daivan/z9gl74zn9y5o/checkout"; // Define payment URL
 
-// Declare Midtrans Snap type on window
-declare global {
-  interface Window {
-    snap: {
-      pay: (token: string, options?: {
-        onSuccess?: (result: any) => void;
-        onPending?: (result: any) => void;
-        onError?: (result: any) => void;
-        onClose?: () => void;
-      }) => void;
-    };
-  }
-}
+  const handleUpgradeClick = () => {
+    // Open payment link in a new tab
+    window.open(paymentUrl, '_blank');
 
-interface UpgradePlanDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-// Export the component correctly
-export function UpgradePlanDialog({ open, onOpenChange }: UpgradePlanDialogProps) {
-  const [selectedPlan, setSelectedPlan] = useState<Plan>('Premium');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  // Effect to ensure Snap.js script is loaded
-  useEffect(() => {
-    const snapScriptId = 'midtrans-snap-script';
-    // Ensure VITE_MIDTRANS_CLIENT_KEY is accessed correctly
-    const clientKey = import.meta.env.VITE_MIDTRANS_CLIENT_KEY;
-    // Determine Snap URL based on environment (using VITE_ environment variable is common)
-    const snapUrl = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true'
-      ? 'https://app.midtrans.com/snap/snap.js'
-      : 'https://app.sandbox.midtrans.com/snap/snap.js';
-
-    if (!document.getElementById(snapScriptId) && clientKey) {
-      const script = document.createElement('script');
-      script.id = snapScriptId;
-      script.src = snapUrl;
-      script.setAttribute('data-client-key', clientKey);
-      script.async = true;
-      document.body.appendChild(script);
-      console.log('Midtrans Snap.js script added.');
-
-      return () => {
-        const existingScript = document.getElementById(snapScriptId);
-        if (existingScript) {
-          document.body.removeChild(existingScript);
-          console.log('Midtrans Snap.js script removed.');
-        }
-      };
-    } else if (!clientKey) {
-        console.warn('VITE_MIDTRANS_CLIENT_KEY is not set. Midtrans Snap will not load.');
-    }
-  }, []);
-
-
-  // Function to initiate Midtrans Payment
-  const initiateMidtransPayment = async (userId: string, userEmail: string, plan: Plan) => {
-    setIsProcessing(true);
-    try {
-      // --- Actual Implementation ---
-      // 1. Call backend function to get transaction token
-      const response = await fetch('/.netlify/functions/create-midtrans-transaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId, userEmail, plan }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.token) {
-        throw new Error(data.error || 'Failed to create payment transaction.');
-      }
-
-      const transactionToken = data.token;
-
-      // 2. Use Midtrans Snap.js to open the payment popup
-      if (window.snap) {
-        window.snap.pay(transactionToken, {
-          onSuccess: function(result){
-            /* You may add your own implementation here */
-            console.log('Midtrans Success:', result);
-            toast({ title: "Payment Successful", description: "Your plan will be updated shortly." });
-            onOpenChange(false); // Close dialog on success
-            // Note: Actual level update happens via webhook
-          },
-          onPending: function(result){
-            /* You may add your own implementation here */
-            console.log('Midtrans Pending:', result);
-            toast({ title: "Payment Pending", description: `Waiting for payment confirmation (Order ID: ${result.order_id})` });
-            onOpenChange(false); // Close dialog on pending
-          },
-          onError: function(result){
-            /* You may add your own implementation here */
-            console.error('Midtrans Error:', result);
-            toast({ title: "Payment Error", description: result.status_message || "An error occurred during payment.", variant: "destructive" });
-            setIsProcessing(false); // Allow user to try again
-          },
-          onClose: function(){
-            /* You may add your own implementation here */
-            console.log('Midtrans payment popup closed');
-            // Only stop processing if not already successful or pending
-            // Check status via API if needed, or assume closed means cancelled/failed for now
-             if (isProcessing) { // Check if we were still in processing state
-                 setIsProcessing(false);
-                 toast({ title: "Payment Closed", description: "Payment window closed before completion.", variant: "default" });
-             }
-          }
-        });
-      } else {
-        console.error("Midtrans Snap.js is not loaded. Ensure VITE_MIDTRANS_CLIENT_KEY is set and the script in index.html is correct.");
-        throw new Error("Midtrans Snap.js is not loaded.");
-      }
-     // --- End Actual Implementation ---
-
-    } catch (error: any) {
-      console.error("Error initiating Midtrans payment:", error);
-      toast({
-        title: "Payment Initiation Failed",
-        description: error.message || "Could not start the payment process. Please check console for details.",
-        variant: "destructive",
-      });
-      setIsProcessing(false); // Stop loading on error
-    }
-    // Note: Don't set isProcessing to false here if snap.pay was called successfully,
-    // as the callbacks will handle the final state. It's set in onError/onClose.
+    // Show confirmation dialog instead of toast
+    setShowConfirmationDialog(true);
   };
 
-  const handleProceedToPayment = () => {
-    if (!user) {
-      toast({ title: "Error", description: "User not found. Please sign in again.", variant: "destructive" });
-      return;
-    }
-    if (!import.meta.env.VITE_MIDTRANS_CLIENT_KEY) {
-       toast({ title: "Configuration Error", description: "Midtrans Client Key is missing in frontend environment.", variant: "destructive" });
-       return;
-    }
-    // Use the correct function name here
-    initiateMidtransPayment(user.id, user.email || '', selectedPlan);
-  };
+  // Split features into two groups
+  const features = [
+    { name: 'AI Chatbot', free: '3 questions/day', researcher: '30 questions/day' },
+    { name: 'AI Peer Review', free: '3 reviews/day', researcher: '15 reviews/day' },
+    { name: 'Disease Library', free: '3 searches/day', researcher: '20 searches/day' },
+    { name: 'Drug Reference', free: '3 searches/day', researcher: '20 searches/day' },
+    { name: 'Clinical Guidelines', free: '3 searches/day', researcher: '20 searches/day' },
+    { name: 'Interaction Checker', free: '3 checks/day', researcher: '15 checks/day' },
+    { name: 'Explore Gemini', free: '3 questions/day', researcher: '30 questions/day' },
+    { name: 'Medical Calculator', free: 'Unlimited', researcher: 'Unlimited' },
+    { name: 'Nutrition Database', free: '3 searches/day', researcher: '20 searches/day' },
+    { name: 'Learning Resources', free: 'No Access', researcher: 'Full Access' },
+    { name: 'AI Mind Map Generator', free: '2 Mind Maps/day', researcher: '10 Mind Maps/day' },
+    { name: 'Clinical Scoring Hub', free: 'Unlimited', researcher: 'Unlimited' },
+  ];
 
-  // Ensure the component returns JSX
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Upgrade Your Plan</DialogTitle>
-          <DialogDescription>
-            Choose a plan to unlock more features and increase your daily quotas.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-grow overflow-y-auto pr-4 space-y-6">
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">Select Plan:</Label>
-            <RadioGroup
-              value={selectedPlan}
-              onValueChange={(value) => setSelectedPlan(value as Plan)}
-              className="grid grid-cols-2 gap-4"
+    <> {/* Use Fragment to wrap multiple elements */}
+      {/* Original Upgrade Dialog Content */}
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Upgrade to Researcher Plan</AlertDialogTitle>
+          <AlertDialogDescription>
+            Unlock advanced features and higher quotas with the Researcher plan.
+            <br /> {/* Add a line break for spacing */}
+            If you encounter any issues or have questions after payment, please contact{' '}
+            <a
+              href="https://wa.me/6285326958791"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline" // Added basic styling
             >
-              <div>
-                <RadioGroupItem value="Premium" id="dlg-plan-premium" className="peer sr-only" />
-                <Label
-                  htmlFor="dlg-plan-premium"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
-                >
-                  <span className="font-semibold text-lg">Premium</span>
-                  <span className="text-sm text-muted-foreground mt-1 text-center">Enhanced Access</span>
-                  <span className="text-xs text-muted-foreground mt-2">(Price Placeholder)</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="Researcher" id="dlg-plan-researcher" className="peer sr-only" />
-                <Label
-                  htmlFor="dlg-plan-researcher"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
-                >
-                  <span className="font-semibold text-lg">Researcher</span>
-                  <span className="text-sm text-muted-foreground mt-1 text-center">Full Access</span>
-                   <span className="text-xs text-muted-foreground mt-2">(Price Placeholder)</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-          <div className="space-y-2">
-             <Label className="text-base font-semibold">Feature Comparison:</Label>
-             <Card>
-               <CardContent className="p-0">
-                 <Table>
-                   <TableHeader>
-                     <TableRow>
-                       <TableHead className="w-[200px]">Feature</TableHead>
-                       <TableHead className="text-center">Free</TableHead>
-                       <TableHead className="text-center">Premium</TableHead>
-                       <TableHead className="text-center">Researcher</TableHead>
-                     </TableRow>
-                   </TableHeader>
-                   <TableBody>
-                     {featureData.map((item) => (
-                       <TableRow key={item.feature}>
-                         <TableCell className="font-medium">{item.feature}</TableCell>
-                         <TableCell className="text-center text-xs sm:text-sm">
-                           {item.free === 'No Access' ? <XIcon className="h-4 w-4 text-red-500 mx-auto" /> : item.free === 'Unlimited' ? <Check className="h-4 w-4 text-green-500 mx-auto" /> : item.free}
-                         </TableCell>
-                         <TableCell className="text-center text-xs sm:text-sm">
-                           {item.premium === 'No Access' ? <XIcon className="h-4 w-4 text-red-500 mx-auto" /> : item.premium === 'Unlimited' ? <Check className="h-4 w-4 text-green-500 mx-auto" /> : item.premium}
-                         </TableCell>
-                         <TableCell className="text-center text-xs sm:text-sm">
-                           {item.researcher === 'No Access' ? <XIcon className="h-4 w-4 text-red-500 mx-auto" /> : item.researcher === 'Unlimited' || item.researcher === 'Full Access' ? <Check className="h-4 w-4 text-green-500 mx-auto" /> : item.researcher}
-                         </TableCell>
-                       </TableRow>
-                     ))}
-                   </TableBody>
-                 </Table>
-               </CardContent>
-             </Card>
-          </div>
-        </div>
-        <DialogFooter className="pt-4 border-t">
-          <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isProcessing}>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button type="button" onClick={handleProceedToPayment} disabled={isProcessing}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isProcessing ? 'Processing...' : `Proceed to Payment for ${selectedPlan}`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Customer Service via WhatsApp
+            </a>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <ScrollArea className="h-[300px] mt-4 border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Feature</TableHead>
+                <TableHead>Free Level</TableHead>
+                <TableHead>Researcher Level</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {features.map((feature) => (
+                <TableRow key={feature.name}>
+                  <TableCell>{feature.name}</TableCell>
+                  <TableCell>{feature.free}</TableCell>
+                  <TableCell>{feature.researcher}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {/* Update onClick handler */}
+          <AlertDialogAction onClick={handleUpgradeClick}>Upgrade Now</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Payment Link Opened</DialogTitle>
+            <DialogDescription className="text-justify"> {/* Add text-justify class */}
+              Your account will be upgraded to Researcher within 1x24 hours after payment confirmation.
+              Please contact Customer Service if the upgrade hasn't occurred by then.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button">OK</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
-}
+};
+
+export default UpgradePlanDialogContent;

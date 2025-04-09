@@ -16,6 +16,8 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword"; // Import ForgotPassword
+import ResetPassword from "./pages/ResetPassword"; // Import ResetPassword
 import Tools from "./pages/Tools";
 import MedicalCalculator from "./pages/MedicalCalculator";
 import DrugReference from "./pages/DrugReference"; 
@@ -33,6 +35,7 @@ import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
 import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
 import ClinicalScoringHub from "./pages/ClinicalScoringHub"; // Import ClinicalScoringHub
+import AdminDashboard from "./pages/AdminDashboard"; // Import AdminDashboard
 // Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -57,6 +60,8 @@ const App = () => (
             <Route path="/contact" element={<Layout><Contact /></Layout>} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Add ForgotPassword route */}
+            <Route path="/reset-password" element={<ResetPassword />} /> {/* Add ResetPassword route */}
             <Route 
               path="/tools" 
               element={
@@ -203,6 +208,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><ClinicalScoringHub /></Layout>
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for Admin Dashboard */}
+             <Route
+               path="/admin-dashboard"
+               element={
+                 <ProtectedRoute requiredLevel="Administrator">
+                   <Layout><AdminDashboard /></Layout>
                  </ProtectedRoute>
                }
              />

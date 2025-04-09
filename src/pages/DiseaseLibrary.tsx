@@ -4,10 +4,11 @@ import PageHeader from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ArrowLeft, Loader2, Info, Terminal } from 'lucide-react'; // Import Loader2, Info, Terminal
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
-import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -23,7 +24,8 @@ interface SearchResultLinks {
 
 const DiseaseLibrary = () => {
   const featureName: FeatureName = 'disease_library';
-  const { checkAccess, incrementUsage } = useFeatureAccess();
+  // Get isLoadingToggles from the hook
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
 
   // State for initial access check
@@ -43,12 +45,14 @@ const DiseaseLibrary = () => {
 
   // Initial access check on mount
   useEffect(() => {
-    const verifyInitialAccess = async () => {
-      setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null);
-      try {
-        // Check access without intending to increment yet
-        const result = await checkAccess(featureName);
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyInitialAccess = async () => {
+        setIsCheckingInitialAccess(true); // Start page-specific check
+        setInitialAccessMessage(null);
+        try {
+          // Check access without intending to increment yet
+          const result = await checkAccess(featureName);
         // We only care if they have *any* access (quota > 0 or null)
         // The specific remaining count doesn't matter here, only for the search action itself.
         // We use result.quota !== 0 check to determine if the level allows access at all.
@@ -69,13 +73,13 @@ const DiseaseLibrary = () => {
           variant: "destructive",
         });
       } finally {
-        setIsCheckingInitialAccess(false);
-      }
-    };
-
-    verifyInitialAccess();
+          setIsCheckingInitialAccess(false); // Finish page-specific check
+        }
+      };
+      verifyInitialAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [isLoadingToggles]); // Re-run when hook loading state changes
 
 
   const handleSearch = async (event: FormEvent) => {
@@ -251,16 +255,16 @@ const DiseaseLibrary = () => {
 
       <div className="container max-w-4xl mx-auto px-4 py-12">
 
-        {/* Initial Loading State */}
-        {isCheckingInitialAccess && (
+        {/* Show Skeleton if overall loading is true */}
+        {(isCheckingInitialAccess || isLoadingToggles) && (
            <div className="flex flex-col space-y-3 mt-4">
-             <Skeleton className="h-[60px] w-full rounded-lg" /> {/* Placeholder for form */}
-             <Skeleton className="h-[100px] w-full rounded-lg" /> {/* Placeholder for results area */}
+             <Skeleton className="h-[60px] w-full rounded-lg" />
+             <Skeleton className="h-[100px] w-full rounded-lg" />
            </div>
          )}
 
-        {/* Initial Access Denied Message */}
-        {!isCheckingInitialAccess && !initialAccessAllowed && (
+        {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+        {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
            <Alert variant="destructive" className="mt-4">
              <Terminal className="h-4 w-4" />
              <AlertTitle>Akses Ditolak</AlertTitle>
@@ -270,8 +274,8 @@ const DiseaseLibrary = () => {
            </Alert>
          )}
 
-        {/* Render content only if initial access is allowed */}
-        {!isCheckingInitialAccess && initialAccessAllowed && (
+        {/* Render content only if NOT loading and access IS allowed */}
+        {!(isCheckingInitialAccess || isLoadingToggles) && initialAccessAllowed && (
           <>
             {/* Disclaimer */}
             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 text-justify" role="alert">

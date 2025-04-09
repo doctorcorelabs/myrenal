@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Added useState
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
 import ChadsvascScore from '@/components/scores/ChadsvascScore';
@@ -7,23 +7,92 @@ import WellsScorePe from '@/components/scores/WellsScorePe';
 import GcsScore from '@/components/scores/GcsScore';
 import Curb65Score from '@/components/scores/Curb65Score';
 import MeldScore from '@/components/scores/MeldScore';
-import { Link } from 'react-router-dom'; // Import Link
-import { Button } from '@/components/ui/button'; // Import Button
-import { ArrowLeft } from 'lucide-react'; // Import ArrowLeft icon
-// Potentially import other calculators later
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
+import { useToast } from '@/components/ui/use-toast'; // Added toast
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Added Alert
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
 
 const ClinicalScoringHub: React.FC = () => {
+  const featureName: FeatureName = 'clinical_scoring';
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { toast } = useToast();
+
+  // State for access check result
+  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
+  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+
+  // Initial access check on mount
+  useEffect(() => {
+    // Define the async function first
+    const verifyInitialAccess = async () => {
+      setInitialAccessMessage(null);
+      try {
+        const result = await checkAccess(featureName);
+        // Check the result inside the try block
+        if (result.quota === 0 || result.isDisabled) {
+           setInitialAccessAllowed(false);
+           setInitialAccessMessage(result.message || 'Akses ditolak.');
+        } else {
+           setInitialAccessAllowed(true);
+        }
+      } catch (error) { // Catch block correctly placed for the try
+        console.error("Error checking initial feature access:", error);
+        setInitialAccessAllowed(false);
+        setInitialAccessMessage('Gagal memeriksa akses fitur.');
+        toast({
+          title: "Error",
+          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          variant: "destructive",
+        });
+      }
+    }; // End of verifyInitialAccess async function
+
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      verifyInitialAccess(); // Call the function conditionally
+    } // End of if (!isLoadingToggles)
+  }, [isLoadingToggles]); // Simplify dependency array
+
+  // TODO: Pass incrementUsage down to individual score components or have them use the hook.
+  // For now, usage is only checked on initial load.
+
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* PageHeader subtitle likely already handles alignment, but we'll check if needed */}
       <PageHeader
         title="Clinical Scoring Hub"
         subtitle="A collection of validated clinical scoring calculators for risk stratification, diagnosis, severity assessment, and prognosis."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        {/* Placeholder for Score Categories/Calculators */}
-        <Card>
+      {/* Show Skeleton only based on the hook's loading state */}
+      {isLoadingToggles && (
+         <div className="flex flex-col space-y-3 mt-6">
+           <Skeleton className="h-[150px] w-full rounded-lg" />
+           <Skeleton className="h-[150px] w-full rounded-lg" />
+           <Skeleton className="h-[300px] w-full rounded-lg" />
+         </div>
+       )}
+
+      {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
+      {!isLoadingToggles && !initialAccessAllowed && (
+         <Alert variant="destructive" className="mt-6">
+           <Terminal className="h-4 w-4" />
+           <AlertTitle>Akses Ditolak</AlertTitle>
+           <AlertDescription>
+             {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+           </AlertDescription>
+         </Alert>
+       )}
+
+      {/* Render content only if NOT loading and access IS allowed */}
+      {!isLoadingToggles && initialAccessAllowed && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {/* Placeholder for Score Categories/Calculators */}
+            <Card>
           <CardHeader>
             <CardTitle>Cardiology Scores</CardTitle>
           </CardHeader>
@@ -93,7 +162,8 @@ const ClinicalScoringHub: React.FC = () => {
           </Button>
         </Link>
       </div>
-
+     </>
+    )} {/* End of initialAccessAllowed block */}
     </div>
   );
 };

@@ -1,9 +1,10 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient'; // Import Supabase client
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+// Removed: import { useToast } from '@/components/ui/use-toast';
 
-// User type including profile level
-export type UserLevel = 'Free' | 'Premium' | 'Researcher';
+// User type including profile level - Updated levels
+export type UserLevel = 'Free' | 'Researcher' | 'Administrator'; // Removed Premium, Added Administrator
 
 type User = {
   id: string;
@@ -14,13 +15,15 @@ type User = {
 
 interface AuthContextType {
   user: User | null;
-  level: UserLevel | null; // Expose level directly
-  session: Session | null; // Expose session if needed
+  level: UserLevel | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  loading: boolean; // Add loading state
-  login: (email: string, password: string) => Promise<any>; // Return type depends on Supabase response
-  register: (email: string, password: string) => Promise<any>; // Return type depends on Supabase response
+  navigate: (path: string) => void; // Add navigate function
+  loading: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  register: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
+  upgradeToResearcher: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,10 +34,12 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [level, setLevel] = useState<UserLevel | null>(null); // State for user level
+  const [level, setLevel] = useState<UserLevel | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true); // Start loading
+  const [navigate, setNavigate] = useState(() => () => {}); // Initialize navigate
+  const [loading, setLoading] = useState<boolean>(true);
+  // Removed: const { toast } = useToast();
 
   // Function to fetch user profile including level
   const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
@@ -47,13 +52,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error && error.code !== 'PGRST116') { // PGRST116: 'Row not found' - expected if profile not created yet
         console.error('Error fetching profile:', error);
-        return { id: supabaseUser.id, email: supabaseUser.email, level: null }; // Return basic user info on error
+        return { id: supabaseUser.id, email: supabaseUser.email, level: null };
       }
 
       return {
         id: supabaseUser.id,
         email: supabaseUser.email,
-        level: profile?.level as UserLevel ?? 'Free', // Default to 'Free' if profile exists but level is null (shouldn't happen with default) or if profile doesn't exist yet
+        level: profile?.level as UserLevel ?? 'Free',
       };
     } catch (err) {
       console.error('Exception fetching profile:', err);
@@ -64,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     setLoading(true);
-    let isMounted = true; // Flag to prevent state updates on unmounted component
+    let isMounted = true;
 
     const handleAuthChange = async (session: Session | null) => {
       if (!isMounted) return;
@@ -85,68 +90,101 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
       if (isMounted) {
-         setLoading(false); // Set loading false after processing auth state
+         setLoading(false);
       }
     };
 
     // Get initial session and profile
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuthChange(session); // Process initial session
+      handleAuthChange(session);
     });
 
     // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       // Don't setLoading(true) here, only on explicit actions like login/logout/register
-      handleAuthChange(session); // Process subsequent changes
+      handleAuthChange(session);
     });
+
+    // Initialize navigate
+    if (isMounted) {
+      setNavigate(() => (path: string) => {
+        // Use a try-catch block to handle potential errors
+        try {
+          // Access the history object from the router context
+          window.location.href = path;
+        } catch (error) {
+          console.error("Navigation error:", error);
+          // Handle the error appropriately, e.g., display an error message
+        }
+      });
+    }
 
     // Cleanup listener on unmount
     return () => {
-      isMounted = false; // Set flag to false on unmount
-      authListener?.subscription.unsubscribe(); // Call unsubscribe directly
+      isMounted = false;
+      authListener?.subscription.unsubscribe();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) throw error;
+    // Removed toast logic block
     return data;
   };
 
   const register = async (email: string, password: string) => {
     setLoading(true);
-    // Note: Supabase signUp might require email confirmation by default
-    // This function now ONLY handles the Supabase Auth sign-up.
-    // Profile creation is handled separately (e.g., in SignUp.tsx for Free, or via webhook for Premium).
     const { data, error } = await supabase.auth.signUp({ email, password });
-
-    setLoading(false); // Set loading false regardless of profile creation here
+    setLoading(false);
 
     if (error) {
       throw error;
     }
-
-    // Return the sign-up data (user, session)
-    // The calling component (SignUp.tsx) will decide what to do next based on the plan.
     return data;
   };
 
   const logout = async () => {
     setLoading(true);
     await supabase.auth.signOut();
-    // State updates will be handled by onAuthStateChange listener
     setLoading(false);
+  };
+
+  const upgradeToResearcher = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ level: 'Researcher' })
+        .eq('id', user?.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Update the user's level in the AuthContext
+      setUser({ ...user, level: 'Researcher' });
+      setLevel('Researcher');
+      // Removed toast logic block
+    } catch (error) {
+      console.error('Error upgrading to Researcher:', error);
+      // Removed toast logic block
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Don't render children until initial auth check is complete
   if (loading) {
-     return <div>Loading Authentication...</div>; // Or a proper loading spinner component
+     return <div>Loading Authentication...</div>;
   }
 
   return (
-    <AuthContext.Provider value={{ user, level, session, isAuthenticated, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, level, session, isAuthenticated, navigate, loading, login, register, logout, upgradeToResearcher }}>
       {children}
     </AuthContext.Provider>
   );

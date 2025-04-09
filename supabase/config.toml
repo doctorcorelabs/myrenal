@@ -1,0 +1,39 @@
+# Supabase Configuration File
+# See https://supabase.com/docs/guides/references/config
+
+# Note: This file was created based on the diff from 'supabase link'.
+# It might not contain all sections present in the remote config.
+
+[auth]
+enabled = true
+site_url = "https://daivanlabs.com/signin"
+additional_redirect_urls = ["https://daivanlabs.com/signin"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_manual_linking = false
+enable_signup = false # Synced from remote
+enable_anonymous_sign_ins = false
+minimum_password_length = 6
+password_requirements = ""
+
+[auth.mfa]
+max_enrolled_factors = 10
+[auth.mfa.totp]
+enroll_enabled = true # Synced from remote
+verify_enabled = true # Synced from remote
+[auth.mfa.phone]
+enroll_enabled = false
+verify_enabled = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true # Synced from remote
+secure_password_change = false
+max_frequency = "1m0s" # Synced from remote
+otp_length = 6
+otp_expiry = 86400 # Synced from remote
+[auth.email.template]
+[auth.sms]
+enable_signup = false

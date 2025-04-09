@@ -7,7 +7,8 @@ import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight, ArrowLeft, Ter
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -28,7 +29,8 @@ const RESULTS_PER_PAGE = 30;
 
 const ClinicalGuidelines = () => {
     const featureName: FeatureName = 'clinical_guidelines';
-    const { checkAccess, incrementUsage } = useFeatureAccess();
+    // Get isLoadingToggles from the hook
+    const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
     const { toast } = useToast();
 
     // State for initial access check
@@ -54,11 +56,13 @@ const ClinicalGuidelines = () => {
 
     // Initial access check on mount
     useEffect(() => {
-        const verifyInitialAccess = async () => {
-          setIsCheckingInitialAccess(true);
-          setInitialAccessMessage(null);
-          try {
-            const result = await checkAccess(featureName);
+        // Only run verifyAccess if the hook is done loading toggles
+        if (!isLoadingToggles) {
+            const verifyInitialAccess = async () => {
+              setIsCheckingInitialAccess(true); // Start page-specific check
+              setInitialAccessMessage(null);
+              try {
+                const result = await checkAccess(featureName);
             if (result.quota === 0) {
                  setInitialAccessAllowed(false);
                  setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
@@ -75,13 +79,13 @@ const ClinicalGuidelines = () => {
               variant: "destructive",
             });
           } finally {
-            setIsCheckingInitialAccess(false);
-          }
-        };
-
-        verifyInitialAccess();
+              setIsCheckingInitialAccess(false); // Finish page-specific check
+              }
+            };
+            verifyInitialAccess();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []); // Run only once on mount
+      }, [isLoadingToggles]); // Re-run when hook loading state changes
 
 
     const fetchPageData = async (pageToFetch: number) => {
@@ -294,16 +298,16 @@ const ClinicalGuidelines = () => {
             />
             <div className="container max-w-7xl mx-auto px-4 py-12">
 
-                {/* Initial Loading State */}
-                {isCheckingInitialAccess && (
+                {/* Show Skeleton if overall loading is true */}
+                {(isCheckingInitialAccess || isLoadingToggles) && (
                    <div className="flex flex-col space-y-3 mt-4">
-                     <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for search card */}
-                     <Skeleton className="h-[300px] w-full rounded-lg" /> {/* Placeholder for results area */}
+                     <Skeleton className="h-[200px] w-full rounded-lg" />
+                     <Skeleton className="h-[300px] w-full rounded-lg" />
                    </div>
                  )}
 
-                {/* Initial Access Denied Message */}
-                {!isCheckingInitialAccess && !initialAccessAllowed && (
+                {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+                {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
                    <Alert variant="destructive" className="mt-4">
                      <Terminal className="h-4 w-4" />
                      <AlertTitle>Akses Ditolak</AlertTitle>
@@ -313,8 +317,8 @@ const ClinicalGuidelines = () => {
                    </Alert>
                  )}
 
-                {/* Render content only if initial access is allowed */}
-                {!isCheckingInitialAccess && initialAccessAllowed && (
+                {/* Render content only if NOT loading and access IS allowed */}
+                {!(isCheckingInitialAccess || isLoadingToggles) && initialAccessAllowed && (
                   <>
                     {/* PubMed Guideline Search Feature */}
                     <div className="pubmed-search-feature p-5 border border-gray-200 dark:border-gray-700 rounded-md mb-6 shadow-sm bg-card">

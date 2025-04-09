@@ -1,31 +1,71 @@
-import { useState, useEffect, useCallback } from 'react'; // Added useCallback
-import { Link, useLocation, useNavigate } from 'react-router-dom'; // Added useNavigate
-import { Menu, X, LogIn, UserPlus, LogOut, User, Wrench, ArrowUpCircle } from 'lucide-react'; // Added ArrowUpCircle
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, LogIn, UserPlus, LogOut, User, Wrench, ShieldCheck, Clock, ArrowUpCircle } from 'lucide-react'; // Added Clock, ArrowUpCircle icons
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+import {
+  AlertDialog, // Added AlertDialog
+  AlertDialogTrigger, // Added AlertDialogTrigger
+} from "@/components/ui/alert-dialog"; // Added AlertDialog imports
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator, // Added Separator
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import UpgradePlanDialogContent from '@/components/UpgradePlanDialog'; // Import the dialog content
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { UpgradePlanDialog } from './UpgradePlanDialog'; // Import the dialog
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false); // Mobile menu state
+  const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false); // State for dialog
+  const [quotaResetTime, setQuotaResetTime] = useState<number | null>(null); // State for countdown
   const location = useLocation();
-  const { user, level, isAuthenticated, logout } = useAuth(); // Added level
-  const navigate = useNavigate(); // Added navigate
-  const { toast } = useToast(); // Added toast
+  const { user, level, isAuthenticated, logout } = useAuth();
+
+  // Helper function to calculate time until next midnight UTC
+  const getTimeUntilNextMidnightUTC = useCallback(() => {
+    const now = new Date();
+    const midnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+    const diff = midnightUTC.getTime() - now.getTime();
+    return Math.max(0, Math.floor(diff / 1000)); // Time in seconds
+  }, []);
+
+  // Effect to calculate and update refresh times for the current user
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isAuthenticated && (level === 'Free' || level === 'Researcher')) {
+      const updateCountdown = () => {
+        setQuotaResetTime(getTimeUntilNextMidnightUTC());
+      };
+      updateCountdown(); // Initial calculation
+      intervalId = setInterval(updateCountdown, 1000); // Update every second
+    } else {
+      setQuotaResetTime(null); // Clear countdown if not authenticated or not Free/Researcher
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId); // Cleanup on unmount or when auth state changes
+      }
+    };
+  }, [isAuthenticated, level, getTimeUntilNextMidnightUTC]);
+
+  // Helper function to format time in hh:mm:ss format
+  const formatTime = (seconds: number | null): string => {
+    if (seconds === null) return '';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+  };
+
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -52,40 +92,14 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    setIsOpen(false);
+    setIsOpen(false); // Close mobile menu on location change
   }, [location]);
 
   const handleLogout = () => {
     logout();
   };
 
-  // Placeholder function for initiating upgrade (calls placeholder in AuthContext or similar)
-  const handleUpgradeClick = useCallback(async () => {
-    if (!user) return; // Should not happen if button is shown, but good practice
-
-    // TODO: Replace this with the actual call to initiateStripeCheckout
-    // This might involve moving initiateStripeCheckout from SignUp to AuthContext
-    // or creating a dedicated function/hook for it.
-    console.log(`Upgrade clicked for user: ${user.id}, email: ${user.email}`);
-    // This function now primarily opens the dialog.
-    // The placeholder toast is removed from here as the dialog handles the next step.
-    // toast({
-    //   title: "Upgrade Feature Placeholder",
-    //   description: "Implement payment gateway checkout initiation here.", // Generic text
-    // });
-    // Example of calling a placeholder function (assuming it exists)
-    // try {
-    //   await initiateStripeCheckout(user.id, user.email || '', 'Premium'); // Or prompt user for Premium/Researcher
-    // } catch (error: any) {
-    //   toast({ title: "Error", description: error.message, variant: "destructive" });
-    // }
-    // For now, just open the dialog
-    setIsUpgradeDialogOpen(true);
-  }, [user, toast]); // Dependencies
-
-
   return (
-    <> {/* Wrap with Fragment to include Dialog */}
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'py-4 bg-transparent'}`}>
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
@@ -95,98 +109,119 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden xl:flex items-center"> {/* Removed justify-between and w-full */}
+          <nav className="hidden xl:flex items-center">
             {/* Main navLinks group */}
-            <div className="flex items-center space-x-6"> {/* Spacing for main links */}
+            <div className="flex items-center space-x-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
-                to={link.path}
-                className={`transition-colors duration-300 hover:text-medical-teal ${
-                  location.pathname === link.path
-                    ? 'text-medical-teal font-medium'
-                    : 'text-gray-700'
-                }`}
-              >
-                {link.name}
+                  to={link.path}
+                  className={`transition-colors duration-300 hover:text-medical-teal ${
+                    location.pathname === link.path
+                      ? 'text-medical-teal font-medium'
+                      : 'text-gray-700'
+                  }`}
+                >
+                  {link.name}
                 </Link>
               ))}
             </div>
 
             {/* Auth section group */}
-            <div className="ml-8 flex items-center space-x-4"> {/* Reduced margin to ml-8 */}
+            <div className="ml-8 flex items-center space-x-4">
               {isAuthenticated ? (
                 <>
                   <Link
-                  to="/tools"
-                  className={`transition-colors duration-300 hover:text-medical-teal ${
-                    location.pathname === '/tools'
-                      ? 'text-medical-teal font-medium'
-                      : 'text-gray-700'
-                  }`}
-                >
-                  Tools
-                </Link>
+                    to="/tools"
+                    className={`transition-colors duration-300 hover:text-medical-teal ${
+                      location.pathname === '/tools'
+                        ? 'text-medical-teal font-medium'
+                        : 'text-gray-700'
+                    }`}
+                  >
+                    Tools
+                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        <span>User</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link to="/tools" className="flex items-center gap-2 cursor-pointer">
+                          <Wrench className="h-4 w-4" />
+                          <span>Tools</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      {/* Conditionally show Upgrade Plan Item */}
+                      {level === 'Free' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center gap-2 cursor-pointer text-green-600 focus:text-green-700 focus:bg-green-50">
+                              <ArrowUpCircle className="h-4 w-4" />
+                              <span>Upgrade Plan</span>
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <UpgradePlanDialogContent />
+                        </AlertDialog>
+                      )}
+
+                      {/* Conditionally show Quota Reset Countdown */}
+                      {quotaResetTime !== null && (
+                        <DropdownMenuItem disabled className="text-xs text-muted-foreground flex items-center gap-1 cursor-default">
+                          <Clock className="h-3 w-3" />
+                          <span>Reset in: {formatTime(quotaResetTime)}</span>
+                        </DropdownMenuItem>
+                      )}
+                      {/* Conditionally show Admin Dashboard item */}
+                      {level === 'Administrator' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin-dashboard" className="flex items-center gap-2 cursor-pointer text-purple-600 focus:text-purple-700 focus:bg-purple-50">
+                              <ShieldCheck className="h-4 w-4" />
+                              <span>Admin Dashboard</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    <span>User</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/tools" className="flex items-center gap-2 cursor-pointer">
-                      <Wrench className="h-4 w-4" />
-                      <span>Tools</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  {/* Removed Stream Interaction link */}
-                  {/* Conditionally show Upgrade Plan item - Temporarily Disabled */}
-                  {/* {level === 'Free' && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleUpgradeClick} className="flex items-center gap-2 cursor-pointer text-green-600 focus:text-green-700 focus:bg-green-50">
-                        <ArrowUpCircle className="h-4 w-4" />
-                        <span>Upgrade Plan</span>
-                      </DropdownMenuItem>
-                    </>
-                  )} */}
-                  {/* <DropdownMenuSeparator /> */} {/* Also hide separator if upgrade is the only item between separators */}
-                  <DropdownMenuSeparator /> {/* Keep this separator before Sign Out */}
-                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              </>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <LogIn className="h-5 w-5" />
-                    <span>Login</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/signin" className="flex items-center gap-2 cursor-pointer">
-                      <LogIn className="h-4 w-4" />
-                      <span>Sign In</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/signup" className="flex items-center gap-2 cursor-pointer">
-                      <UserPlus className="h-4 w-4" />
-                      <span>Sign Up</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <LogIn className="h-5 w-5" />
+                      <span>Login</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/signin" className="flex items-center gap-2 cursor-pointer">
+                        <LogIn className="h-4 w-4" />
+                        <span>Sign In</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/signup" className="flex items-center gap-2 cursor-pointer">
+                        <UserPlus className="h-4 w-4" />
+                        <span>Sign Up</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-            </div> {/* End of auth group */}
-          </nav> {/* End of nav */}
+            </div>
+          </nav>
 
           {/* Mobile Menu Button */}
           <div className="xl:hidden flex items-center space-x-4">
@@ -223,24 +258,41 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            
+
             {/* Auth Links (Mobile) */}
             <div className="pt-4 border-t border-gray-200">
               {isAuthenticated ? (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 px-2">Signed in as {user?.email || 'User'}</div>
-                  {/* <div className="text-xs text-gray-400 px-2 capitalize">Level: {level || 'Unknown'}</div> */} {/* Temporarily hide level */}
-                   {/* Conditionally show Upgrade Plan button for Free users - Temporarily Disabled */}
-                   {/* {level === 'Free' && (
-                     <Button
-                       variant="ghost"
-                       onClick={handleUpgradeClick}
-                       className="w-full flex items-center justify-start gap-2 text-left py-2 text-green-600 hover:bg-green-50 hover:text-green-700"
-                     >
-                       <ArrowUpCircle className="h-5 w-5" />
-                       <span>Upgrade Plan</span>
+                  <div className="text-xs text-gray-400 px-2 capitalize">Level: {level || 'Unknown'}</div>
+                  {/* Conditionally show Quota Reset Countdown for Mobile */}
+                  {quotaResetTime !== null && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 px-2 py-1 border-t border-b border-gray-100">
+                      <Clock className="h-3 w-3" />
+                      <span>Quota Reset in: {formatTime(quotaResetTime)}</span>
+                    </div>
+                  )}
+                   {/* Conditionally show Admin Dashboard button */}
+                   {level === 'Administrator' && (
+                     <Button variant="ghost" asChild className="w-full flex items-center justify-start gap-2 text-left py-2 text-purple-600 hover:bg-purple-50 hover:text-purple-700">
+                       <Link to="/admin-dashboard">
+                         <ShieldCheck className="h-5 w-5" />
+                         <span>Admin Dashboard</span>
+                       </Link>
                      </Button>
-                   )} */}
+                   )}
+                  {/* Conditionally show Upgrade Plan Item in Mobile */}
+                  {level === 'Free' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="w-full flex items-center justify-start gap-2 text-left py-2 hover:bg-green-50 hover:text-green-700 text-green-600">
+                          <ArrowUpCircle className="h-5 w-5" />
+                          <span>Upgrade Plan</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <UpgradePlanDialogContent />
+                    </AlertDialog>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 text-left py-2 text-red-600 hover:bg-red-50 hover:text-red-700"
@@ -256,7 +308,6 @@ const Navbar = () => {
                       <LogIn className="h-5 w-5" />
                       <span>Login / Register</span>
                     </span>
-                    {/* Add an icon indicator for collapsible state if desired */}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pl-6 space-y-2">
                     <Link
@@ -281,9 +332,6 @@ const Navbar = () => {
         </nav>
       )}
     </header>
-    {/* Render the Dialog component */}
-    <UpgradePlanDialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen} />
-    </>
   );
 };
 

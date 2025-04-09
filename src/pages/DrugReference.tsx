@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, AlertTriangle, Loader2, Terminal } from 'lucide-react'; // Added Terminal
-import { useFeatureAccess, FeatureName } from '@/hooks/useFeatureAccess'; // Added hook
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
+import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import ReactMarkdown from 'react-markdown'; // Import react-markdown
@@ -38,7 +39,8 @@ interface DrugResult {
 
 const DrugReference = () => {
   const featureName: FeatureName = 'drug_reference';
-  const { checkAccess, incrementUsage } = useFeatureAccess();
+  // Get isLoadingToggles from the hook
+  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
 
   // State for initial access check
@@ -55,11 +57,13 @@ const DrugReference = () => {
 
   // Initial access check on mount
   useEffect(() => {
-    const verifyInitialAccess = async () => {
-      setIsCheckingInitialAccess(true);
-      setInitialAccessMessage(null);
-      try {
-        const result = await checkAccess(featureName);
+    // Only run verifyAccess if the hook is done loading toggles
+    if (!isLoadingToggles) {
+      const verifyInitialAccess = async () => {
+        setIsCheckingInitialAccess(true); // Start page-specific check
+        setInitialAccessMessage(null);
+        try {
+          const result = await checkAccess(featureName);
         // Check if quota is explicitly 0 (denied by level)
         if (result.quota === 0) {
              setInitialAccessAllowed(false);
@@ -77,13 +81,13 @@ const DrugReference = () => {
           variant: "destructive",
         });
       } finally {
-        setIsCheckingInitialAccess(false);
-      }
-    };
-
-    verifyInitialAccess();
+          setIsCheckingInitialAccess(false); // Finish page-specific check
+        }
+      };
+      verifyInitialAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [isLoadingToggles]); // Re-run when hook loading state changes
 
 
   const handleSearch = async () => {
@@ -272,16 +276,16 @@ const DrugReference = () => {
       <div className="container-custom">
         <div className="max-w-4xl mx-auto">
 
-          {/* Initial Loading State */}
-          {isCheckingInitialAccess && (
+          {/* Show Skeleton if overall loading is true */}
+          {(isCheckingInitialAccess || isLoadingToggles) && (
              <div className="flex flex-col space-y-3 mt-8">
-               <Skeleton className="h-[120px] w-full rounded-lg" /> {/* Placeholder for search card */}
-               <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Placeholder for results card */}
+               <Skeleton className="h-[120px] w-full rounded-lg" />
+               <Skeleton className="h-[200px] w-full rounded-lg" />
              </div>
            )}
 
-          {/* Initial Access Denied Message */}
-          {!isCheckingInitialAccess && !initialAccessAllowed && (
+          {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+          {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
              <Alert variant="destructive" className="mt-8">
                <Terminal className="h-4 w-4" />
                <AlertTitle>Akses Ditolak</AlertTitle>
@@ -291,8 +295,8 @@ const DrugReference = () => {
              </Alert>
            )}
 
-          {/* Render content only if initial access is allowed */}
-          {!isCheckingInitialAccess && initialAccessAllowed && (
+          {/* Render content only if NOT loading and access IS allowed */}
+          {!(isCheckingInitialAccess || isLoadingToggles) && initialAccessAllowed && (
             <>
               {/* Disclaimer */}
               <Alert variant="destructive" className="mb-8 bg-yellow-50 border-yellow-500 text-yellow-800">
