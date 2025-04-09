@@ -25,29 +25,29 @@ const AIChatbot = () => {
         setAccessMessage(null);
         try {
           const result = await checkAccess(featureName);
-        setAccessAllowed(result.allowed);
-        if (result.allowed) {
-          // Increment usage only if access is granted
-          // We increment usage *before* the user interacts with the iframe
-          // Alternatively, could increment based on iframe interaction, but that's more complex.
-          await incrementUsage(featureName);
-          // Optionally show remaining quota
-          // if (result.remaining !== null) {
-          //   toast({ title: "Info", description: `Sisa kuota ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
-          // }
-        } else {
-          setAccessMessage(result.message || 'Akses ditolak.'); // Set message if denied
-        }
-      } catch (error) {
-        console.error("Error checking feature access:", error);
-        setAccessAllowed(false);
-        setAccessMessage('Gagal memeriksa akses fitur.');
-        toast({
-          title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
-          variant: "destructive",
-        });
-      } finally {
+          setAccessAllowed(result.allowed);
+          if (result.allowed) {
+            // Increment usage only if access is granted
+            // We increment usage *before* the user interacts with the iframe
+            // Alternatively, could increment based on iframe interaction, but that's more complex.
+            await incrementUsage(featureName);
+            // Optionally show remaining quota
+            // if (result.remaining !== null) {
+            //   toast({ title: "Info", description: `Remaining quota for ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
+            // }
+          } else {
+            setAccessMessage(result.message || 'Access denied.'); // Set message if denied
+          }
+        } catch (error) {
+          console.error("Error checking feature access:", error);
+          setAccessAllowed(false);
+          setAccessMessage('Failed to check feature access.');
+          toast({
+            title: "Error",
+            description: "Could not verify feature access at this time.",
+            variant: "destructive",
+          });
+        } finally {
           setIsCheckingAccess(false); // Finish page-specific check
         }
       };
@@ -76,16 +76,16 @@ const AIChatbot = () => {
             </div>
           )}
 
-         {/* Access Denied Message (Show only if NOT loading and access is denied) */}
-         {!isLoading && !accessAllowed && (
-            <Alert variant="destructive" className="mt-4">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Akses Ditolak</AlertTitle>
-              <AlertDescription>
-                {accessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-              </AlertDescription>
-            </Alert>
-          )}
+           {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+           {!isLoading && !accessAllowed && (
+              <Alert variant="destructive" className="mt-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Access Denied</AlertTitle>
+                <AlertDescription>
+                  {accessMessage || 'You do not have permission to access this feature.'}
+                </AlertDescription>
+              </Alert>
+            )}
 
          {/* Feature Content (Iframe) - Render only if NOT loading and access IS allowed */}
          {!isLoading && accessAllowed && (

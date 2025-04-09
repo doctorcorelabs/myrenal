@@ -130,20 +130,20 @@ const MindMapMaker: React.FC = () => {
         setInitialAccessMessage(null);
         try {
           const result = await checkAccess(featureName);
-          setInitialAccessAllowed(result.allowed);
-          if (!result.allowed) {
-            setInitialAccessMessage(result.message || 'Akses ditolak.');
-          }
-        } catch (error) {
-          console.error("Error checking initial feature access:", error);
-          setInitialAccessAllowed(false);
-          setInitialAccessMessage('Gagal memeriksa akses fitur.');
-          toast({
-            title: "Error",
-            description: "Tidak dapat memverifikasi akses fitur saat ini.",
-            variant: "destructive",
-          });
-        }
+           setInitialAccessAllowed(result.allowed);
+           if (!result.allowed) {
+             setInitialAccessMessage(result.message || 'Access denied.');
+           }
+         } catch (error) {
+           console.error("Error checking initial feature access:", error);
+           setInitialAccessAllowed(false);
+           setInitialAccessMessage('Failed to check feature access.');
+           toast({
+             title: "Error",
+             description: "Could not verify feature access at this time.",
+             variant: "destructive",
+           });
+         }
       };
       verifyInitialAccess();
     }
@@ -196,14 +196,14 @@ const MindMapMaker: React.FC = () => {
     }
 
     // --- Action Access Check ---
-    const accessResult = await checkAccess(featureName);
-    if (!accessResult.allowed) {
-      toast({
-        title: "Akses Ditolak",
-        description: accessResult.message || 'Anda tidak dapat membuat mind map saat ini.',
-        variant: "destructive",
-      });
-      return; // Stop generation
+     const accessResult = await checkAccess(featureName);
+     if (!accessResult.allowed) {
+       toast({
+         title: "Access Denied",
+         description: accessResult.message || 'You cannot create a mind map at this time.',
+         variant: "destructive",
+       });
+       return; // Stop generation
     }
 
     setIsLoading(true);
@@ -256,16 +256,16 @@ const MindMapMaker: React.FC = () => {
              <Skeleton className="h-[600px] w-full rounded-lg" />
            </div>
          )}
-        {/* Access Denied Message */}
-        {!isLoadingToggles && !initialAccessAllowed && (
-           <Alert variant="destructive" className="mt-4">
-             <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
-             <AlertDescription>
-               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-             </AlertDescription>
-           </Alert>
-         )}
+         {/* Access Denied Message */}
+         {!isLoadingToggles && !initialAccessAllowed && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Access Denied</AlertTitle>
+              <AlertDescription>
+                {initialAccessMessage || 'You do not have permission to access this feature.'}
+              </AlertDescription>
+            </Alert>
+          )}
         {/* Main Content */}
         {!isLoadingToggles && initialAccessAllowed && (
           <>
@@ -319,7 +319,22 @@ const MindMapMaker: React.FC = () => {
             </Dialog>
             {/* Buttons Section */}
             <div className="flex flex-col items-center gap-4 mt-8 mb-4">
-              <Button onClick={() => setIsAdvancedModalOpen(true)}>Advanced Mind Map Generator</Button>
+              <Button onClick={async () => {
+                // --- Action Access Check for Advanced ---
+                const accessResult = await checkAccess(featureName);
+                if (!accessResult.allowed) {
+                  toast({
+                    title: "Access Denied",
+                    description: accessResult.message || 'You cannot access the Advanced Mind Map Generator at this time.',
+                    variant: "destructive",
+                  });
+                  return; // Stop if access denied
+                }
+                // --- Increment Usage for Advanced ---
+                await incrementUsage(featureName);
+                // --- Open Modal ---
+                setIsAdvancedModalOpen(true);
+              }}>Advanced Mind Map Generator</Button>
               <Link to="/tools"><Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Back to Tools</Button></Link>
             </div>
           </>

@@ -125,7 +125,7 @@ export function useFeatureAccess() {
 
     if (!effectiveLevel) {
         console.error(`[checkAccess] Could not determine user level for user ${currentUser.id}.`);
-        return { ...defaultDenied, message: 'Gagal memverifikasi level pengguna.' };
+        return { ...defaultDenied, message: 'Failed to verify user level.' };
     }
     console.log(`[checkAccess] Initial Level: ${effectiveLevel}`);
     // --- End Fetch Profile Details ---
@@ -135,7 +135,7 @@ export function useFeatureAccess() {
     console.log(`[checkAccess] Feature '${featureName}' enabled status: ${isFeatureEnabled}`);
     if (!isFeatureEnabled && effectiveLevel !== 'Administrator') {
         console.log(`[checkAccess] Access DENIED: Feature '${featureName}' is disabled by admin.`);
-        return { ...defaultDenied, allowed: false, message: 'Fitur ini sedang tidak tersedia.', level: effectiveLevel, isDisabled: true };
+        return { ...defaultDenied, allowed: false, message: 'This feature is currently unavailable.', level: effectiveLevel, isDisabled: true };
     }
     // --- End Check Feature Toggle Status ---
 
@@ -167,7 +167,7 @@ export function useFeatureAccess() {
         const canAccess = hasLearningResourcesAccess(effectiveLevel);
         console.log(`[checkAccess] Learning Resources check - Level: ${effectiveLevel}, Can Access: ${canAccess}`);
         if (!canAccess) {
-            const message = `Fitur 'Learning Resources' tidak tersedia untuk level ${effectiveLevel}.`;
+            const message = `Feature 'Learning Resources' is not available for level ${effectiveLevel}.`;
             console.log(`[checkAccess] Access DENIED: ${message}`);
             return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: effectiveLevel, isExpired };
         } else {
@@ -188,7 +188,7 @@ export function useFeatureAccess() {
 
     // Handle immediate denial if effective level has 0 quota
     if (userQuota === 0) {
-        const message = `Fitur '${featureName.replace(/_/g, ' ')}' tidak tersedia untuk level ${effectiveLevel}.`;
+        const message = `Feature '${featureName.replace(/_/g, ' ')}' is not available for level ${effectiveLevel}.`;
         console.log(`[checkAccess] Access DENIED: ${message}`);
         return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: effectiveLevel, isExpired };
     }
@@ -206,7 +206,7 @@ export function useFeatureAccess() {
 
       if (usageError) {
         console.error(`[checkAccess] Error fetching usage via RPC 'get_today_usage_count':`, usageError);
-        return { ...defaultDenied, message: 'Gagal memeriksa kuota penggunaan.', level: effectiveLevel, isExpired };
+        return { ...defaultDenied, message: 'Failed to check usage quota.', level: effectiveLevel, isExpired };
       }
 
       // *** MODIFIED RESULT HANDLING ***
@@ -219,7 +219,7 @@ export function useFeatureAccess() {
       const remaining = actualQuota - currentUsage;
 
       if (currentUsage >= actualQuota) {
-        const message = `Kuota harian (${actualQuota}) untuk fitur '${featureName.replace(/_/g, ' ')}' telah tercapai. Coba lagi besok.`;
+        const message = `Daily quota (${actualQuota}) for feature '${featureName.replace(/_/g, ' ')}' has been reached. Please try again tomorrow.`;
         console.log(`[checkAccess] Access DENIED: ${message}`);
         return {
           allowed: false,
@@ -244,7 +244,7 @@ export function useFeatureAccess() {
       }
     } catch (err) {
       console.error(`[checkAccess] Exception fetching usage via RPC 'get_today_usage_count':`, err);
-      return { ...defaultDenied, message: 'Terjadi kesalahan saat memeriksa kuota.', level: effectiveLevel, isExpired };
+      return { ...defaultDenied, message: 'An error occurred while checking the quota.', level: effectiveLevel, isExpired };
     }
   }, [supabase, featureToggles, isLoadingToggles]); // Added dependencies
 
@@ -256,7 +256,7 @@ export function useFeatureAccess() {
       console.warn('[incrementUsage] Not authenticated.');
       toast({
           title: "Error",
-          description: `Gagal mencatat penggunaan: Autentikasi tidak valid.`,
+          description: `Failed to record usage: Invalid authentication.`,
           variant: "destructive",
         });
       return;
@@ -274,7 +274,7 @@ export function useFeatureAccess() {
         console.error(`[incrementUsage] Error calling RPC:`, error);
         toast({
           title: "Error",
-          description: `Gagal mencatat penggunaan fitur '${featureName.replace(/_/g, ' ')}'.`,
+          description: `Failed to record usage for feature '${featureName.replace(/_/g, ' ')}'.`,
           variant: "destructive",
         });
       } else {
@@ -284,7 +284,7 @@ export function useFeatureAccess() {
       console.error(`[incrementUsage] Exception calling RPC:`, err);
        toast({
           title: "Error",
-          description: `Terjadi kesalahan saat mencatat penggunaan fitur '${featureName.replace(/_/g, ' ')}'.`,
+          description: `An error occurred while recording usage for feature '${featureName.replace(/_/g, ' ')}'.`,
           variant: "destructive",
         });
     }

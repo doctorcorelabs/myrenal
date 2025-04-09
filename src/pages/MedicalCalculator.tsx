@@ -242,7 +242,7 @@ const MedicalCalculator = () => {
   const handleBmiCalculate = async () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setError('');
     const weightNum = parseFloat(bmiWeight);
@@ -260,7 +260,7 @@ const MedicalCalculator = () => {
   const handleBsaCalculate = async () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setError('');
     const weightNum = parseFloat(bsaWeight);
@@ -277,7 +277,7 @@ const MedicalCalculator = () => {
   const handleGfrCalculate = async () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setError('');
     const creatinineNum = parseFloat(gfrCreatinine);
@@ -294,7 +294,7 @@ const MedicalCalculator = () => {
   const handleIbwCalculate = async () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setError('');
     const heightNum = parseFloat(ibwHeight);
@@ -310,7 +310,7 @@ const MedicalCalculator = () => {
   const handleAdjBwCalculate = async () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setError('');
     const actualWeightNum = parseFloat(adjBwActualWeight);
@@ -333,7 +333,7 @@ const MedicalCalculator = () => {
   const handleBmrCalculate = async () => {
      const accessResult = await checkAccess(featureName);
      if (!accessResult.allowed) {
-       toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
      }
      setError('');
      const weightNum = parseFloat(bmrWeight);
@@ -351,7 +351,7 @@ const MedicalCalculator = () => {
   const handleCorrectedCalciumCalculate = async () => {
      const accessResult = await checkAccess(featureName);
      if (!accessResult.allowed) {
-       toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
      }
      setError('');
      const totalCaNum = parseFloat(ccTotalCalcium);
@@ -387,7 +387,7 @@ const MedicalCalculator = () => {
         {!isLoadingToggles && !initialAccessAllowed && (
            <Alert variant="destructive" className="mt-8">
              <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertTitle>Access Denied</AlertTitle>
              <AlertDescription>
                {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
              </AlertDescription>

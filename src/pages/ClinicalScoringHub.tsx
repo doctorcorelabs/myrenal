@@ -32,23 +32,23 @@ const ClinicalScoringHub: React.FC = () => {
       setInitialAccessMessage(null);
       try {
         const result = await checkAccess(featureName);
-        // Check the result inside the try block
-        if (result.quota === 0 || result.isDisabled) {
-           setInitialAccessAllowed(false);
-           setInitialAccessMessage(result.message || 'Akses ditolak.');
-        } else {
-           setInitialAccessAllowed(true);
-        }
-      } catch (error) { // Catch block correctly placed for the try
-        console.error("Error checking initial feature access:", error);
-        setInitialAccessAllowed(false);
-        setInitialAccessMessage('Gagal memeriksa akses fitur.');
-        toast({
-          title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
-          variant: "destructive",
-        });
-      }
+         // Check the result inside the try block
+         if (result.quota === 0 || result.isDisabled) {
+            setInitialAccessAllowed(false);
+            setInitialAccessMessage(result.message || 'Access denied.');
+         } else {
+            setInitialAccessAllowed(true);
+         }
+       } catch (error) { // Catch block correctly placed for the try
+         console.error("Error checking initial feature access:", error);
+         setInitialAccessAllowed(false);
+         setInitialAccessMessage('Failed to check feature access.');
+         toast({
+           title: "Error",
+           description: "Could not verify feature access at this time.",
+           variant: "destructive",
+         });
+       }
     }; // End of verifyInitialAccess async function
 
     // Only run verifyAccess if the hook is done loading toggles
@@ -76,16 +76,16 @@ const ClinicalScoringHub: React.FC = () => {
          </div>
        )}
 
-      {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
-      {!isLoadingToggles && !initialAccessAllowed && (
-         <Alert variant="destructive" className="mt-6">
-           <Terminal className="h-4 w-4" />
-           <AlertTitle>Akses Ditolak</AlertTitle>
-           <AlertDescription>
-             {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-           </AlertDescription>
-         </Alert>
-       )}
+       {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
+       {!isLoadingToggles && !initialAccessAllowed && (
+          <Alert variant="destructive" className="mt-6">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Access Denied</AlertTitle>
+            <AlertDescription>
+              {initialAccessMessage || 'You do not have permission to access this feature.'}
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Render content only if NOT loading and access IS allowed */}
       {!isLoadingToggles && initialAccessAllowed && (

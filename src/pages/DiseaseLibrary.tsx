@@ -55,24 +55,24 @@ const DiseaseLibrary = () => {
           const result = await checkAccess(featureName);
         // We only care if they have *any* access (quota > 0 or null)
         // The specific remaining count doesn't matter here, only for the search action itself.
-        // We use result.quota !== 0 check to determine if the level allows access at all.
-        if (result.quota === 0) { // Explicitly denied by level
-             setInitialAccessAllowed(false);
-             setInitialAccessMessage(result.message || 'Akses ditolak untuk level Anda.');
-        } else {
-             setInitialAccessAllowed(true); // Allow rendering the search UI
-        }
+         // We use result.quota !== 0 check to determine if the level allows access at all.
+         if (result.quota === 0) { // Explicitly denied by level
+              setInitialAccessAllowed(false);
+              setInitialAccessMessage(result.message || 'Access denied for your level.');
+         } else {
+              setInitialAccessAllowed(true); // Allow rendering the search UI
+         }
 
-      } catch (error) {
-        console.error("Error checking initial feature access:", error);
-        setInitialAccessAllowed(false);
-        setInitialAccessMessage('Gagal memeriksa akses fitur.');
-        toast({
-          title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
-          variant: "destructive",
-        });
-      } finally {
+       } catch (error) {
+         console.error("Error checking initial feature access:", error);
+         setInitialAccessAllowed(false);
+         setInitialAccessMessage('Failed to check feature access.');
+         toast({
+           title: "Error",
+           description: "Could not verify feature access at this time.",
+           variant: "destructive",
+         });
+       } finally {
           setIsCheckingInitialAccess(false); // Finish page-specific check
         }
       };
@@ -86,14 +86,14 @@ const DiseaseLibrary = () => {
     event.preventDefault();
 
     // --- Action Access Check ---
-    const accessResult = await checkAccess(featureName);
-    if (!accessResult.allowed) {
-      toast({
-        title: "Akses Ditolak",
-        description: accessResult.message || 'Anda tidak dapat melakukan pencarian saat ini.',
-        variant: "destructive",
-      });
-      return; // Stop the search
+     const accessResult = await checkAccess(featureName);
+     if (!accessResult.allowed) {
+       toast({
+         title: "Access Denied",
+         description: accessResult.message || 'You cannot perform a search at this time.',
+         variant: "destructive",
+       });
+       return; // Stop the search
     }
     // --- End Action Access Check ---
 
@@ -152,12 +152,12 @@ const DiseaseLibrary = () => {
     // --- Increment Usage ---
     // Increment only after confirming the search will proceed
     await incrementUsage(featureName);
-    // Optionally show remaining quota after successful search
-    // if (accessResult.remaining !== null) {
-    //    const remainingAfterIncrement = accessResult.remaining - 1;
-    //    toast({ title: "Info", description: `Sisa kuota pencarian hari ini: ${remainingAfterIncrement}` });
-    // }
-    // --- End Increment Usage ---
+     // Optionally show remaining quota after successful search
+     // if (accessResult.remaining !== null) {
+     //    const remainingAfterIncrement = accessResult.remaining - 1;
+     //    toast({ title: "Info", description: `Remaining search quota for today: ${remainingAfterIncrement}` });
+     // }
+     // --- End Increment Usage ---
   };
 
   // Function to fetch detailed information
@@ -263,16 +263,16 @@ const DiseaseLibrary = () => {
            </div>
          )}
 
-        {/* Access Denied Message (Show only if NOT loading and access is denied) */}
-        {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
-           <Alert variant="destructive" className="mt-4">
-             <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
-             <AlertDescription>
-               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-             </AlertDescription>
-           </Alert>
-         )}
+         {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+         {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Access Denied</AlertTitle>
+              <AlertDescription>
+                {initialAccessMessage || 'You do not have permission to access this feature.'}
+              </AlertDescription>
+            </Alert>
+          )}
 
         {/* Render content only if NOT loading and access IS allowed */}
         {!(isCheckingInitialAccess || isLoadingToggles) && initialAccessAllowed && (

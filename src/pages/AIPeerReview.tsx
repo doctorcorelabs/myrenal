@@ -31,18 +31,18 @@ const AIPeerReview = () => {
           await incrementUsage(featureName);
           // Optionally show remaining quota
           // if (result.remaining !== null) {
-          //   toast({ title: "Info", description: `Sisa kuota ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
+          //   toast({ title: "Info", description: `Remaining quota for ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
           // }
         } else {
-          setAccessMessage(result.message || 'Akses ditolak.');
+          setAccessMessage(result.message || 'Access denied.');
         }
       } catch (error) {
         console.error("Error checking feature access:", error);
         setAccessAllowed(false);
-        setAccessMessage('Gagal memeriksa akses fitur.');
+        setAccessMessage('Failed to check feature access.');
         toast({
           title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
+          description: "Could not verify feature access at this time.",
           variant: "destructive",
         });
       } finally {
@@ -77,9 +77,9 @@ const AIPeerReview = () => {
         {!isLoading && !accessAllowed && (
            <Alert variant="destructive" className="mt-4">
              <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
+             <AlertTitle>Access Denied</AlertTitle>
              <AlertDescription>
-               {accessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
+               {accessMessage || 'You do not have permission to access this feature.'}
              </AlertDescription>
            </Alert>
          )}

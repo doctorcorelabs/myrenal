@@ -50,8 +50,8 @@ const UpgradePlanDialogContent = () => {
 
   // Split features into two groups
   const features = [
-    { name: 'AI Chatbot', free: '3 questions/day', researcher: '30 questions/day' },
-    { name: 'AI Peer Review', free: '3 reviews/day', researcher: '15 reviews/day' },
+    { name: 'AI Chatbot', free: '3 sessions/day', researcher: '30 sessions/day' },
+    { name: 'AI Peer Review', free: '3 sessions/day', researcher: '15 sessions/day' },
     { name: 'Disease Library', free: '3 searches/day', researcher: '20 searches/day' },
     { name: 'Drug Reference', free: '3 searches/day', researcher: '20 searches/day' },
     { name: 'Clinical Guidelines', free: '3 searches/day', researcher: '20 searches/day' },

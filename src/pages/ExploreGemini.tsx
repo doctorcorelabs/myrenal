@@ -268,20 +268,20 @@ const ExploreGemini: React.FC = () => {
         }
         try {
           const result = await checkAccess(featureName);
-          setInitialAccessAllowed(result.allowed);
-          if (!result.allowed) {
-            setInitialAccessMessage(result.message || 'Akses ditolak.');
-          }
-        } catch (error) {
-          console.error("Error checking initial feature access:", error);
-          setInitialAccessAllowed(false);
-          setInitialAccessMessage('Gagal memeriksa akses fitur.');
-          toast({
-            title: "Error",
-            description: "Tidak dapat memverifikasi akses fitur saat ini.",
-            variant: "destructive",
-          });
-        }
+           setInitialAccessAllowed(result.allowed);
+           if (!result.allowed) {
+             setInitialAccessMessage(result.message || 'Access denied.');
+           }
+         } catch (error) {
+           console.error("Error checking initial feature access:", error);
+           setInitialAccessAllowed(false);
+           setInitialAccessMessage('Failed to check feature access.');
+           toast({
+             title: "Error",
+             description: "Could not verify feature access at this time.",
+             variant: "destructive",
+           });
+         }
       };
       verifyInitialAccess();
     }
@@ -296,7 +296,7 @@ const ExploreGemini: React.FC = () => {
     e.preventDefault();
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
     }
     setIsLoading(true); setError(null); setResponseText(''); setResponseImage(null);
     const payload: any = { prompt, modelName: selectedModel, imageData: uploadedFile };
@@ -383,7 +383,7 @@ const ExploreGemini: React.FC = () => {
   const handleSendInThread = async (threadId: string) => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Akses Ditolak", description: accessResult.message, variant: "destructive" });
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
       return;
     }
 
@@ -506,14 +506,14 @@ const ExploreGemini: React.FC = () => {
              <Skeleton className="h-[200px] w-full rounded-lg" />
            </div>
          )}
-        {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
-        {!isLoadingToggles && !initialAccessAllowed && (
-           <Alert variant="destructive" className="mt-4">
-             <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
-             <AlertDescription>{initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}</AlertDescription>
-           </Alert>
-         )}
+         {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
+          {!isLoadingToggles && !initialAccessAllowed && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Access Denied</AlertTitle>
+              <AlertDescription>{initialAccessMessage || 'You do not have permission to access this feature.'}</AlertDescription>
+            </Alert>
+          )}
         {/* Render main content only if NOT loading and access IS allowed */}
         {!isLoadingToggles && initialAccessAllowed && (
           <>

@@ -52,22 +52,22 @@ const InteractionChecker = () => {
         }
         try {
           const result = await checkAccess(featureName);
-        if (result.quota === 0 || result.isDisabled) { // Check if denied by level/toggle
-             setInitialAccessAllowed(false);
-             setInitialAccessMessage(result.message || 'Akses ditolak.');
-        } else {
-             setInitialAccessAllowed(true); // Allow rendering the UI
-        }
-      } catch (error) {
-        console.error("Error checking initial feature access:", error);
-        setInitialAccessAllowed(false);
-        setInitialAccessMessage('Gagal memeriksa akses fitur.');
-        toast({
-          title: "Error",
-          description: "Tidak dapat memverifikasi akses fitur saat ini.",
-          variant: "destructive",
-        });
-      } // Removed finally block
+         if (result.quota === 0 || result.isDisabled) { // Check if denied by level/toggle
+              setInitialAccessAllowed(false);
+              setInitialAccessMessage(result.message || 'Access denied.');
+         } else {
+              setInitialAccessAllowed(true); // Allow rendering the UI
+         }
+       } catch (error) {
+         console.error("Error checking initial feature access:", error);
+         setInitialAccessAllowed(false);
+         setInitialAccessMessage('Failed to check feature access.');
+         toast({
+           title: "Error",
+           description: "Could not verify feature access at this time.",
+           variant: "destructive",
+         });
+       } // Removed finally block
     };
       verifyInitialAccess();
     }
@@ -99,14 +99,14 @@ const InteractionChecker = () => {
     }
 
     // --- Action Access Check ---
-    const accessResult = await checkAccess(featureName);
-    if (!accessResult.allowed) {
-      toast({
-        title: "Akses Ditolak",
-        description: accessResult.message || 'Anda tidak dapat melakukan pengecekan interaksi saat ini.',
-        variant: "destructive",
-      });
-      return; // Stop the check
+     const accessResult = await checkAccess(featureName);
+     if (!accessResult.allowed) {
+       toast({
+         title: "Access Denied",
+         description: accessResult.message || 'You cannot perform an interaction check at this time.',
+         variant: "destructive",
+       });
+       return; // Stop the check
     }
     // --- End Action Access Check ---
 
@@ -233,16 +233,16 @@ const InteractionChecker = () => {
            </div>
          )}
 
-        {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
-        {!isLoadingToggles && !initialAccessAllowed && (
-           <Alert variant="destructive" className="mt-4">
-             <Terminal className="h-4 w-4" />
-             <AlertTitle>Akses Ditolak</AlertTitle>
-             <AlertDescription>
-               {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
-             </AlertDescription>
-           </Alert>
-         )}
+         {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
+         {!isLoadingToggles && !initialAccessAllowed && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Access Denied</AlertTitle>
+              <AlertDescription>
+                {initialAccessMessage || 'You do not have permission to access this feature.'}
+              </AlertDescription>
+            </Alert>
+          )}
 
         {/* Render content only if NOT loading and access IS allowed */}
         {!isLoadingToggles && initialAccessAllowed && (
