@@ -84,8 +84,15 @@ function handleOptions(request: Request) {
     headers.get('Access-Control-Request-Headers') !== null
   ) {
     // Handle CORS preflight requests.
+    const origin = request.headers.get('Origin');
+    const allowedOrigins = ['https://daivanlabs.com', 'http://localhost:8888', 'http://localhost:8787'];
+    let allowOrigin = 'http://localhost:8888';
+    if (origin && allowedOrigins.includes(origin)) {
+      allowOrigin = origin;
+    }
+
     const respHeaders = {
-      'Access-Control-Allow-Origin': request.headers.get('Origin') || 'http://localhost:8888',
+      'Access-Control-Allow-Origin': allowOrigin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': headers.get('Access-Control-Request-Headers') || 'Content-Type',
       'Access-Control-Max-Age': '86400', // Cache preflight for 1 day
@@ -115,8 +122,14 @@ export default {
 		}
 
 		// Define CORS headers for the actual response
+    const origin = request.headers.get('Origin');
+    const allowedOrigins = ['https://daivanlabs.com', 'http://localhost:8888', 'http://localhost:8787'];
+    let allowOrigin = 'http://localhost:8888';
+    if (origin && allowedOrigins.includes(origin)) {
+      allowOrigin = origin;
+    }
 		const corsHeaders = {
-		  'Access-Control-Allow-Origin': request.headers.get('Origin') || 'http://localhost:8888',
+		  'Access-Control-Allow-Origin': allowOrigin,
 		  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 		  'Access-Control-Allow-Headers': 'Content-Type',
 		  'Access-Control-Allow-Credentials': 'true'

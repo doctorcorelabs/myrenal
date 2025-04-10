@@ -391,7 +391,7 @@ const ExploreGemini: React.FC = () => {
     }
     try {
       const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/';
-      const res = await fetch("http://localhost:8787", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch("https://gemini-worker.daivanfebrijuansetiya.workers.dev/", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         let errorMsg = `HTTP error! status: ${res.status}`;
         try { const errorText = await res.text(); errorMsg = JSON.parse(errorText).error || errorText || errorMsg; } catch { /* Ignore */ }
@@ -535,7 +535,7 @@ const ExploreGemini: React.FC = () => {
 
     try {
       const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/'; // Assuming same endpoint
-      const res = await fetch(functionUrl, {
+      const res = await fetch("https://gemini-worker.daivanfebrijuansetiya.workers.dev/", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
