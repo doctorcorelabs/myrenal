@@ -139,6 +139,15 @@ const toolsData: ToolData[] = [
     icon: Book,
     path: '/tools/learning-resources',
     comingSoon: false
+  },
+  {
+    id: 13, // Assuming 13 is the next available unique ID
+    featureName: 'explore_deepseek',
+    title: 'Explore DeepSeek',
+    description: 'Leverage DeepSeek AI for advanced medical insights.',
+    icon: Brain, // Using the Brain icon, similar to other AI tools
+    path: '/tools/explore-deepseek', // Proposed path
+    comingSoon: false
   }
 ];
 

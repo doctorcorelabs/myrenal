@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +22,85 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+
+
+// --- Helper Function to Format Tables ---
+const tryFormatTable = (text: string): string => {
+  const lines = text.split('\n');
+  const tableRegex = /^\s*\|.+\|.+\|/;
+  const separatorRegex = /^[\s\|:-]+\|?$/;
+  let inTable = false;
+  let tableBuffer: string[] = [];
+  let formattedLines: string[] = [];
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // Detect table start/continuation
+    if (tableRegex.test(trimmed) || (inTable && trimmed.startsWith('|'))) {
+      if (!inTable) {
+        // New table detected
+        inTable = true;
+        tableBuffer = [];
+      }
+      tableBuffer.push(trimmed);
+    } else {
+      if (inTable) {
+        // Process accumulated table lines
+        if (tableBuffer.length >= 1) {
+          const processedTable = processTableBuffer(tableBuffer);
+          formattedLines.push(...processedTable);
+        }
+        tableBuffer = [];
+        inTable = false;
+      }
+      formattedLines.push(line);
+    }
+
+    // Process remaining table at end of text
+    if (index === lines.length - 1 && inTable && tableBuffer.length > 0) {
+      const processedTable = processTableBuffer(tableBuffer);
+      formattedLines.push(...processedTable);
+    }
+  });
+
+  return formattedLines.join('\n');
+};
+
+const processTableBuffer = (buffer: string[]): string[] => {
+  // Find separator line index
+  const separatorIndex = buffer.findIndex(line => 
+    line.replace(/[^\|]/g, '').length > 2 && // At least 2 pipes
+    line.replace(/[^:-]/g, '').length >= 2 && // Contains at least 2 : or -
+    line.trim().match(/^[\|\s:-]+$/)
+  );
+
+  // If no separator found, insert one after first line
+  if (separatorIndex === -1 && buffer.length > 0) {
+    const header = buffer[0];
+    const colCount = (header.match(/\|/g) || []).length - 1;
+    const separator = '|' + Array(colCount).fill('---').join('|') + '|';
+    buffer.splice(1, 0, separator);
+  }
+
+  // Clean up alignment syntax and normalize pipes
+  return buffer.map((line, idx) => {
+    // Remove leading/trailing whitespace around pipes
+    let cleaned = line.trim().replace(/\s*\|\s*/g, '|');
+    
+    // Add missing starting/ending pipes
+    if (!cleaned.startsWith('|')) cleaned = `|${cleaned}`;
+    if (!cleaned.endsWith('|')) cleaned = `${cleaned}|`;
+    
+    // Normalize separator line
+    if (idx === 1 || (separatorIndex !== -1 && idx === separatorIndex)) {
+      return cleaned.replace(/[^|]/g, '-').replace(/\|/g, '|');
+    }
+    
+    return cleaned;
+  });
+};
 
 // --- System Instructions ---
 const systemInstructions = {
@@ -181,6 +261,10 @@ Confidentiality: Treat the manuscript content as strictly confidential. Do not r
 
 Transparency: When flagging an issue, explain why it's being flagged (e.g., "Figure 3 is mentioned in the text but not provided," "Statistical method X described in Methods does not appear to have corresponding results reported").`
   },
+  "markdown-table": {
+    label: "Markdown Table Format",
+    text: "When generating tables, use the following Markdown format:\n\n| Column 1 | Column 2 | Column 3 |\n|---|---|---| \n| Data 1 | Data 2 | Data 3 |\n| Data 4 | Data 5 | Data 6 |\n\nEnsure that the separator line consists of '---' for each column and that the columns are properly aligned."
+  },
   "custom": { label: "Custom...", text: "" }
 };
 // --- End System Instructions ---
@@ -306,8 +390,8 @@ const ExploreGemini: React.FC = () => {
       payload.systemInstructionId = selectedSystemInstructionId;
     }
     try {
-      const functionUrl = 'https://gemini-cf-worker.daivanfebrijuansetiya.workers.dev';
-      const res = await fetch(functionUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/';
+      const res = await fetch("http://localhost:8787", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         let errorMsg = `HTTP error! status: ${res.status}`;
         try { const errorText = await res.text(); errorMsg = JSON.parse(errorText).error || errorText || errorMsg; } catch { /* Ignore */ }
@@ -327,32 +411,51 @@ const ExploreGemini: React.FC = () => {
     await incrementUsage(featureName);
   };
 
+  const clearUploadedFile = () => {
+    setUploadedFile(null);
+    setUploadedFileName(null);
+    if (mainFileInputRef.current) mainFileInputRef.current.value = "";
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (!allowedMimeTypes.includes(file.type)) {
-         setError(`Unsupported file type: ${file.type || 'unknown'}.`); setUploadedFile(null); setUploadedFileName(null);
-         if (mainFileInputRef.current) mainFileInputRef.current.value = ""; return;
+        setError(`Unsupported file type: ${file.type || 'unknown'}.`);
+        setUploadedFile(null);
+        setUploadedFileName(null);
+        if (mainFileInputRef.current) mainFileInputRef.current.value = "";
+        return;
       }
-      setError(null); setUploadedFileName(file.name);
+
+      setError(null);
+      setUploadedFileName(file.name);
       const reader = new FileReader();
-      reader.onloadend = () => { const base64String = (reader.result as string).split(',')[1]; setUploadedFile({ mimeType: file.type, data: base64String }); };
-      reader.onerror = () => { setError("Failed to read file."); setUploadedFile(null); setUploadedFileName(null); };
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setUploadedFile({ mimeType: file.type, data: base64String });
+      };
+      reader.onerror = () => {
+        setError("Failed to read file.");
+        setUploadedFile(null);
+        setUploadedFileName(null);
+      };
       reader.readAsDataURL(file);
     }
   };
 
-  const clearUploadedFile = () => {
-    setUploadedFile(null); setUploadedFileName(null);
-    if (mainFileInputRef.current) mainFileInputRef.current.value = "";
-  };
-
   const handleExploreClick = () => {
-    if (!responseText && !responseImage) return;
+    // Use the state which already has the formatted text
+    const currentFormattedResponseText = responseText;
+    if (!currentFormattedResponseText && !responseImage) return;
+
     const userMessage: Message = { id: crypto.randomUUID(), role: 'user', text: prompt, file: uploadedFile, fileName: uploadedFileName, timestamp: new Date(Date.now() - 1000) };
-    const modelMessage: Message = { id: crypto.randomUUID(), role: 'model', text: responseText || '', image: responseImage, timestamp: new Date() };
+    // Use the formatted text for the model message
+    const modelMessage: Message = { id: crypto.randomUUID(), role: 'model', text: currentFormattedResponseText || '', image: responseImage, timestamp: new Date() };
+
     const newThread: ExplorationThread = { id: crypto.randomUUID(), initialModel: selectedModel, initialSystemInstructionId: selectedSystemInstructionId, initialCustomSystemInstruction: selectedSystemInstructionId === "custom" ? customSystemInstruction : undefined, messages: [userMessage, modelMessage], createdAt: new Date() };
     setHistory(prev => [...prev, newThread]);
+    // Clear the main response area state
     setPrompt(''); setResponseText(''); setResponseImage(null); setUploadedFile(null); setUploadedFileName(null); setError(null);
     if (mainFileInputRef.current) mainFileInputRef.current.value = "";
     toast({ title: "Added to Exploration History" });
@@ -431,7 +534,7 @@ const ExploreGemini: React.FC = () => {
     };
 
     try {
-      const functionUrl = 'https://gemini-cf-worker.daivanfebrijuansetiya.workers.dev'; // Assuming same endpoint
+      const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/'; // Assuming same endpoint
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -448,12 +551,12 @@ const ExploreGemini: React.FC = () => {
       }
 
       const contentType = res.headers.get("content-type");
-      let modelResponseText = '';
+      let rawModelResponseText = ''; // Store raw response first
       let modelResponseImage: ResponseImageData | null = null;
 
       if (contentType?.includes("application/json")) {
         const data = await res.json();
-        if (data.responseText) modelResponseText = data.responseText;
+        if (data.responseText) rawModelResponseText = data.responseText;
         if (data.responseImage) modelResponseImage = data.responseImage;
         if (!data.responseText && !data.responseImage) {
            throw new Error("Received an empty response from the model.");
@@ -463,10 +566,14 @@ const ExploreGemini: React.FC = () => {
         throw new Error(`Received unexpected response format: ${text}`);
       }
 
+      // --- Apply table formatting ---
+      const formattedModelResponseText = tryFormatTable(rawModelResponseText);
+      // --- End Apply table formatting ---
+
       const modelMessage: Message = {
         id: crypto.randomUUID(),
         role: 'model',
-        text: modelResponseText,
+        text: formattedModelResponseText, // Use formatted text
         image: modelResponseImage,
         timestamp: new Date()
       };
@@ -549,7 +656,7 @@ const ExploreGemini: React.FC = () => {
                      <div className="flex items-center gap-2">
                         <Input id="file-upload" type="file" accept={allowedFileTypesString} ref={mainFileInputRef} onChange={handleFileChange} className="hidden" disabled={isLoading} />
                         <Button type="button" variant="outline" onClick={() => mainFileInputRef.current?.click()} disabled={isLoading}><Upload className="mr-2 h-4 w-4" /> Choose File</Button>
-                        {uploadedFileName && (<><div className="flex items-center gap-2 text-sm p-2 border rounded-md bg-muted"><FileIcon className="h-4 w-4" /><span className="truncate">{uploadedFileName}</span></div><Button type="button" variant="ghost" size="icon" onClick={() => clearUploadedFile} disabled={isLoading} title="Remove file"><X className="h-4 w-4" /></Button></>)}
+                        {uploadedFileName && (<><div className="flex items-center gap-2 text-sm p-2 border rounded-md bg-muted"><FileIcon className="h-4 w-4" /><span className="truncate">{uploadedFileName}</span></div><Button type="button" variant="ghost" size="icon" onClick={() => clearUploadedFile()} disabled={isLoading} title="Remove file"><X className="h-4 w-4" /></Button></>)}
                       </div>
                   </div>
                   {/* Submit */}
@@ -561,8 +668,14 @@ const ExploreGemini: React.FC = () => {
             {(responseText || responseImage) && !error && (
               <Card>
                 <CardHeader><CardTitle>Gemini Response</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  {responseText && (<div className="prose prose-sm max-w-none text-justify whitespace-pre-wrap"><ReactMarkdown>{responseText}</ReactMarkdown></div>)}
+                <CardContent className="space-y-4 overflow-x-auto">
+                  {responseText && (
+                    <div className="overflow-x-auto">
+                      <div className="prose prose-sm max-w-none text-justify whitespace-pre-wrap min-w-full">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{responseText}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
                   {responseImage && (<div><img src={`data:${responseImage.mimeType};base64,${responseImage.data}`} alt="Generated by Gemini" className="max-w-full h-auto rounded-md" /></div>)}
                 </CardContent>
                 {(responseText || responseImage) && !error && !isLoading && (<CardFooter className="flex justify-end p-4 border-t"><Button variant="secondary" onClick={handleExploreClick}><Sparkles className="mr-2 h-4 w-4" /> Explore Topic</Button></CardFooter>)}
@@ -576,7 +689,29 @@ const ExploreGemini: React.FC = () => {
                   <Card key={thread.id} className="bg-muted/50 shadow-md">
                     <CardHeader><CardTitle className="text-lg">Exploration Thread</CardTitle><p className="text-xs text-muted-foreground">Started: {thread.createdAt.toLocaleString()} | Initial Model: {modelOptions.find(m => m.value === thread.initialModel)?.label || thread.initialModel}</p></CardHeader>
                     <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4">
-                      {thread.messages.map((message) => (<div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>{message.text && (<div className="prose prose-sm max-w-none whitespace-pre-wrap text-justify"><ReactMarkdown>{message.text}</ReactMarkdown></div>)}{message.role === 'user' && message.fileName && (<div className="mt-2 flex items-center gap-2 text-xs p-1.5 border rounded-md bg-primary/10 text-primary-foreground/80"><Paperclip className="h-3 w-3 flex-shrink-0" /><span className="truncate">{message.fileName}</span></div>)}{message.role === 'model' && message.image && (<div className="mt-2"><img src={`data:${message.image.mimeType};base64,${message.image.data}`} alt="Generated by Gemini" className="max-w-full h-auto rounded-md" /></div>)}<p className="text-xs opacity-70 mt-1.5 text-right">{message.timestamp.toLocaleTimeString()}</p></div></div>))}
+                      {thread.messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
+                            {message.text && (
+                              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-justify overflow-x-auto">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                              </div>
+                            )}
+                            {message.role === 'user' && message.fileName && (
+                              <div className="mt-2 flex items-center gap-2 text-xs p-1.5 border rounded-md bg-primary/10 text-primary-foreground/80">
+                                <Paperclip className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{message.fileName}</span>
+                              </div>
+                            )}
+                            {message.role === 'model' && message.image && (
+                              <div className="mt-2">
+                                <img src={`data:${message.image.mimeType};base64,${message.image.data}`} alt="Generated by Gemini" className="max-w-full h-auto rounded-md" />
+                              </div>
+                            )}
+                            <p className="text-xs opacity-70 mt-1.5 text-right">{message.timestamp.toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                      ))}
                        {threadLoading[thread.id] && (<div className="flex justify-start"><div className="p-3 rounded-lg bg-background border animate-pulse"><Loader2 className="h-4 w-4 animate-spin" /></div></div>)}
                        {threadErrors[thread.id] && (<Alert variant="destructive" className="mt-2"><Terminal className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{threadErrors[thread.id]}</AlertDescription></Alert>)}
                     </CardContent>

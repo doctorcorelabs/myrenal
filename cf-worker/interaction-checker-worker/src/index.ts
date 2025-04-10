@@ -85,10 +85,11 @@ function handleOptions(request: Request) {
   ) {
     // Handle CORS preflight requests.
     const respHeaders = {
-      'Access-Control-Allow-Origin': '*', // Adjust in production for security
+      'Access-Control-Allow-Origin': request.headers.get('Origin') || 'http://localhost:8888',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': headers.get('Access-Control-Request-Headers') || 'Content-Type',
       'Access-Control-Max-Age': '86400', // Cache preflight for 1 day
+      'Access-Control-Allow-Credentials': 'true'
     };
     return new Response(null, { headers: respHeaders });
   } else {
@@ -115,9 +116,10 @@ export default {
 
 		// Define CORS headers for the actual response
 		const corsHeaders = {
-		  'Access-Control-Allow-Origin': '*', // Adjust in production
+		  'Access-Control-Allow-Origin': request.headers.get('Origin') || 'http://localhost:8888',
 		  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 		  'Access-Control-Allow-Headers': 'Content-Type',
+		  'Access-Control-Allow-Credentials': 'true'
 		};
 
 		try {
@@ -157,6 +159,12 @@ export default {
 
 			// Handle potential errors from OpenFDA fetch
 			if (interactionData.error) {
+				if (interactionData.error.code === 'NOT_FOUND') {
+					return new Response(JSON.stringify({ interactions: [] }), {
+						status: 200,
+						headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+					});
+				}
 				return new Response(JSON.stringify({ error: `OpenFDA API Error: ${interactionData.error.message}` }), {
 					status: 502, // Bad Gateway might be appropriate
 					headers: { ...corsHeaders, 'Content-Type': 'application/json' },

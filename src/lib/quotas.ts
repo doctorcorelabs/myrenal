@@ -12,7 +12,8 @@ export type FeatureName =
   | 'nutrition_database'
   | 'learning_resources' // Access based, not count based
   | 'mind_map_maker'
-  | 'clinical_scoring'; // Unlimited
+  | 'clinical_scoring' // Unlimited
+  | 'explore_deepseek';
 
 // Define quota limits (null means unlimited or access-based)
 const quotas: Record<UserLevel, Record<FeatureName, number | null>> = {
@@ -29,6 +30,7 @@ const quotas: Record<UserLevel, Record<FeatureName, number | null>> = {
     learning_resources: 0, // No access (represented by 0 for simplicity, logic handled elsewhere)
     mind_map_maker: 2,
     clinical_scoring: null, // Unlimited
+    explore_deepseek: 3,
   },
   Researcher: {
     ai_chatbot: 30,
@@ -43,6 +45,7 @@ const quotas: Record<UserLevel, Record<FeatureName, number | null>> = {
     learning_resources: null, // Full access (represented by null)
     mind_map_maker: 10,
     clinical_scoring: null, // Unlimited
+    explore_deepseek: 30,
   },
   Administrator: { // Administrators likely have unlimited access
     ai_chatbot: null,
@@ -57,6 +60,7 @@ const quotas: Record<UserLevel, Record<FeatureName, number | null>> = {
     learning_resources: null,
     mind_map_maker: null,
     clinical_scoring: null,
+    explore_deepseek: null,
   },
 };
 

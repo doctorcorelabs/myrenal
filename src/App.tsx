@@ -35,6 +35,7 @@ import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
 import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
 import ClinicalScoringHub from "./pages/ClinicalScoringHub"; // Import ClinicalScoringHub
+import ExploreDeepSeek from "./pages/ExploreDeepSeek"; // Import ExploreDeepSeek
 import AdminDashboard from "./pages/AdminDashboard"; // Import AdminDashboard
 // Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
@@ -208,6 +209,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><ClinicalScoringHub /></Layout>
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for Explore DeepSeek */}
+             <Route
+               path="/tools/explore-deepseek"
+               element={
+                 <ProtectedRoute>
+                   <Layout><ExploreDeepSeek /></Layout>
                  </ProtectedRoute>
                }
              />

@@ -123,19 +123,11 @@ const Research = () => {
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
                 <thead className="bg-medical-blue text-white">
-                  <tr>
-                    <th className="py-3 px-4 text-center">Title</th> {/* Added text-center */}
-                    <th className="py-3 px-4 text-center">Type</th> {/* Added text-center */}
-                    <th className="py-3 px-4 text-center">Publication Venue</th> {/* Added text-center */}
-                  </tr>
+                  <tr><th className="py-3 px-4 text-center">Title</th><th className="py-3 px-4 text-center">Type</th><th className="py-3 px-4 text-center">Publication Venue</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {publications.map((pub, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-medical-blue font-medium text-justify">{pub.title}</td> {/* Added text-justify */}
-                      <td className="py-4 px-4 text-gray-700 text-justify">{pub.type}</td> {/* Added text-justify */}
-                      <td className="py-4 px-4 text-gray-700 text-justify">{pub.venue}</td> {/* Added text-justify */}
-                    </tr>
+                    <tr key={index} className="hover:bg-gray-50"><td className="py-4 px-4 text-medical-blue font-medium text-justify">{pub.title}</td><td className="py-4 px-4 text-gray-700 text-justify">{pub.type}</td><td className="py-4 px-4 text-gray-700 text-justify">{pub.venue}</td></tr>
                   ))}
                 </tbody>
               </table>

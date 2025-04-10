@@ -1,0 +1,10 @@
+name = "deepseek-cf-worker" # You can change this name if needed
+main = "src/index.ts"
+compatibility_date = "2024-04-05" # Use a recent compatibility date
+
+# Define the secret binding for the DeepSeek API Key
+# You will need to set this secret using 'wrangler secret put DEEPSEEK_API_KEY'
+# or via the Cloudflare dashboard after deployment.
+[vars]
+# Add any non-secret environment variables here if needed
+# Secrets like DEEPSEEK_API_KEY should be set using 'wrangler secret put DEEPSEEK_API_KEY'

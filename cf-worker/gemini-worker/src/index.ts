@@ -1,6 +1,6 @@
-import type { Handler, HandlerEvent, HandlerContext, HandlerResponse } from "@netlify/functions";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
-import { PassThrough } from 'stream'; // Re-added PassThrough import
+
+declare const GEMINI_API_KEY: string;
 
 // --- System Instructions Text (Mirrored from Frontend) ---
 // Keep this in sync with the frontend definition
@@ -167,37 +167,65 @@ Transparency: When flagging an issue, explain why it's being flagged (e.g., "Fig
 };
 // --- End System Instructions Text ---
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }), headers: { 'Content-Type': 'application/json' } };
+addEventListener('fetch', (event: FetchEvent) => {
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request: Request): Promise<Response> {
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      }
+    });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+      status: 405,
+      headers: { 
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+
+  const apiKey = GEMINI_API_KEY;
   if (!apiKey) {
     console.error("GEMINI_API_KEY environment variable not set.");
-    // Return standard JSON error response
-    return { statusCode: 500, body: JSON.stringify({ error: "Internal Server Error: API key not configured." }), headers: { 'Content-Type': 'application/json' } };
+    return new Response(JSON.stringify({ error: "Internal Server Error: API key not configured." }), {
+      status: 500,
+      headers: { 
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
   }
 
   interface RequestBody {
     prompt?: string;
     modelName?: string;
     imageData?: { mimeType: string; data: string; };
-    systemInstructionId?: string; 
-    customSystemInstruction?: string; 
+    systemInstructionId?: string;
+    customSystemInstruction?: string;
   }
 
   let requestBody: RequestBody;
   try {
-    requestBody = JSON.parse(event.body || "{}");
-    // Standard check for prompt OR image
+    requestBody = await request.json() as RequestBody;
     if (!requestBody.prompt && !requestBody.imageData) {
       throw new Error("Request must include 'prompt' and/or 'imageData'");
     }
   } catch (error: any) {
     console.error("Error parsing request body:", error);
-    // Return standard JSON error response
-    return { statusCode: 400, body: JSON.stringify({ error: `Bad Request: ${error.message}` }), headers: { 'Content-Type': 'application/json' } };
+    return new Response(JSON.stringify({ error: `Bad Request: ${error.message}` }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -206,10 +234,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
     // --- Model Selection Logic ---
     const validModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-exp-03-25"];
     const defaultModel = "gemini-1.5-flash"; // Use a fast default
-    const isLocalDev = process.env.NETLIFY_DEV === 'true'; // Keep for logging if needed
-    // Removed duplicate defaultModel declaration
+    const isLocalDev = false;
     const selectedModelIdentifier = (requestBody.modelName && validModels.includes(requestBody.modelName)) ? requestBody.modelName : defaultModel;
-    const useStreaming = selectedModelIdentifier === "gemini-2.5-pro-exp-03-25"; // Condition for streaming
+    //const useStreaming = selectedModelIdentifier === "gemini-2.5-pro-exp-03-25"; // Condition for streaming
+    const useStreaming = false; // Force non-streaming
 
     console.log(`Using model: ${selectedModelIdentifier} (Streaming: ${useStreaming}, Local Dev: ${isLocalDev})`);
     // --- End Model Selection Logic ---
@@ -218,19 +246,40 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
     // Determine system instruction: prioritize custom, then ID, then none
     let systemInstructionText: string | undefined = undefined;
     if (requestBody.customSystemInstruction && requestBody.customSystemInstruction.trim()) {
-        systemInstructionText = requestBody.customSystemInstruction;
-        console.log("Using custom system instruction.");
+      systemInstructionText = requestBody.customSystemInstruction;
+      console.log("Using custom system instruction.");
     } else if (requestBody.systemInstructionId && requestBody.systemInstructionId !== "none" && systemInstructionTexts[requestBody.systemInstructionId]) {
-        systemInstructionText = systemInstructionTexts[requestBody.systemInstructionId];
-        console.log(`Using predefined system instruction: ${requestBody.systemInstructionId}`);
+      systemInstructionText = systemInstructionTexts[requestBody.systemInstructionId];
+      console.log(`Using predefined system instruction: ${requestBody.systemInstructionId}`);
     } else {
-        console.log("No system instruction provided.");
+      console.log("No system instruction provided.");
     }
 
-    const model = genAI.getGenerativeModel({ 
-        model: selectedModelIdentifier,
-        systemInstruction: systemInstructionText, // Use determined text or undefined
-     });
+    // Add more specific formatting instructions to the system message
+    let finalSystemInstruction = systemInstructionText;
+    const formattingInstruction = `
+
+**Formatting Instructions:**
+- Use standard Markdown syntax ONLY.
+- **Headings:** Use '### Heading Text' (with a space after ###). Do NOT use '###Heading Text'.
+- **Bold Text:** Use '**bold text**' (with asterisks on both sides). Do NOT use '**text' or 'text**'.
+- **Tables:** Use standard Markdown table format:
+  | Header 1 | Header 2 |
+  | -------- | -------- |
+  | Cell 1   | Cell 2   |
+  | Cell 3   | Cell 4   |
+- **Lists:** Use standard Markdown lists (* item or 1. item).`;
+
+    if (finalSystemInstruction) {
+      finalSystemInstruction = finalSystemInstruction + formattingInstruction;
+    } else {
+      finalSystemInstruction = "You are a helpful medical assistant." + formattingInstruction;
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: selectedModelIdentifier,
+      systemInstruction: finalSystemInstruction, // Use determined text or undefined
+    });
 
     // Construct parts - include both text and image if present
     const parts: any[] = [];
@@ -238,24 +287,23 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
       parts.push({ text: requestBody.prompt });
     }
     if (requestBody.imageData) {
-       if (!requestBody.imageData.mimeType || !requestBody.imageData.data) {
-         throw new Error("Invalid 'imageData' provided. Both mimeType and data are required.");
-       }
-       parts.push({
-         inlineData: {
-           mimeType: requestBody.imageData.mimeType,
-           data: requestBody.imageData.data,
-         },
-       });
+      if (!requestBody.imageData.mimeType || !requestBody.imageData.data) {
+        throw new Error("Invalid 'imageData' provided. Both mimeType and data are required.");
+      }
+      parts.push({
+        inlineData: {
+          mimeType: requestBody.imageData.mimeType,
+          data: requestBody.imageData.data,
+        },
+      });
     }
     if (parts.length === 0) {
-        // This case should technically be caught earlier, but added for safety
-        throw new Error("No content (prompt or file) provided for generation.");
+      throw new Error("No content (prompt or file) provided for generation.");
     }
 
 
     const generationConfig = {
-      temperature: 0.9, 
+      temperature: 0.9,
       topK: 1,
       topP: 1,
       maxOutputTokens: 2048, // Keep other configs
@@ -271,143 +319,57 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
     // Construct the user content object
     const userContent: Content = { role: "user", parts: parts };
 
-    // --- Conditional Logic: Streaming or Non-Streaming ---
-    let responseBody: any; // To hold stream or JSON string
-    let responseHeaders = {};
-    let isStreamingResponse = false;
+    // --- Standard Non-Streaming Implementation (for other models) ---
+    const result = await model.generateContent({
+      contents: [userContent], // Use the same inputs
+      generationConfig,
+      safetySettings,
+    });
 
-    if (useStreaming) {
-      // --- Streaming Logic for gemini-2.5-pro-exp-03-25 ---
-      isStreamingResponse = true;
-      responseHeaders = { 'Content-Type': 'text/plain; charset=utf-8' };
-      console.log("Preparing streaming approach for gemini-2.5-pro-exp-03-25...");
+    console.log("--- Full Gemini API Result ---");
+    console.log(JSON.stringify(result, null, 2));
+    console.log("--- End Full Gemini API Result ---");
 
-      const streamResult = await model.generateContentStream({
-          contents: [userContent],
-          generationConfig,
-          safetySettings,
-      });
+    const response = result.response;
+    const responsePayload: { responseText?: string; responseImage?: { mimeType: string; data: string } } = {};
 
-      if (isLocalDev) {
-        // --- Local Dev: Use PassThrough Stream ---
-        console.log("Using PassThrough stream for local dev.");
-        const passThroughStream = new PassThrough();
-        responseBody = passThroughStream; // Assign stream to responseBody
-
-        (async () => {
-          try {
-            console.log("Starting Gemini stream (PassThrough)...");
-            for await (const chunk of streamResult.stream) {
-              const chunkText = chunk.text();
-              if (chunkText) {
-                passThroughStream.write(chunkText); // Remove TEXT: prefix
-              }
-              const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-              if (imagePart?.inlineData) {
-                 const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-                 passThroughStream.write(JSON.stringify(imagePayload)); // Remove JSON: prefix, keep stringify
-              }
-            }
-            console.log("Gemini stream finished (PassThrough).");
-            passThroughStream.end();
-          } catch (streamError: any) {
-            console.error("Error reading Gemini stream (PassThrough):", streamError);
-            // Stream raw error message
-            passThroughStream.write(`[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}`);
-            passThroughStream.destroy(streamError);
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+        candidate.content.parts.forEach(part => {
+          if (part.text) {
+            responsePayload.responseText = (responsePayload.responseText || "") + part.text;
           }
-        })();
-        // --- End PassThrough Stream Logic ---
-      } else {
-        // --- Deployed: Use Async Generator ---
-        console.log("Using async generator for deployed environment.");
-        const bodyGenerator = async function* () {
-          try {
-            console.log("Starting Gemini stream (async generator)...");
-            for await (const chunk of streamResult.stream) {
-              const chunkText = chunk.text();
-              if (chunkText) {
-                yield chunkText; // Remove TEXT: prefix
-              }
-              const imagePart = chunk.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-              if (imagePart?.inlineData) {
-                 const imagePayload = { type: 'image', mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
-                 yield JSON.stringify(imagePayload); // Remove JSON: prefix, keep stringify
-              }
-            }
-            console.log("Gemini stream finished (async generator).");
-          } catch (streamError: any) {
-            console.error("Error reading Gemini stream in generator:", streamError);
-            // Yield raw error message
-            yield `[STREAM_ERROR]: ${streamError.message || 'Unknown stream error'}`;
+          if (part.inlineData) {
+            responsePayload.responseImage = {
+              mimeType: part.inlineData.mimeType,
+              data: part.inlineData.data
+            };
           }
-        };
-        responseBody = bodyGenerator(); // Assign invoked generator to responseBody
-        // --- End Async Generator Logic ---
+        });
       }
-      // --- End Streaming Logic ---
-    } else {
-      // --- Standard Non-Streaming Implementation (for other models) ---
-      isStreamingResponse = false;
-      responseHeaders = { 'Content-Type': 'application/json' };
-      console.log("Using standard non-streaming approach for other models");
-      const result = await model.generateContent({
-          contents: [userContent], // Use the same inputs
-          generationConfig,
-          safetySettings,
-      });
-
-      console.log("--- Full Gemini API Result ---");
-      console.log(JSON.stringify(result, null, 2));
-      console.log("--- End Full Gemini API Result ---");
-
-      const response = result.response;
-      const responsePayload: { responseText?: string; responseImage?: { mimeType: string; data: string } } = {};
-
-      if (response.candidates && response.candidates.length > 0) {
-          const candidate = response.candidates[0];
-          if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-              candidate.content.parts.forEach(part => {
-                  if (part.text) {
-                      responsePayload.responseText = (responsePayload.responseText || "") + part.text;
-                  }
-                  if (part.inlineData) {
-                      responsePayload.responseImage = {
-                          mimeType: part.inlineData.mimeType,
-                          data: part.inlineData.data
-                      };
-                  }
-              });
-          }
-      }
-
-      if (!responsePayload.responseText && !responsePayload.responseImage && response.text) {
-           responsePayload.responseText = response.text();
-      }
-
-      responseBody = JSON.stringify(responsePayload); // Assign JSON string
-      // --- End Standard Non-Streaming Implementation ---
     }
 
-    // --- Return Unified Response ---
-    return {
-      statusCode: 200,
-      headers: responseHeaders,
-      body: responseBody as any, // Cast body (stream or string)
-      isBase64Encoded: false // Streaming body is never base64
-    };
-    // --- End Unified Response ---
+    if (!responsePayload.responseText && !responsePayload.responseImage && response.text) {
+      responsePayload.responseText = response.text();
+    }
+
+    const json = JSON.stringify(responsePayload);
+    return new Response(json, {
+      headers: {
+        "content-type": "application/json;charset=UTF-8",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
+    // --- End Standard Non-Streaming Implementation ---
 
   } catch (error: any) {
-    console.error("Error setting up Gemini stream:", error);
-    // Return standard JSON error response
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `Internal Server Error: Failed to set up stream. ${error.message}` }),
+    console.error("Error setting up Gemini:", error);
+    return new Response(JSON.stringify({ error: `Internal Server Error: Failed to set up stream. ${error.message}` }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
-    };
-    // reject(error); // Removed Promise wrapper
+    });
   }
-};
-
-export { handler };
+}
