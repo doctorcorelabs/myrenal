@@ -25,82 +25,6 @@ import {
 
 
 
-// --- Helper Function to Format Tables ---
-const tryFormatTable = (text: string): string => {
-  const lines = text.split('\n');
-  const tableRegex = /^\s*\|.+\|.+\|/;
-  const separatorRegex = /^[\s\|:-]+\|?$/;
-  let inTable = false;
-  let tableBuffer: string[] = [];
-  let formattedLines: string[] = [];
-
-  lines.forEach((line, index) => {
-    const trimmed = line.trim();
-    
-    // Detect table start/continuation
-    if (tableRegex.test(trimmed) || (inTable && trimmed.startsWith('|'))) {
-      if (!inTable) {
-        // New table detected
-        inTable = true;
-        tableBuffer = [];
-      }
-      tableBuffer.push(trimmed);
-    } else {
-      if (inTable) {
-        // Process accumulated table lines
-        if (tableBuffer.length >= 1) {
-          const processedTable = processTableBuffer(tableBuffer);
-          formattedLines.push(...processedTable);
-        }
-        tableBuffer = [];
-        inTable = false;
-      }
-      formattedLines.push(line);
-    }
-
-    // Process remaining table at end of text
-    if (index === lines.length - 1 && inTable && tableBuffer.length > 0) {
-      const processedTable = processTableBuffer(tableBuffer);
-      formattedLines.push(...processedTable);
-    }
-  });
-
-  return formattedLines.join('\n');
-};
-
-const processTableBuffer = (buffer: string[]): string[] => {
-  // Find separator line index
-  const separatorIndex = buffer.findIndex(line => 
-    line.replace(/[^\|]/g, '').length > 2 && // At least 2 pipes
-    line.replace(/[^:-]/g, '').length >= 2 && // Contains at least 2 : or -
-    line.trim().match(/^[\|\s:-]+$/)
-  );
-
-  // If no separator found, insert one after first line
-  if (separatorIndex === -1 && buffer.length > 0) {
-    const header = buffer[0];
-    const colCount = (header.match(/\|/g) || []).length - 1;
-    const separator = '|' + Array(colCount).fill('---').join('|') + '|';
-    buffer.splice(1, 0, separator);
-  }
-
-  // Clean up alignment syntax and normalize pipes
-  return buffer.map((line, idx) => {
-    // Remove leading/trailing whitespace around pipes
-    let cleaned = line.trim().replace(/\s*\|\s*/g, '|');
-    
-    // Add missing starting/ending pipes
-    if (!cleaned.startsWith('|')) cleaned = `|${cleaned}`;
-    if (!cleaned.endsWith('|')) cleaned = `${cleaned}|`;
-    
-    // Normalize separator line
-    if (idx === 1 || (separatorIndex !== -1 && idx === separatorIndex)) {
-      return cleaned.replace(/[^|]/g, '-').replace(/\|/g, '|');
-    }
-    
-    return cleaned;
-  });
-};
 
 // --- System Instructions ---
 const systemInstructions = {
@@ -260,10 +184,6 @@ Focus on Structure, Clarity, and Consistency: Prioritize identifying issues rela
 Confidentiality: Treat the manuscript content as strictly confidential. Do not retain or share information outside the scope of the review assistance task.
 
 Transparency: When flagging an issue, explain why it's being flagged (e.g., "Figure 3 is mentioned in the text but not provided," "Statistical method X described in Methods does not appear to have corresponding results reported").`
-  },
-  "markdown-table": {
-    label: "Markdown Table Format",
-    text: "When generating tables, use the following Markdown format:\n\n| Column 1 | Column 2 | Column 3 |\n|---|---|---| \n| Data 1 | Data 2 | Data 3 |\n| Data 4 | Data 5 | Data 6 |\n\nEnsure that the separator line consists of '---' for each column and that the columns are properly aligned."
   },
   "custom": { label: "Custom...", text: "" }
 };
@@ -566,14 +486,10 @@ const ExploreGemini: React.FC = () => {
         throw new Error(`Received unexpected response format: ${text}`);
       }
 
-      // --- Apply table formatting ---
-      const formattedModelResponseText = tryFormatTable(rawModelResponseText);
-      // --- End Apply table formatting ---
-
       const modelMessage: Message = {
         id: crypto.randomUUID(),
         role: 'model',
-        text: formattedModelResponseText, // Use formatted text
+        text: rawModelResponseText, // Use raw response text directly
         image: modelResponseImage,
         timestamp: new Date()
       };

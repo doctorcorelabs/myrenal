@@ -190,6 +190,8 @@ async function handleRequest(request: Request): Promise<Response> {
       headers: { 
         'Content-Type': 'application/json',
         "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
       },
     });
   }
@@ -202,6 +204,8 @@ async function handleRequest(request: Request): Promise<Response> {
       headers: { 
         'Content-Type': 'application/json',
         "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
       },
     });
   }
@@ -224,7 +228,12 @@ async function handleRequest(request: Request): Promise<Response> {
     console.error("Error parsing request body:", error);
     return new Response(JSON.stringify({ error: `Bad Request: ${error.message}` }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
     });
   }
 
@@ -263,11 +272,6 @@ async function handleRequest(request: Request): Promise<Response> {
 - Use standard Markdown syntax ONLY.
 - **Headings:** Use '### Heading Text' (with a space after ###). Do NOT use '###Heading Text'.
 - **Bold Text:** Use '**bold text**' (with asterisks on both sides). Do NOT use '**text' or 'text**'.
-- **Tables:** Use standard Markdown table format:
-  | Header 1 | Header 2 |
-  | -------- | -------- |
-  | Cell 1   | Cell 2   |
-  | Cell 3   | Cell 4   |
 - **Lists:** Use standard Markdown lists (* item or 1. item).`;
 
     if (finalSystemInstruction) {
@@ -369,7 +373,12 @@ async function handleRequest(request: Request): Promise<Response> {
     console.error("Error setting up Gemini:", error);
     return new Response(JSON.stringify({ error: `Internal Server Error: Failed to set up stream. ${error.message}` }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
     });
   }
 }
