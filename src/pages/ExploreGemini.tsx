@@ -315,7 +315,8 @@ const ExploreGemini: React.FC = () => {
   const featureName: FeatureName = 'explore_gemini';
   const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const { isAuthenticated, navigate } = useAuth();
+  // Add openUpgradeDialog from context
+  const { isAuthenticated, navigate, openUpgradeDialog } = useAuth(); 
 
   // State for access check result
   const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
@@ -380,7 +381,9 @@ const ExploreGemini: React.FC = () => {
     e.preventDefault();
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); return;
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); 
+      openUpgradeDialog(); // Open global dialog
+      return;
     }
     setIsLoading(true); setError(null); setResponseText(''); setResponseImage(null);
     const payload: any = { prompt, modelName: selectedModel, imageData: uploadedFile };
@@ -487,6 +490,7 @@ const ExploreGemini: React.FC = () => {
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
+      openUpgradeDialog(); // Open global dialog
       return;
     }
 
@@ -624,16 +628,8 @@ const ExploreGemini: React.FC = () => {
              <Skeleton className="h-[200px] w-full rounded-lg" />
            </div>
          )}
-         {/* Access Denied Message (Show only if hook is NOT loading and access is denied) */}
-          {!isLoadingToggles && !initialAccessAllowed && (
-            <Alert variant="destructive" className="mt-4">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Access Denied</AlertTitle>
-              <AlertDescription>{initialAccessMessage || 'You do not have permission to access this feature.'}</AlertDescription>
-            </Alert>
-          )}
-        {/* Render main content only if NOT loading and access IS allowed */}
-        {!isLoadingToggles && initialAccessAllowed && (
+        {/* Always show main content */}
+        {!isLoadingToggles && (
           <>
             <Card>
               <CardHeader><CardTitle>Interact with Gemini</CardTitle></CardHeader>
@@ -741,7 +737,7 @@ const ExploreGemini: React.FC = () => {
               </div>
             )}
           </>
-        )} {/* End of initialAccessAllowed block */}
+        )}
         {/* Back to Tools Button */}
         <div className="flex justify-center pt-6">
           <Link to="/tools">

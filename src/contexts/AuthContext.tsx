@@ -24,6 +24,10 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   upgradeToResearcher: () => Promise<void>;
+  // Add state and functions for global upgrade dialog
+  isUpgradeDialogOpen: boolean;
+  openUpgradeDialog: () => void;
+  closeUpgradeDialog: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [navigate, setNavigate] = useState(() => () => {}); // Initialize navigate
   const [loading, setLoading] = useState<boolean>(true);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false); // State for global dialog
   // Removed: const { toast } = useToast();
 
   // Function to fetch user profile including level
@@ -183,8 +188,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
      return <div>Loading Authentication...</div>;
   }
 
+  // Functions to control the global upgrade dialog
+  const openUpgradeDialog = () => setIsUpgradeDialogOpen(true);
+  const closeUpgradeDialog = () => setIsUpgradeDialogOpen(false);
+
   return (
-    <AuthContext.Provider value={{ user, level, session, isAuthenticated, navigate, loading, login, register, logout, upgradeToResearcher }}>
+    <AuthContext.Provider value={{
+      user,
+      level,
+      session,
+      isAuthenticated,
+      navigate,
+      loading,
+      login,
+      register,
+      logout,
+      upgradeToResearcher,
+      // Add dialog state and functions to provider value
+      isUpgradeDialogOpen,
+      openUpgradeDialog,
+      closeUpgradeDialog
+    }}>
       {children}
     </AuthContext.Provider>
   );

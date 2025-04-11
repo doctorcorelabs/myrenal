@@ -17,7 +17,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { useAuth } from '@/contexts/AuthContext'; // Added useAuth
 import { supabase } from '@/lib/supabaseClient'; // Added supabase
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added useFeatureAccess
-import UpgradePlanDialog from '@/components/UpgradePlanDialog'; // Added UpgradePlanDialog
+import UpgradePlanDialogContent from '@/components/UpgradePlanDialog'; // Corrected Import
 import { FeatureName } from '@/lib/quotas'; // Added FeatureName
 
 // Configure the worker source for pdfjs-dist
@@ -44,9 +44,10 @@ interface ExplorationThread {
 
 const ExploreDeepSeek: React.FC = () => {
   const { toast } = useToast();
-  const { user, level } = useAuth(); // Get user and level
+  // Get user, level, and the function to open the global dialog (will be added to context later)
+  const { user, level, openUpgradeDialog } = useAuth(); 
   const { checkAccess, incrementUsage } = useFeatureAccess(); // Corrected: Initialize hook
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false); // State for upgrade dialog
+  // Removed local dialog state: const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const [prompt, setPrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<DeepSeekModel>('deepseek-chat');
@@ -83,8 +84,13 @@ const ExploreDeepSeek: React.FC = () => {
     const access = await checkAccess(featureName);
 
     if (!access.allowed) { // Corrected property check based on hook definition
+      toast({
+        title: "Access Denied",
+        description: access.message || 'Quota limit reached for Explore DeepSeek.',
+        variant: "destructive"
+      });
       setError(access.message || 'Quota limit reached for Explore DeepSeek.');
-      setShowUpgradeDialog(true); // Show upgrade dialog if access denied
+      openUpgradeDialog(); // Open the global dialog
       setIsLoading(false); // Stop loading indicator
       return; // Stop execution if no access
     }
@@ -338,8 +344,13 @@ const ExploreDeepSeek: React.FC = () => {
     const access = await checkAccess(featureName);
 
     if (!access.allowed) { // Corrected property check based on hook definition
+      toast({
+        title: "Access Denied",
+        description: access.message || 'Quota limit reached for Explore DeepSeek.',
+        variant: "destructive"
+      });
       setThreadErrors(prev => ({ ...prev, [threadId]: access.message || 'Quota limit reached for Explore DeepSeek.' }));
-      setShowUpgradeDialog(true); // Show upgrade dialog
+      openUpgradeDialog(); // Open the global dialog
       setThreadLoading(prev => ({ ...prev, [threadId]: false })); // Stop loading for this thread
       return; // Stop execution
     }
@@ -676,12 +687,7 @@ const ExploreDeepSeek: React.FC = () => {
         </div>
 
       </div> {/* End container */}
-      {/* Wrap UpgradePlanDialogContent correctly */}
-      <AlertDialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <AlertDialogContent>
-          <UpgradePlanDialog /> {/* Render the actual content component */}
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Removed local AlertDialog rendering */}
     </>
   );
 };

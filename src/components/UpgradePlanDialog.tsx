@@ -69,9 +69,9 @@ const UpgradePlanDialogContent = () => {
 
   return (
     <> {/* Use Fragment to wrap multiple elements */}
-      {/* Original Upgrade Dialog Content */}
-      {/* Add max-h and flex layout */}
-      <AlertDialogContent className="max-h-[90vh] flex flex-col">
+      {/* Original Upgrade Dialog Content - Now wrapped by AlertDialogContent in Layout.tsx */}
+      {/* Removed outer AlertDialogContent wrapper, styles moved to Layout.tsx */}
+      <> 
         <AlertDialogHeader>
           <AlertDialogTitle>Upgrade to Researcher Plan</AlertDialogTitle>
           <AlertDialogDescription>
@@ -150,7 +150,7 @@ const UpgradePlanDialogContent = () => {
             Upgrade Now
           </AlertDialogAction>
         </AlertDialogFooter>
-      </AlertDialogContent>
+      </> {/* Close the fragment that replaced AlertDialogContent */}
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
