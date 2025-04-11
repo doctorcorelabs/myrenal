@@ -15,9 +15,9 @@
 [functions."explore_gemini"]
   timeout = 25
 
-# Jadwalkan fungsi fetch-medical-news untuk berjalan setiap 20 jam
+# Jadwalkan fungsi fetch-medical-news untuk berjalan setiap 10 jam
 [functions."fetch-medical-news"]
-  schedule = "0 */20 * * *"
+  schedule = "0 */10 * * *"
 
 # Konfigurasi untuk netlify dev
 [dev]
