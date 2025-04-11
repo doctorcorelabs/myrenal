@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { Turnstile } from '@marsidev/react-turnstile'; // Import Turnstile
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string>(''); // State for Turnstile token
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -20,6 +22,16 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Check if Turnstile token exists
+    if (!turnstileToken) {
+      toast({
+        title: "CAPTCHA Required",
+        description: "Please complete the CAPTCHA verification.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -33,8 +45,30 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      // Call register function from AuthContext
-      // register returns the data object { user, session } or throws an error
+      // 2. Verify Turnstile token with backend
+      const verifyResponse = await fetch('/.netlify/functions/verify-turnstile', { // Use the correct path to your function
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ turnstileToken }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyData.success) {
+        console.error("Turnstile verification failed:", verifyData);
+        toast({
+          title: "CAPTCHA Verification Failed",
+          description: verifyData.error || "Could not verify CAPTCHA. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false); // Stop loading on failure
+        setTurnstileToken(''); // Reset token potentially? Or let Turnstile handle expiry/retry
+        return; // Stop submission
+      }
+
+      // 3. Proceed with registration if Turnstile verification is successful
       const signUpData = await register(email, password);
 
       // Error handling is done within the register function or caught below.
@@ -135,6 +169,22 @@ const SignUp = () => {
                         className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </div>
+                  </div>
+
+                  {/* Turnstile Widget */}
+                  <div className="flex justify-center py-2">
+                    <Turnstile
+                      siteKey="0x4AAAAAABJj5Q0iqgbTzacQ" // Ganti dengan Site Key Anda yang benar
+                      onSuccess={setTurnstileToken}
+                      options={{ theme: 'light' }} // Sesuaikan tema jika perlu
+                      onError={() => {
+                        toast({ title: "CAPTCHA Error", description: "Failed to load CAPTCHA. Please refresh.", variant: "destructive" });
+                      }}
+                      onExpire={() => {
+                        toast({ title: "CAPTCHA Expired", description: "Please complete the CAPTCHA again.", variant: "destructive" });
+                        setTurnstileToken(''); // Reset token on expiry
+                      }}
+                    />
                   </div>
 
                   {/* Submit Button */}
