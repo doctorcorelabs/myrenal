@@ -11,13 +11,19 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, requiredLevel }: ProtectedRouteProps) => {
   const { isAuthenticated, level, loading } = useAuth(); // Get level and loading state
 
-  // Show loading indicator while auth state is being determined
-  if (loading) {
-    return <div>Loading...</div>; // Or a proper spinner
-  }
+  // REMOVED: Redundant loading check - AuthProvider handles initial load
+  // if (loading) {
+  //   return <div>Loading...</div>; // Or a proper spinner
+  // }
 
   // Redirect to signin if not authenticated
   if (!isAuthenticated) {
+    // It's possible the loading state IS needed if navigating *back* to a protected route
+    // while logged out, but let's test without it first.
+    // If issues persist, we might need a more nuanced loading check here.
+    if (loading) { // Re-introduce loading check ONLY for the !isAuthenticated case
+        return <div>Loading...</div>; // Or a proper spinner
+    }
     return <Navigate to="/signin" replace />; // Added replace prop
   }
 

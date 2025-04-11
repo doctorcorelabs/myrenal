@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   AlertDialog, // Added AlertDialog
   AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogContent, // Added AlertDialogContent import
 } from "@/components/ui/alert-dialog"; // Added AlertDialog imports
 import {
   DropdownMenu,
@@ -165,7 +166,10 @@ const Navbar = () => {
                               <span>Upgrade Plan</span>
                             </DropdownMenuItem>
                           </AlertDialogTrigger>
-                          <UpgradePlanDialogContent />
+                          {/* Wrap content with AlertDialogContent */}
+                          <AlertDialogContent className="max-h-[90vh] flex flex-col">
+                            <UpgradePlanDialogContent />
+                          </AlertDialogContent>
                         </AlertDialog>
                       )}
 
@@ -290,7 +294,10 @@ const Navbar = () => {
                           <span>Upgrade Plan</span>
                         </Button>
                       </AlertDialogTrigger>
-                      <UpgradePlanDialogContent />
+                      {/* Wrap content with AlertDialogContent */}
+                      <AlertDialogContent className="max-h-[90vh] flex flex-col">
+                        <UpgradePlanDialogContent />
+                      </AlertDialogContent>
                     </AlertDialog>
                   )}
                   <button
