@@ -51,6 +51,18 @@ const techStack = [
     category: "AI Model",
     description: "Google's powerful multimodal AI for diverse applications.",
     logo: "/gemini logo.png"
+  },
+  {
+    name: "Radix UI",
+    category: "UI Primitives",
+    description: "Unstyled, accessible UI primitives for building design systems.",
+    logo: "/radix.png"
+  },
+  {
+    name: "Tanstack Query",
+    category: "Data Fetching",
+    description: "Powerful asynchronous state management for TS/JS applications.",
+    logo: "/tanstack.png"
   }
 ];
 
