@@ -27,8 +27,8 @@ const MedicalNewsSection: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const plugin = useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true }) // Autoplay every 3 seconds
+  const [plugin] = useState(() => 
+    Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
   useEffect(() => {
@@ -62,6 +62,9 @@ const MedicalNewsSection: React.FC = () => {
     // Initial fetch
     fetchNewsFromSupabase();
 
+    // Set up interval to refetch every 10 hours (36,000,000 ms)
+    const intervalId = setInterval(fetchNewsFromSupabase, 10 * 60 * 60 * 1000);
+
     // Set up Supabase real-time subscription
     const channel = supabase
       .channel('latest_medical_news_changes')
@@ -76,9 +79,10 @@ const MedicalNewsSection: React.FC = () => {
       )
       .subscribe();
 
-    // Cleanup subscription on component unmount
+    // Cleanup subscription and interval on component unmount
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(intervalId); // Clear the interval
     };
   }, []); // Empty dependency array still correct, setup runs once
 
@@ -116,39 +120,46 @@ const MedicalNewsSection: React.FC = () => {
         )}
         {!loading && !error && newsItems.length > 0 && (
           <Carousel
-            plugins={[plugin.current]}
-            className="w-full max-w-3xl mx-auto" // Center the carousel
-            onMouseEnter={() => plugin.current.stop()} // Wrap in arrow function
-            onMouseLeave={() => plugin.current.play()} // Change to play and wrap in arrow function
+            plugins={[plugin]}
+            className="w-full max-w-3xl mx-auto"
+            onMouseEnter={() => plugin.stop()}
+            onMouseLeave={() => plugin.play()}
             opts={{
               align: "start",
               loop: true,
             }}
           >
-            <CarouselContent>
+            <CarouselContent className="-ml-4"> {/* Add negative margin like tools carousel */}
               {newsItems.map((item) => ( // Use item.id as key
-                <CarouselItem key={item.id} className="md:basis-1/2 lg:basis-1/1"> {/* Adjust basis for responsiveness if needed */}
+                // Adjust basis for responsiveness, show 2 on md+, add padding
+                <CarouselItem key={item.id} className="pl-4 basis-full md:basis-1/2"> 
                   <div className="p-1 h-full">
-                    <Card className="h-full flex flex-col"> {/* Ensure card takes full height */}
-                      <CardHeader>
-                        <CardTitle className="text-lg leading-tight text-justify"> {/* Add text-justify */}
+                    {/* Apply card styling similar to tool card */}
+                    <Card className="h-full flex flex-col bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1"> 
+                      <CardHeader className="pb-2"> {/* Reduce bottom padding */}
+                        {/* Apply text styling similar to tool card title */}
+                        <CardTitle className="text-lg font-semibold text-medical-blue mb-1 text-justify"> 
                            {item.title || 'No Title'}
                         </CardTitle>
-                        <CardDescription>
+                        {/* Apply text styling similar to tool card description (muted) */}
+                        <CardDescription className="text-sm text-gray-500"> 
                           {item.source || 'Unknown Source'} - {formatDate(item.pub_date)}
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="flex-grow text-sm"> {/* Allow content to grow */}
-                        <p className="line-clamp-3 text-justify"> {/* Add text-justify & Limit snippet lines */}
+                      {/* Apply text styling similar to tool card description, keep flex-grow */}
+                      <CardContent className="flex-grow text-sm text-gray-600 pb-2"> {/* Reduce bottom padding */}
+                        <p className="line-clamp-3 text-justify"> 
                            {item.content_snippet || 'No snippet available.'}
                         </p>
                       </CardContent>
-                      <div className="p-4 pt-0 mt-auto"> {/* Push link to bottom */}
+                      {/* Apply styling similar to tool card link/button */}
+                      <div className="p-4 pt-0 mt-auto"> 
                         <a
                           href={item.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-medium text-primary hover:underline"
+                          // Use medical-blue color, similar font weight/size
+                          className="text-sm font-medium text-medical-blue hover:underline" 
                         >
                           Read More &rarr;
                         </a>

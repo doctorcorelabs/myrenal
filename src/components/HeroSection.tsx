@@ -2,7 +2,6 @@ import React from 'react'; // Import React
 // Updated icons based on Tools.tsx for consistency
 import { ArrowRight, Calculator, Pill, Apple, Book, FileSearch, Brain, FileText, Computer, AlertTriangle, Network, ClipboardList, ExternalLink, Bot } from 'lucide-react'; 
 import { Link } from 'react-router-dom';
-import MedicalNewsSection from './MedicalNewsSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
 import { Button } from '@/components/ui/button'; // Added Button import
 import {
@@ -225,9 +224,6 @@ const HeroSection = () => {
       </div>
       {/* END: Medical Tools Preview Section */}
 
-      {/* START: Medical News Section */}
-      <MedicalNewsSection />
-      {/* END: Medical News Section */}
     </section>
   );
 };
