@@ -1,5 +1,6 @@
 import React from 'react'; // Import React
-import { ArrowRight, Calculator, Pill, Apple, Library, FileText, Bot, Users, BookOpen, Network, Sparkles, BrainCircuit, ClipboardList, ExternalLink } from 'lucide-react'; // Added ClipboardList and ExternalLink
+// Updated icons based on Tools.tsx for consistency
+import { ArrowRight, Calculator, Pill, Apple, Book, FileSearch, Brain, FileText, Computer, AlertTriangle, Network, ClipboardList, ExternalLink, Bot } from 'lucide-react'; 
 import { Link } from 'react-router-dom';
 import MedicalNewsSection from './MedicalNewsSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
@@ -14,20 +15,21 @@ import {
 import Autoplay from "embla-carousel-autoplay"; // Import Autoplay plugin
 
 
-// Define tool data array
+// Define tool data array - Updated to match src/pages/Tools.tsx
 const toolsData = [
-  { icon: Calculator, title: "Medical Calculator", description: "Calculate BMI, BSA, GFR, and other important clinical values", link: "/tools/medical-calculator" },
-  { icon: Pill, title: "Drug Reference", description: "Access comprehensive drug information database", link: "/tools/drug-reference" },
-  { icon: Apple, title: "Nutrition Database", description: "Explore nutritional information for various food items", link: "/tools/nutrition-database" },
-  { icon: Library, title: "Disease Library", description: "Comprehensive information on various conditions", link: "/tools/disease-library" },
-  { icon: FileText, title: "Clinical Guidelines", description: "Access the latest medical practice guidelines", link: "/tools/clinical-guidelines" },
-  { icon: Bot, title: "AI Chatbot", description: "Engage with an AI assistant for medical information and queries", link: "/tools/ai-chatbot" },
-  { icon: Users, title: "AI Peer-Review", description: "Get AI-powered feedback on your clinical notes or case studies", link: "/tools/ai-peer-review" },
-  { icon: BookOpen, title: "Learning Resources", description: "Access curated educational materials and resources", link: "/tools/learning-resources" },
-  { icon: Network, title: "Interaction Checker", description: "Check for potential drug interactions", link: "/tools/interaction-checker" },
-  { icon: Sparkles, title: "Explore Gemini", description: "Utilize Google's Gemini for advanced medical insights", link: "/tools/explore-gemini" },
-  { icon: BrainCircuit, title: "AI Mind Map Generator", description: "Visually organize complex medical topics with AI assistance.", link: "/tools/ai-mindmap-generator" }, // Corrected link
-  { icon: ClipboardList, title: "Clinical Scoring Hub", description: "Access various validated clinical scoring calculators.", link: "/tools/clinical-scoring-hub" }, // Added Clinical Scoring Hub
+  { icon: Calculator, title: "Medical Calculator", description: "Calculate BMI, BSA, GFR, and other important clinical values.", link: "/tools/medical-calculator" },
+  { icon: Pill, title: "Drug Reference", description: "Access comprehensive drug information database.", link: "/tools/drug-reference" },
+  { icon: Apple, title: "Nutrition Database", description: "Explore nutritional information for various food items.", link: "/tools/nutrition-database" },
+  { icon: Book, title: "Disease Library", description: "Comprehensive information on various conditions.", link: "/tools/disease-library" },
+  { icon: FileSearch, title: "Clinical Guidelines", description: "Access the latest medical practice guidelines.", link: "/tools/clinical-guidelines" },
+  { icon: Brain, title: "AI Chatbot", description: "Engage with an AI assistant for medical information and queries.", link: "/tools/ai-chatbot" },
+  { icon: FileText, title: "AI Peer-Review", description: "Get AI-powered feedback on your clinical notes or case studies.", link: "/tools/ai-peer-review" },
+  { icon: Computer, title: "Explore GEMINI", description: "Utilize Google's advanced AI for medical research exploration.", link: "/tools/explore-gemini" },
+  { icon: Bot, title: "Explore DeepSeek", description: "Leverage DeepSeek AI for advanced medical insights.", link: "/tools/explore-deepseek" },
+  { icon: AlertTriangle, title: "Drug Interaction Checker", description: "Check for potential interactions between multiple drugs.", link: "/tools/interaction-checker" },
+  { icon: Network, title: "AI Mind Map Generator", description: "Generate visual mind maps from any topic using AI.", link: "/tools/ai-mindmap-generator" },
+  { icon: ClipboardList, title: "Clinical Scoring Hub", description: "Access various validated clinical scoring calculators.", link: "/tools/clinical-scoring-hub" },
+  { icon: Book, title: "Learning Resources", description: "Access curated educational materials and resources.", link: "/tools/learning-resources" },
 ];
 
 // Website Project Images
@@ -195,9 +197,9 @@ const HeroSection = () => {
               <CarouselItem key={index} className="pl-4 basis-full md:basis-1/2 lg:basis-1/4"> 
                 <div className="p-1 h-full"> {/* Added padding and full height */}
                   {/* Tool Card Structure (copied from original grid) */}
-                  <Link 
-                    to={tool.link} 
-                    className="tool-card group block h-full p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1 flex flex-col" // Added h-full and flex flex-col
+                  <Link
+                    to={tool.link}
+                    className="tool-card group h-full p-6 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-1 flex flex-col" // Removed redundant 'block' class
                   >
                     <div className="flex items-center justify-center w-12 h-12 rounded-full bg-medical-light text-medical-blue mb-4 group-hover:bg-medical-blue group-hover:text-white transition-colors flex-shrink-0"> {/* Added flex-shrink-0 */}
                       <tool.icon size={24} />

@@ -59,6 +59,7 @@ const UpgradePlanDialogContent = () => {
     { name: 'Clinical Guidelines', free: '3 searches/day', researcher: '20 searches/day' },
     { name: 'Interaction Checker', free: '3 checks/day', researcher: '15 checks/day' },
     { name: 'Explore Gemini', free: '3 questions/day', researcher: '30 questions/day' },
+    { name: 'Explore DeepSeek', free: '3 questions/day', researcher: '30 questions/day' },
     { name: 'Medical Calculator', free: 'Unlimited', researcher: 'Unlimited' },
     { name: 'Nutrition Database', free: '3 searches/day', researcher: '20 searches/day' },
     { name: 'Learning Resources', free: 'No Access', researcher: 'Full Access' },
