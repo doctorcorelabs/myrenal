@@ -121,6 +121,51 @@
     margin-bottom: 0;
     padding-bottom: 0;
   }
+
+  /* Responsive tables for markdown content */
+  .markdown-render-area table {
+    @apply w-full max-w-full overflow-x-auto;
+  }
+
+  /* Gemini response container styles */
+  .gemini-response-container {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100vw;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .markdown-render-area {
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100vw;
+      margin-left: -1rem;
+      margin-right: -1rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .markdown-render-area table {
+      display: block;
+      overflow-x: visible;
+      white-space: nowrap;
+    }
+    .markdown-render-area td {
+      word-break: break-word;
+      white-space: normal;
+    }
+
+    .gemini-response-container table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  }
   .prose strong, .prose strong { /* Target strong */
     @apply font-bold; /* Ensure font-weight is bold */
   }

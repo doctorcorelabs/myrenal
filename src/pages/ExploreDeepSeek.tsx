@@ -540,7 +540,7 @@ const ExploreDeepSeek: React.FC = () => {
              <CardHeader><CardTitle>Current Response from {selectedModel}</CardTitle></CardHeader>
              <CardContent>
                {/* Added prose classes */}
-               <div className="p-4 border rounded-md bg-gray-50 text-justify min-h-[50px] markdown-render-area prose prose-sm dark:prose-invert max-w-none">
+               <div className="p-4 border rounded-md bg-gray-50 text-justify min-h-[50px] gemini-response-container prose prose-sm dark:prose-invert max-w-none">
                  {response ? (
                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                      {response}
