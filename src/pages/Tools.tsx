@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'; // Added useState, use
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle, Network, ClipboardList, XCircle } from 'lucide-react'; // Added XCircle
+import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, HeartPulse, Apple, FileText, Computer, AlertTriangle, Network, ClipboardList, XCircle, Bot } from 'lucide-react'; // Added XCircle
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
@@ -106,6 +106,15 @@ const toolsData: ToolData[] = [
   },
   {
     id: 9,
+    featureName: 'explore_deepseek',
+    title: 'Explore DeepSeek',
+    description: 'Leverage DeepSeek AI for advanced medical insights.',
+    icon: Bot, // Using the Bot icon, similar to other AI tools
+    path: '/tools/explore-deepseek', // Proposed path
+    comingSoon: false
+  },
+  {
+    id: 10,
     featureName: 'interaction_checker', // Added feature name
     title: 'Drug Interaction Checker',
     description: 'Check for potential interactions between multiple drugs.',
@@ -132,21 +141,12 @@ const toolsData: ToolData[] = [
     comingSoon: false
   },
   {
-    id: 10,
+    id: 13,
     featureName: 'learning_resources', // Added feature name
     title: 'Learning Resources',
     description: 'Access curated educational materials and resources.',
     icon: Book,
     path: '/tools/learning-resources',
-    comingSoon: false
-  },
-  {
-    id: 13, // Assuming 13 is the next available unique ID
-    featureName: 'explore_deepseek',
-    title: 'Explore DeepSeek',
-    description: 'Leverage DeepSeek AI for advanced medical insights.',
-    icon: Brain, // Using the Brain icon, similar to other AI tools
-    path: '/tools/explore-deepseek', // Proposed path
     comingSoon: false
   }
 ];

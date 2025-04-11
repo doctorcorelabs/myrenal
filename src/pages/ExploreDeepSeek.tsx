@@ -460,6 +460,7 @@ const ExploreDeepSeek: React.FC = () => {
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
         {/* Main Interaction Area */}
+        <img src="/deep fix.png" alt="DeepSeek" style={{ display: 'block', margin: '0 auto', width: '300px', marginBottom: '10px' }} />
         <Card>
           <CardHeader><CardTitle>Start New Exploration</CardTitle></CardHeader>
           <CardContent className="space-y-4">
