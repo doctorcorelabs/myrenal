@@ -88,8 +88,8 @@ const UpgradePlanDialogContent = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {/* Conditionally apply border/rounded only for desktop, make scroll area flexible */}
-        <ScrollArea className={`${isMobile ? 'flex-grow' : 'h-[300px] border rounded-md flex-grow'} mt-4`}>
+        {/* Conditionally apply border/rounded only for desktop, make scroll area flexible and explicitly scrollable */}
+        <ScrollArea className={`${isMobile ? 'flex-grow overflow-y-auto' : 'h-[300px] border rounded-md flex-grow'} mt-4`}>
           {isMobile ? (
             // Mobile: Render cards directly
             <div className="p-1"> {/* Add slight padding around the cards list */}
