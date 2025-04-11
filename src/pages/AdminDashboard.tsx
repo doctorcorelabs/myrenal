@@ -34,6 +34,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"; // Import AlertDialog components
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"; // Import Collapsible components
 
 // Define the type for a feature toggle item
 interface FeatureToggle {
@@ -516,25 +521,54 @@ const AdminDashboard: React.FC = () => {
         <CardHeader><CardTitle>Feature Toggles</CardTitle></CardHeader>
         <CardContent>
           {isLoadingToggles ? (<p>Loading feature toggles...</p>) : featureToggles.length === 0 ? (<p>No feature toggles found.</p>) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Feature</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Status</TableHead></TableRow></TableHeader>
-              <TableBody>
+            <>
+              {/* Table View for Medium Screens and Up */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Feature</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {featureToggles.map((toggle) => (
+                      <TableRow key={toggle.feature_name}>
+                        {/* Use helper function for display name */}
+                        <TableCell className="font-medium">{getDisplayFeatureName(toggle.feature_name)}</TableCell>
+                        <TableCell>{toggle.description || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            {/* Use helper function for display name in label */}
+                            <Label htmlFor={`toggle-table-${toggle.feature_name}`} className="sr-only">{toggle.is_enabled ? 'Disable' : 'Enable'} {getDisplayFeatureName(toggle.feature_name)}</Label>
+                            <Switch id={`toggle-table-${toggle.feature_name}`} checked={toggle.is_enabled} onCheckedChange={(checked) => handleToggleChange(toggle.feature_name, checked)} aria-label={`Toggle ${getDisplayFeatureName(toggle.feature_name)}`} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Card View for Small Screens */}
+              <div className="block md:hidden space-y-4">
                 {featureToggles.map((toggle) => (
-                  <TableRow key={toggle.feature_name}>
-                    {/* Use helper function for display name */}
-                    <TableCell className="font-medium">{getDisplayFeatureName(toggle.feature_name)}</TableCell>
-                    <TableCell>{toggle.description || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                         {/* Use helper function for display name in label */}
-                         <Label htmlFor={`toggle-${toggle.feature_name}`} className="sr-only">{toggle.is_enabled ? 'Disable' : 'Enable'} {getDisplayFeatureName(toggle.feature_name)}</Label>
-                         <Switch id={`toggle-${toggle.feature_name}`} checked={toggle.is_enabled} onCheckedChange={(checked) => handleToggleChange(toggle.feature_name, checked)} aria-label={`Toggle ${getDisplayFeatureName(toggle.feature_name)}`} />
-                       </div>
-                    </TableCell>
-                  </TableRow>
+                  <Card key={`card-${toggle.feature_name}`}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        {getDisplayFeatureName(toggle.feature_name)}
+                      </CardTitle>
+                      <Switch
+                        id={`toggle-card-${toggle.feature_name}`}
+                        checked={toggle.is_enabled}
+                        onCheckedChange={(checked) => handleToggleChange(toggle.feature_name, checked)}
+                        aria-label={`Toggle ${getDisplayFeatureName(toggle.feature_name)}`}
+                      />
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">
+                        {toggle.description || 'No description available.'}
+                      </p>
+                    </CardContent>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -544,59 +578,124 @@ const AdminDashboard: React.FC = () => {
         <CardHeader><CardTitle>User Management</CardTitle><CardDescription>View and manage user levels and access.</CardDescription></CardHeader>
         <CardContent>
           {isLoadingUsers ? (<p>Loading users...</p>) : users.length === 0 ? (<p>No user profiles found.</p>) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Email / User ID</TableHead><TableHead>Level</TableHead><TableHead>Level Expires</TableHead><TableHead>Joined</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
+            <>
+              {/* Table View for Medium Screens and Up */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Email / User ID</TableHead><TableHead>Level</TableHead><TableHead>Level Expires</TableHead><TableHead>Joined</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        {/* Updated TableCell to show only User ID */}
+                        <TableCell className="font-medium">
+                          {/* <div>{user.email}</div> */} {/* Removed email display */}
+                          <div className="text-sm break-all">{user.id}</div> {/* Display ID directly */}
+                        </TableCell>
+                        <TableCell>
+                          <Select value={editingUsers[user.id]?.level ?? user.level ?? 'Free'} onValueChange={(value) => handleLevelChange(user.id, value as UserLevel)}>
+                            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Select level" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Free">Free</SelectItem>
+                              <SelectItem value="Researcher">Researcher</SelectItem>
+                              {/* Only show Administrator option for the specific user ID */}
+                              {user.id === 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
+                                <SelectItem value="Administrator">Administrator</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {(editingUsers[user.id]?.level ?? user.level) === 'Researcher' ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant={"outline"} className={cn("w-[200px] justify-start text-left font-normal", !(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) ? format(new Date(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at!), 'PP') : <span>Pick a date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={editingUsers[user.id]?.level_expires_at ? new Date(editingUsers[user.id]!.level_expires_at!) : user.level_expires_at ? new Date(user.level_expires_at) : undefined} onSelect={(date) => handleExpiryDateChange(user.id, date)} initialFocus />
+                                <div className="p-2 border-t"><Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => handleExpiryDateChange(user.id, undefined)}>Clear Date (No Expiry)</Button></div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : ('-')}
+                        </TableCell>
+                        <TableCell>{format(new Date(user.created_at), 'PP')}</TableCell>
+                        <TableCell className="text-right space-x-1">
+                          {editingUsers[user.id] ? (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => handleSaveUserChanges(user.id)} title="Save Changes"><Save className="h-4 w-4 text-green-600" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDiscardChanges(user.id)} title="Discard Changes"><XCircle className="h-4 w-4 text-red-600" /></Button>
+                            </>
+                          ) : (<span className="text-xs text-muted-foreground"></span>)}
+                          {/* <Button variant="ghost" size="icon" title="Delete User (Not Implemented)"><Trash2 className="h-4 w-4 text-destructive" /></Button> */}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Card View for Small Screens (User Management) */}
+              <div className="block md:hidden space-y-4">
                 {users.map((user) => (
-                  <TableRow key={user.id}>
-                    {/* Updated TableCell to show only User ID */}
-                    <TableCell className="font-medium">
-                      {/* <div>{user.email}</div> */} {/* Removed email display */}
-                      <div className="text-sm break-all">{user.id}</div> {/* Display ID directly */}
-                    </TableCell>
-                    <TableCell>
-                      <Select value={editingUsers[user.id]?.level ?? user.level ?? 'Free'} onValueChange={(value) => handleLevelChange(user.id, value as UserLevel)}>
-                        <SelectTrigger className="w-[150px]"><SelectValue placeholder="Select level" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Free">Free</SelectItem>
-                          <SelectItem value="Researcher">Researcher</SelectItem>
-                          {/* Only show Administrator option for the specific user ID */}
-                          {user.id === 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
-                            <SelectItem value="Administrator">Administrator</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {(editingUsers[user.id]?.level ?? user.level) === 'Researcher' ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-[200px] justify-start text-left font-normal", !(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) && "text-muted-foreground")}>
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) ? format(new Date(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at!), 'PP') : <span>Pick a date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={editingUsers[user.id]?.level_expires_at ? new Date(editingUsers[user.id]!.level_expires_at!) : user.level_expires_at ? new Date(user.level_expires_at) : undefined} onSelect={(date) => handleExpiryDateChange(user.id, date)} initialFocus />
-                            <div className="p-2 border-t"><Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => handleExpiryDateChange(user.id, undefined)}>Clear Date (No Expiry)</Button></div>
-                          </PopoverContent>
-                        </Popover>
-                      ) : ('-')}
-                    </TableCell>
-                    <TableCell>{format(new Date(user.created_at), 'PP')}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {editingUsers[user.id] ? (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => handleSaveUserChanges(user.id)} title="Save Changes"><Save className="h-4 w-4 text-green-600" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDiscardChanges(user.id)} title="Discard Changes"><XCircle className="h-4 w-4 text-red-600" /></Button>
-                        </>
-                      ) : (<span className="text-xs text-muted-foreground"></span>)}
-                      {/* <Button variant="ghost" size="icon" title="Delete User (Not Implemented)"><Trash2 className="h-4 w-4 text-destructive" /></Button> */}
-                    </TableCell>
-                  </TableRow>
+                  <Card key={`card-${user.id}`}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium break-all">User ID: {user.id}</CardTitle>
+                      <CardDescription>Joined: {format(new Date(user.created_at), 'PP')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor={`select-level-card-${user.id}`}>Level</Label>
+                        <Select
+                          value={editingUsers[user.id]?.level ?? user.level ?? 'Free'}
+                          onValueChange={(value) => handleLevelChange(user.id, value as UserLevel)}
+                        >
+                          <SelectTrigger id={`select-level-card-${user.id}`}><SelectValue placeholder="Select level" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Free">Free</SelectItem>
+                            <SelectItem value="Researcher">Researcher</SelectItem>
+                            {user.id === 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
+                              <SelectItem value="Administrator">Administrator</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(editingUsers[user.id]?.level ?? user.level) === 'Researcher' && (
+                        <div className="flex flex-col space-y-1.5">
+                          <Label>Level Expires</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at) ? format(new Date(editingUsers[user.id]?.level_expires_at ?? user.level_expires_at!), 'PP') : <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={editingUsers[user.id]?.level_expires_at ? new Date(editingUsers[user.id]!.level_expires_at!) : user.level_expires_at ? new Date(user.level_expires_at) : undefined} onSelect={(date) => handleExpiryDateChange(user.id, date)} initialFocus />
+                              <div className="p-2 border-t"><Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => handleExpiryDateChange(user.id, undefined)}>Clear Date (No Expiry)</Button></div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end space-x-2 pt-2">
+                        {editingUsers[user.id] ? (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => handleSaveUserChanges(user.id)} title="Save Changes"><Save className="mr-1 h-4 w-4 text-green-600" /> Save</Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDiscardChanges(user.id)} title="Discard Changes"><XCircle className="mr-1 h-4 w-4 text-red-600" /> Discard</Button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground h-9 flex items-center"></span> // Placeholder to maintain height
+                        )}
+                        {/* <Button variant="ghost" size="icon" title="Delete User (Not Implemented)"><Trash2 className="h-4 w-4 text-destructive" /></Button> */}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -618,116 +717,93 @@ const AdminDashboard: React.FC = () => {
           ) : usageStatsToday.length === 0 ? (
             <p>No usage recorded today.</p>
           ) : (
-            <Table className="mb-6">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Feature</TableHead>
-                  <TableHead className="text-center">Users</TableHead> {/* Added Users column */}
-                  <TableHead className="text-right">Total Usage Today</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usageStatsToday.map((stat) => (
-                  <TableRow key={stat.feature_name}>
-                    {/* Use helper function for display name */}
-                    <TableCell className="font-medium">{getDisplayFeatureName(stat.feature_name)}</TableCell>
-                    {/* Users Popover Cell - Now displays User IDs */}
-                    <TableCell className="text-center">
-                      {stat.userIds.length > 0 ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-xs">
-                              <UsersIcon className="mr-1 h-3 w-3" /> {stat.userIds.length}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto max-w-xs p-2">
-                            <div className="text-sm font-semibold mb-1">User IDs ({stat.userIds.length})</div>
-                            <ul className="list-disc list-inside text-xs max-h-40 overflow-y-auto">
-                              {stat.userIds.map((userId, index) => (
-                                <li key={index} className="truncate">{userId}</li>
-                              ))}
-                            </ul>
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{stat.total_usage}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+            <>
+              {/* Table View for Medium Screens and Up */}
+              <div className="hidden md:block mb-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Feature</TableHead>
+                      <TableHead className="text-center">Users</TableHead> {/* Added Users column */}
+                      <TableHead className="text-right">Total Usage Today</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usageStatsToday.map((stat) => (
+                      <TableRow key={stat.feature_name}>
+                        {/* Use helper function for display name */}
+                        <TableCell className="font-medium">{getDisplayFeatureName(stat.feature_name)}</TableCell>
+                        {/* Users Popover Cell - Now displays User IDs */}
+                        <TableCell className="text-center">
+                          {stat.userIds.length > 0 ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-xs">
+                                  <UsersIcon className="mr-1 h-3 w-3" /> {stat.userIds.length}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto max-w-xs p-2">
+                                <div className="text-sm font-semibold mb-1">User IDs ({stat.userIds.length})</div>
+                                <ul className="list-disc list-inside text-xs max-h-40 overflow-y-auto">
+                                  {stat.userIds.map((userId, index) => (
+                                    <li key={index} className="truncate">{userId}</li>
+                                  ))}
+                                </ul>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{stat.total_usage}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          <h3 className="text-lg font-semibold mt-6 mb-2">Usage Trend (Last 7 Days)</h3>
-          {/* Line Chart Implementation */}
-          {isLoadingUsage ? (
-             <p>Loading usage trend...</p>
-          ) : usageError ? (
-             <p className="text-red-600">Error loading usage trend: {usageError}</p>
-          ) : timeSeriesUsageData.length === 0 ? (
-             <p>No usage data available for the last 7 days.</p>
-          ) : (
-            <div className="mt-4 h-[400px]"> {/* Increased height for line chart */}
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={timeSeriesUsageData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(dateStr) => format(parseISO(dateStr), 'MMM d')} // Format date for display
-                    tick={{ fontSize: 10 }}
-                  />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <div className="grid grid-cols-1 gap-1.5">
-                              <div className="font-semibold">{format(parseISO(label), 'PP')}</div>
-                              {payload.map((entry) => (
-                                <div key={entry.dataKey} className="grid grid-cols-2 gap-1.5 items-center">
-                                  <div className="flex items-center gap-1">
-                                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                                     <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                       {/* Use helper function for display name */}
-                                       {typeof entry.dataKey === 'string' ? getDisplayFeatureName(entry.dataKey) : 'N/A'}
-                                     </span>
-                                  </div>
-                                  <span className="font-semibold ml-auto">{entry.value}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  {/* Use helper function in Legend formatter */}
-                  <Legend wrapperStyle={{ fontSize: '10px' }} formatter={(value) => getDisplayFeatureName(value)} />
-                  {/* Dynamically generate lines for each feature */}
-                  {allFeatureNames.map((featureName, index) => (
-                    <Line
-                      key={featureName}
-                      type="monotone"
-                      dataKey={featureName}
-                      stroke={`hsl(${index * (360 / (allFeatureNames.length || 1))}, 70%, 50%)`} // Generate distinct colors
-                      strokeWidth={2}
-                      dot={false}
-                      // Use helper function for display name in Line's name prop
-                      name={getDisplayFeatureName(featureName)}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+              {/* Card View for Small Screens */}
+              <div className="block md:hidden space-y-4 mb-6">
+                {usageStatsToday.map((stat) => (
+                  <Card key={`card-stat-${stat.feature_name}`}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        {getDisplayFeatureName(stat.feature_name)}
+                      </CardTitle>
+                      <div className="text-sm font-bold">{stat.total_usage}</div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xs text-muted-foreground flex items-center">
+                        {stat.userIds.length > 0 ? (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="link" size="sm" className="text-xs h-auto p-0 text-muted-foreground hover:text-primary">
+                                <UsersIcon className="mr-1 h-3 w-3" /> {stat.userIds.length} User(s) Today
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto max-w-xs p-2">
+                              <div className="text-sm font-semibold mb-1">User IDs ({stat.userIds.length})</div>
+                              <ul className="list-disc list-inside text-xs max-h-40 overflow-y-auto">
+                                {stat.userIds.map((userId, index) => (
+                                  <li key={index} className="truncate">{userId}</li>
+                                ))}
+                              </ul>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span>0 Users Today</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* User Quota Display Card - Re-added without refresh */}
+      {/* User Quota Display Card */}
       <Card className="mb-8">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -759,92 +835,175 @@ const AdminDashboard: React.FC = () => {
           ) : Object.keys(userQuotaDetails).length === 0 ? (
             <p>No user quota data available for today.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[150px]">User ID</TableHead>
-                  <TableHead>Level</TableHead>
-                  {/* Dynamically create headers for each feature */}
-                  {allFeatureNames.map(featureName => ( // Assuming allFeatureNames is populated by the stats card useEffect
-                    <TableHead key={featureName} className="text-center text-xs whitespace-nowrap">
-                      {getDisplayFeatureName(featureName)} <br/> (Remaining)
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-center">Quota Reset</TableHead> {/* Changed Header */}
-                  <TableHead className="text-right">Actions</TableHead> {/* Added Actions Header */}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.values(userQuotaDetails).map((userDetails) => (
-                  <TableRow key={userDetails.userId}>
-                    <TableCell className="font-medium text-xs break-all min-w-[150px]">{userDetails.userId}</TableCell>
-                    <TableCell>{userDetails.level}</TableCell>
-                    {/* Dynamically create cells for each feature quota */}
-                    {allFeatureNames.map(featureName => {
-                      const quota = userDetails.quotas[featureName as FeatureName]; // Cast needed if allFeatureNames isn't strictly FeatureName[]
-                      if (!quota) { // Handle case where a feature might not be in the details (e.g., new feature)
-                        return <TableCell key={featureName} className="text-center text-xs text-muted-foreground">-</TableCell>;
-                      }
-                      let limitText = quota.limit === null ? 'Unlimited' : quota.limit;
-                      let displayText = "";
+            <>
+              {/* Table View for Large Screens and Up */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">User ID</TableHead>
+                      <TableHead>Level</TableHead>
+                      {/* Dynamically create headers for each feature */}
+                      {allFeatureNames.map(featureName => ( // Assuming allFeatureNames is populated by the stats card useEffect
+                        <TableHead key={featureName} className="text-center text-xs whitespace-nowrap">
+                          {getDisplayFeatureName(featureName)} <br/> (Remaining)
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-center">Quota Reset</TableHead> {/* Changed Header */}
+                      <TableHead className="text-right">Actions</TableHead> {/* Added Actions Header */}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.values(userQuotaDetails).map((userDetails) => (
+                      <TableRow key={userDetails.userId}>
+                        <TableCell className="font-medium text-xs break-all min-w-[150px]">{userDetails.userId}</TableCell>
+                        <TableCell>{userDetails.level}</TableCell>
+                        {/* Dynamically create cells for each feature quota */}
+                        {allFeatureNames.map(featureName => {
+                          const quota = userDetails.quotas[featureName as FeatureName]; // Cast needed if allFeatureNames isn't strictly FeatureName[]
+                          if (!quota) { // Handle case where a feature might not be in the details (e.g., new feature)
+                            return <TableCell key={featureName} className="text-center text-xs text-muted-foreground">-</TableCell>;
+                          }
+                          let limitText = quota.limit === null ? 'Unlimited' : quota.limit;
+                          let displayText = "";
 
-                      if (featureName === 'learning_resources') {
-                        displayText = (quota.limit === null ? 'Access' : 'No Access');
-                      } else {
-                        // Display remaining quota instead of used/limit
-                        displayText = quota.remaining === null ? 'Unlimited' : quota.remaining.toString();
-                      }
+                          if (featureName === 'learning_resources') {
+                            displayText = (quota.limit === null ? 'Access' : 'No Access');
+                          } else {
+                            // Display remaining quota instead of used/limit
+                            displayText = quota.remaining === null ? 'Unlimited' : quota.remaining.toString();
+                          }
 
-                      return (
-                        <TableCell key={featureName} className="text-center text-xs">
-                          {/* Display remaining quota */}
-                          {displayText}
+                          return (
+                            <TableCell key={featureName} className="text-center text-xs">
+                              {/* Display remaining quota */}
+                              {displayText}
+                            </TableCell>
+                          );
+                        })}
+                        {/* Added Quota Reset Cell */}
+                        <TableCell className="text-center text-xs"> {/* Centered */}
+                          {userRefreshTimes[userDetails.userId] !== undefined ? (
+                            formatTime(userRefreshTimes[userDetails.userId])
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
-                      );
-                    })}
-                    {/* Added Quota Reset Cell */}
-                    <TableCell className="text-right">
-                      {userRefreshTimes[userDetails.userId] !== undefined ? (
-                        formatTime(userRefreshTimes[userDetails.userId])
-                      ) : (
-                         '-'
-                       )}
-                     </TableCell>
-                     {/* Added Actions Cell with Reset Button */}
-                     <TableCell className="text-right">
-                       <AlertDialog>
-                         <AlertDialogTrigger asChild>
-                           <Button
-                             variant="destructive"
-                             size="sm"
-                             className="text-xs"
-                             disabled={isLoadingQuotas || isResettingQuota === userDetails.userId} // Disable while loading or resetting this user
-                             title={`Reset Today's Quota for ${userDetails.userId.substring(0,8)}...`}
-                           >
-                             <RotateCcw className={`mr-1 h-3 w-3 ${isResettingQuota === userDetails.userId ? 'animate-spin' : ''}`} />
-                             {isResettingQuota === userDetails.userId ? 'Resetting...' : 'Reset'}
-                           </Button>
-                         </AlertDialogTrigger>
-                         <AlertDialogContent>
-                           <AlertDialogHeader>
-                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                             <AlertDialogDescription>
-                               This will reset today's usage count for all features for user ID <span className="font-mono break-all">{userDetails.userId}</span> back to zero. This action cannot be undone.
-                             </AlertDialogDescription>
-                           </AlertDialogHeader>
-                           <AlertDialogFooter>
-                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                             <AlertDialogAction onClick={() => handleResetQuota(userDetails.userId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                               Yes, Reset Quota
-                             </AlertDialogAction>
-                           </AlertDialogFooter>
-                         </AlertDialogContent>
-                       </AlertDialog>
-                     </TableCell>
-                   </TableRow>
-                 ))}
-               </TableBody>
-            </Table>
+                        {/* Added Actions Cell with Reset Button */}
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs"
+                                disabled={isLoadingQuotas || isResettingQuota === userDetails.userId} // Disable while loading or resetting this user
+                                title={`Reset Today's Quota for ${userDetails.userId.substring(0,8)}...`}
+                              >
+                                <RotateCcw className={`mr-1 h-3 w-3 ${isResettingQuota === userDetails.userId ? 'animate-spin' : ''}`} />
+                                {isResettingQuota === userDetails.userId ? 'Resetting...' : 'Reset'}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will reset today's usage count for all features for user ID <span className="font-mono break-all">{userDetails.userId}</span> back to zero. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleResetQuota(userDetails.userId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Yes, Reset Quota
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Card View for Screens Smaller than Large */}
+              <div className="block lg:hidden space-y-4">
+                {Object.values(userQuotaDetails).map((userDetails) => (
+                  <Card key={`card-quota-${userDetails.userId}`}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium break-all">User ID: {userDetails.userId}</CardTitle>
+                      <CardDescription>Level: {userDetails.level}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-center text-xs">
+                            View/Hide Quotas
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-3 space-y-1 text-xs border rounded-md p-2">
+                          {allFeatureNames.map(featureName => {
+                            const quota = userDetails.quotas[featureName as FeatureName];
+                            if (!quota) return null;
+                            let displayText = "";
+                            if (featureName === 'learning_resources') {
+                              displayText = (quota.limit === null ? 'Access' : 'No Access');
+                            } else {
+                              displayText = quota.remaining === null ? 'Unlimited' : quota.remaining.toString();
+                            }
+                            return (
+                              <div key={`quota-detail-${userDetails.userId}-${featureName}`} className="flex justify-between items-center">
+                                <span className="text-muted-foreground">{getDisplayFeatureName(featureName)}:</span>
+                                <span className="font-medium">{displayText}</span>
+                              </div>
+                            );
+                          })}
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      <div className="flex items-center justify-between pt-2 border-t mt-3">
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">Resets in: </span>
+                          {userRefreshTimes[userDetails.userId] !== undefined ? (
+                            <span className="font-mono">{formatTime(userRefreshTimes[userDetails.userId])}</span>
+                          ) : (
+                            '-'
+                          )}
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="text-xs"
+                              disabled={isLoadingQuotas || isResettingQuota === userDetails.userId}
+                              title={`Reset Today's Quota for ${userDetails.userId.substring(0,8)}...`}
+                            >
+                              <RotateCcw className={`mr-1 h-3 w-3 ${isResettingQuota === userDetails.userId ? 'animate-spin' : ''}`} />
+                              {isResettingQuota === userDetails.userId ? 'Resetting...' : 'Reset'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will reset today's usage count for all features for user ID <span className="font-mono break-all">{userDetails.userId}</span> back to zero. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleResetQuota(userDetails.userId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Yes, Reset Quota
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

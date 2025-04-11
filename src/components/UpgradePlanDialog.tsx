@@ -1,4 +1,5 @@
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   AlertDialog, // Keep AlertDialog imports for the main dialog structure
   AlertDialogAction,
@@ -34,6 +35,7 @@ import { Button } from "@/components/ui/button"; // Import Button
 
 // This component now expects to be rendered inside an <AlertDialog>
 const UpgradePlanDialogContent = () => {
+  const isMobile = useIsMobile();
   // Removed: const { upgradeToResearcher } = useAuth();
   // Removed: const { toast } = useToast();
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false); // State for confirmation dialog
@@ -67,7 +69,8 @@ const UpgradePlanDialogContent = () => {
   return (
     <> {/* Use Fragment to wrap multiple elements */}
       {/* Original Upgrade Dialog Content */}
-      <AlertDialogContent>
+      {/* Add max-h and flex layout */}
+      <AlertDialogContent className="max-h-[90vh] flex flex-col">
         <AlertDialogHeader>
           <AlertDialogTitle>Upgrade to Researcher Plan</AlertDialogTitle>
           <AlertDialogDescription>
@@ -85,31 +88,66 @@ const UpgradePlanDialogContent = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <ScrollArea className="h-[300px] mt-4 border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Feature</TableHead>
-                <TableHead>Free Level</TableHead>
-                <TableHead>Researcher Level</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {/* Conditionally apply border/rounded only for desktop, make scroll area flexible */}
+        <ScrollArea className={`${isMobile ? 'flex-grow' : 'h-[300px] border rounded-md flex-grow'} mt-4`}>
+          {isMobile ? (
+            // Mobile: Render cards directly
+            <div className="p-1"> {/* Add slight padding around the cards list */}
               {features.map((feature) => (
-                <TableRow key={feature.name}>
-                  <TableCell>{feature.name}</TableCell>
-                  <TableCell>{feature.free}</TableCell>
-                  <TableCell>{feature.researcher}</TableCell>
-                </TableRow>
+                <div key={feature.name} className="flex flex-col gap-2 p-3 border rounded-lg mb-2 bg-card"> {/* Added bg-card */}
+                  <h4 className="font-medium text-base">{feature.name}</h4>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm w-24 shrink-0">Free:</span>
+                      <span className="text-sm">{feature.free}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm w-24 shrink-0">Researcher:</span>
+                      <span className="text-sm">{feature.researcher}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            // Desktop: Render Table
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Feature</TableHead>
+                  <TableHead>Free Level</TableHead>
+                  <TableHead>Researcher Level</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {features.map((feature) => (
+                  <TableRow key={feature.name}>
+                    <TableCell className="font-medium max-w-[200px] whitespace-normal break-words">
+                      {feature.name}
+                    </TableCell>
+                    {/* Apply whitespace-nowrap to prevent wrapping */}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="break-all">{feature.free}</span>
+                    </TableCell>
+                    {/* Apply whitespace-nowrap to prevent wrapping */}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="break-all">{feature.researcher}</span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </ScrollArea>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          {/* Update onClick handler */}
-          <AlertDialogAction onClick={handleUpgradeClick}>Upgrade Now</AlertDialogAction>
+          <AlertDialogCancel className={isMobile ? 'w-full' : ''}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleUpgradeClick}
+            className={isMobile ? 'w-full' : ''}
+          >
+            Upgrade Now
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
 
