@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Save, Trash2, XCircle, BarChartHorizontal, LineChartIcon, UsersIcon, RefreshCw, Terminal, RotateCcw } from "lucide-react"; // Added RotateCcw
 import { cn } from "@/lib/utils";
-import { formatISO, subDays, eachDayOfInterval, parseISO } from 'date-fns';
+import { formatISO, subDays, eachDayOfInterval, parseISO } from 'date-fns'; // Added parseISO
 import { getQuotaLimit, FeatureName } from '@/lib/quotas';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -570,6 +570,67 @@ const AdminDashboard: React.FC = () => {
               </div>
             </>
           )}
+
+          {/* 7-Day Usage Trend Chart */}
+          <h3 className="text-lg font-semibold mt-6 mb-2">Usage Trend (Last 7 Days)</h3>
+          {isLoadingUsage ? (
+            <p>Loading usage trend...</p>
+          ) : usageError ? (
+            <p className="text-red-600">Error loading trend: {usageError}</p>
+          ) : timeSeriesUsageData.length === 0 ? (
+            <p>No usage data available for the last 7 days.</p>
+          ) : (
+            <div className="h-[300px] w-full"> {/* Set explicit height */}
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={timeSeriesUsageData}
+                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tickFormatter={(value) => format(parseISO(value), 'MMM d')} />
+                  <YAxis />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="grid grid-cols-1 gap-1.5"> {/* Changed to 1 column for better readability */}
+                              <span className="text-sm font-semibold">{format(parseISO(label), 'PP')}</span>
+                              {payload.map((entry, index) => (
+                                <div key={`tooltip-${index}`} className="flex items-center gap-1.5">
+                                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <div className="flex flex-1 justify-between leading-none">
+                                    {/* Explicitly convert entry.name to string */}
+                                    <span className="text-muted-foreground">{getDisplayFeatureName(String(entry.name || ''))}:</span>
+                                    <span className="font-medium">{entry.value}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  {allFeatureNames.map((featureName, index) => (
+                    <Line
+                      key={featureName}
+                      type="monotone"
+                      dataKey={featureName}
+                      stroke={`hsl(${index * (360 / (allFeatureNames.length || 1))}, 70%, 50%)`} // Generate distinct colors
+                      strokeWidth={2}
+                      dot={false}
+                      name={getDisplayFeatureName(featureName)} // Use display name in legend/tooltip
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {/* End 7-Day Usage Trend Chart */}
+
         </CardContent>
       </Card>
 
@@ -580,7 +641,7 @@ const AdminDashboard: React.FC = () => {
           {isLoadingUsers ? (<p>Loading users...</p>) : users.length === 0 ? (<p>No user profiles found.</p>) : (
             <>
               {/* Table View for Medium Screens and Up */}
-              <div className="hidden md:block">
+              <div className="hidden md:block max-h-[350px] overflow-y-auto">
                 <Table>
                   <TableHeader><TableRow><TableHead>Email / User ID</TableHead><TableHead>Level</TableHead><TableHead>Level Expires</TableHead><TableHead>Joined</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -595,8 +656,13 @@ const AdminDashboard: React.FC = () => {
                           <Select value={editingUsers[user.id]?.level ?? user.level ?? 'Free'} onValueChange={(value) => handleLevelChange(user.id, value as UserLevel)}>
                             <SelectTrigger className="w-[150px]"><SelectValue placeholder="Select level" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Free">Free</SelectItem>
-                              <SelectItem value="Researcher">Researcher</SelectItem>
+                              {/* Only show Free and Researcher if NOT the specific admin user */}
+                              {user.id !== 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
+                                <>
+                                  <SelectItem value="Free">Free</SelectItem>
+                                  <SelectItem value="Researcher">Researcher</SelectItem>
+                                </>
+                              )}
                               {/* Only show Administrator option for the specific user ID */}
                               {user.id === 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
                                 <SelectItem value="Administrator">Administrator</SelectItem>
@@ -637,7 +703,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Card View for Small Screens (User Management) */}
-              <div className="block md:hidden space-y-4">
+              <div className="block md:hidden space-y-4 max-h-[600px] overflow-y-auto">
                 {users.map((user) => (
                   <Card key={`card-${user.id}`}>
                     <CardHeader className="pb-3">
@@ -653,8 +719,14 @@ const AdminDashboard: React.FC = () => {
                         >
                           <SelectTrigger id={`select-level-card-${user.id}`}><SelectValue placeholder="Select level" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Free">Free</SelectItem>
-                            <SelectItem value="Researcher">Researcher</SelectItem>
+                            {/* Only show Free and Researcher if NOT the specific admin user */}
+                            {user.id !== 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
+                              <>
+                                <SelectItem value="Free">Free</SelectItem>
+                                <SelectItem value="Researcher">Researcher</SelectItem>
+                              </>
+                            )}
+                            {/* Only show Administrator option for the specific user ID */}
                             {user.id === 'bd66e44f-4bcb-494d-803b-9fead7399ddb' && (
                               <SelectItem value="Administrator">Administrator</SelectItem>
                             )}
@@ -837,7 +909,7 @@ const AdminDashboard: React.FC = () => {
           ) : (
             <>
               {/* Table View for Large Screens and Up */}
-              <div className="hidden lg:block">
+              <div className="hidden lg:block max-h-[350px] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -927,7 +999,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Card View for Screens Smaller than Large */}
-              <div className="block lg:hidden space-y-4">
+              <div className="block lg:hidden space-y-4 max-h-[600px] overflow-y-auto">
                 {Object.values(userQuotaDetails).map((userDetails) => (
                   <Card key={`card-quota-${userDetails.userId}`}>
                     <CardHeader className="pb-3">
