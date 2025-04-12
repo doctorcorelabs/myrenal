@@ -29,6 +29,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Terminal, Loader2 } from 'lucide-react'; // Added Terminal, Loader2
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
 import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
+import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -92,10 +93,13 @@ const MindMapMaker: React.FC = () => {
   const featureName: FeatureName = 'mind_map_maker';
   const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
+  const { openUpgradeDialog } = useAuth(); // Get the dialog function
 
   // State for access check result
-  const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
-  const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+  // No longer using initialAccessAllowed for conditional rendering, but keep for potential checks
+  // const [initialAccessAllowed, setInitialAccessAllowed] = useState(true);
+  // const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null); // No longer needed for alert
+  const [isInitiallyLocked, setIsInitiallyLocked] = useState(false); // Track if locked on load
 
   // Component state
   const [topic, setTopic] = useState('');
@@ -127,17 +131,19 @@ const MindMapMaker: React.FC = () => {
   useEffect(() => {
     if (!isLoadingToggles) {
       const verifyInitialAccess = async () => {
-        setInitialAccessMessage(null);
         try {
           const result = await checkAccess(featureName);
-           setInitialAccessAllowed(result.allowed);
            if (!result.allowed) {
-             setInitialAccessMessage(result.message || 'Access denied.');
+             // Don't show alert, just set the locked state
+             setIsInitiallyLocked(true);
+             // Optionally show a subtle toast on load if needed
+             // toast({ title: "Quota Reached", description: result.message || 'Daily quota reached.', variant: "default" });
+           } else {
+             setIsInitiallyLocked(false); // Ensure it's false if access is allowed
            }
          } catch (error) {
            console.error("Error checking initial feature access:", error);
-           setInitialAccessAllowed(false);
-           setInitialAccessMessage('Failed to check feature access.');
+           setIsInitiallyLocked(true); // Lock if check fails
            toast({
              title: "Error",
              description: "Could not verify feature access at this time.",
@@ -147,7 +153,8 @@ const MindMapMaker: React.FC = () => {
       };
       verifyInitialAccess();
     }
-  }, [isLoadingToggles]); // Simplify dependency array
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingToggles]); // Removed checkAccess, toast from deps as they shouldn't trigger refetch
 
   const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setEditingNodeId(node.id);
@@ -171,6 +178,8 @@ const MindMapMaker: React.FC = () => {
   };
 
   const handleAddNode = () => {
+    // Check access before allowing node addition if needed, or keep it free
+    // For now, keeping it free as per previous state
     const newNodeLabel = window.prompt("Enter label for the new node:");
     if (newNodeLabel !== null && newNodeLabel.trim() !== '') {
       const newNodeId = `manual-node-${nodeCounter}`;
@@ -203,6 +212,7 @@ const MindMapMaker: React.FC = () => {
          description: accessResult.message || 'You cannot create a mind map at this time.',
          variant: "destructive",
        });
+       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop generation
     }
 
@@ -239,6 +249,20 @@ const MindMapMaker: React.FC = () => {
 
     // --- Increment Usage ---
     await incrementUsage(featureName);
+    // Show remaining quota toast if applicable
+    if (accessResult.remaining !== null) {
+      const remainingAfterIncrement = accessResult.remaining - 1;
+      // Ensure remaining is not negative before showing
+      const displayRemaining = Math.max(0, remainingAfterIncrement);
+      toast({
+        title: "Usage Recorded",
+        description: `Remaining mind map generations for today: ${displayRemaining}`,
+      });
+      // If quota is now 0 after incrementing, lock the buttons
+      if (displayRemaining <= 0) {
+        setIsInitiallyLocked(true);
+      }
+    }
     // --- End Increment Usage ---
   };
 
@@ -256,25 +280,21 @@ const MindMapMaker: React.FC = () => {
              <Skeleton className="h-[600px] w-full rounded-lg" />
            </div>
          )}
-         {/* Access Denied Message */}
-         {!isLoadingToggles && !initialAccessAllowed && (
-            <Alert variant="destructive" className="mt-4">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Access Denied</AlertTitle>
-              <AlertDescription>
-                {initialAccessMessage || 'You do not have permission to access this feature.'}
-              </AlertDescription>
-            </Alert>
-          )}
-        {/* Main Content */}
-        {!isLoadingToggles && initialAccessAllowed && (
+
+         {/* Removed Access Denied Alert */}
+
+        {/* Main Content - Always render after loading skeleton */}
+        {!isLoadingToggles && (
           <>
             <Card>
               <CardContent className="mt-6">
                 <div className="flex flex-col sm:flex-row gap-2 mb-4 items-center flex-wrap">
+                  {/* Input field only disabled during loading */}
                   <Input type="text" placeholder="Enter topic..." value={topic} onChange={(e) => setTopic(e.target.value)} disabled={isLoading} className="flex-grow min-w-[200px]" />
+                  {/* Generate button only disabled during loading */}
                   <Button onClick={handleGenerate} disabled={isLoading} className="whitespace-nowrap">{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : 'Generate Mind Map'}</Button>
-                  <Button onClick={handleAddNode} variant="outline" className="whitespace-nowrap">Add Node</Button>
+                  {/* Add Node button only disabled during loading */}
+                  <Button onClick={handleAddNode} variant="outline" className="whitespace-nowrap" disabled={isLoading}>Add Node</Button>
                   <div className="flex items-center gap-2 ml-auto">
                     <Label htmlFor="layout-direction" className="whitespace-nowrap">Layout:</Label>
                     <Select value={layoutDirection} onValueChange={(value: LayoutDirection) => setLayoutDirection(value)} disabled={!originalMindMapData || isLoading}>
@@ -319,7 +339,9 @@ const MindMapMaker: React.FC = () => {
             </Dialog>
             {/* Buttons Section */}
             <div className="flex flex-col items-center gap-4 mt-8 mb-4">
-              <Button onClick={async () => {
+              <Button
+                disabled={isLoading} // Advanced button only disabled during loading
+                onClick={async () => {
                 // --- Action Access Check for Advanced ---
                 const accessResult = await checkAccess(featureName);
                 if (!accessResult.allowed) {
@@ -328,17 +350,32 @@ const MindMapMaker: React.FC = () => {
                     description: accessResult.message || 'You cannot access the Advanced Mind Map Generator at this time.',
                     variant: "destructive",
                   });
+                  openUpgradeDialog(); // Open the upgrade dialog
                   return; // Stop if access denied
                 }
                 // --- Increment Usage for Advanced ---
                 await incrementUsage(featureName);
+                // Show remaining quota toast if applicable
+                if (accessResult.remaining !== null) {
+                  const remainingAfterIncrement = accessResult.remaining - 1;
+                  // Ensure remaining is not negative before showing
+                  const displayRemaining = Math.max(0, remainingAfterIncrement);
+                  toast({
+                    title: "Usage Recorded",
+                    description: `Remaining mind map generations for today: ${displayRemaining}`,
+                  });
+                  // If quota is now 0 after incrementing, lock the buttons
+                  if (displayRemaining <= 0) {
+                    setIsInitiallyLocked(true);
+                  }
+                }
                 // --- Open Modal ---
                 setIsAdvancedModalOpen(true);
               }}>Advanced Mind Map Generator</Button>
               <Link to="/tools"><Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Back to Tools</Button></Link>
             </div>
           </>
-        )}
+        )} {/* End of !isLoadingToggles block */}
       </div>
     </>
   );

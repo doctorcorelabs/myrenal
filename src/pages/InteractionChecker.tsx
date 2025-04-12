@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, X, Loader2, Sparkles, ArrowLeft, Terminal } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext'; // useAuth is already imported
 import { useNavigate, Link } from 'react-router-dom';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import feature access hook
 import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
@@ -23,7 +23,7 @@ interface InteractionResult {
 
 const InteractionChecker = () => {
   const featureName: FeatureName = 'interaction_checker';
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, openUpgradeDialog } = useAuth(); // Get openUpgradeDialog
   // Get isLoadingToggles from the hook
   const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const navigate = useNavigate();
@@ -106,6 +106,7 @@ const InteractionChecker = () => {
          description: accessResult.message || 'You cannot perform an interaction check at this time.',
          variant: "destructive",
        });
+       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the check
     }
     // --- End Action Access Check ---

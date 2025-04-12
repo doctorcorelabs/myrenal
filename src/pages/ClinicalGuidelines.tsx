@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
 import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
+import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -32,6 +33,7 @@ const ClinicalGuidelines = () => {
     // Get isLoadingToggles from the hook
     const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
     const { toast } = useToast();
+    const { openUpgradeDialog } = useAuth(); // Get the dialog function
 
     // State for initial access check
     const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -99,6 +101,7 @@ const ClinicalGuidelines = () => {
             description: accessResult.message || 'You cannot load the next page at this time.',
             variant: "destructive",
           });
+          openUpgradeDialog(); // Open the upgrade dialog
           setIsLoading(false); // Ensure loading stops if denied
           return;
         }
@@ -164,12 +167,13 @@ const ClinicalGuidelines = () => {
         if (!accessResult.allowed) {
           toast({
             title: "Access Denied",
-            description: accessResult.message || 'You cannot perform a search at this time.',
-            variant: "destructive",
-          });
-          return; // Stop the search
-        }
-        // --- End Action Access Check ---
+          description: accessResult.message || 'You cannot perform a search at this time.',
+          variant: "destructive",
+        });
+        openUpgradeDialog(); // Open the upgrade dialog
+        return; // Stop the search
+      }
+      // --- End Action Access Check ---
 
         const trimmedKeywords = keywords.trim();
         if (trimmedKeywords === '') {

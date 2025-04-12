@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Search, ArrowLeft, Loader2, Info, Terminal } from 'lucide-react'; // Import Loader2, Info, Terminal
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
 import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
+import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,7 @@ const DiseaseLibrary = () => {
   // Get isLoadingToggles from the hook
   const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
+  const { openUpgradeDialog } = useAuth(); // Get the dialog function
 
   // State for initial access check
   const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -93,6 +95,7 @@ const DiseaseLibrary = () => {
          description: accessResult.message || 'You cannot perform a search at this time.',
          variant: "destructive",
        });
+       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the search
     }
     // --- End Action Access Check ---
