@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Save, Trash2, XCircle, BarChartHorizontal, LineChartIcon, UsersIcon, RefreshCw, Terminal, RotateCcw } from "lucide-react"; // Added RotateCcw
+import { CalendarIcon, Save, Trash2, XCircle, BarChartHorizontal, LineChartIcon, UsersIcon, RefreshCw, Terminal, RotateCcw, Edit, PlusCircle } from "lucide-react"; // Added Edit, PlusCircle
 import { cn } from "@/lib/utils";
 import { formatISO, subDays, eachDayOfInterval, parseISO } from 'date-fns'; // Added parseISO
 import { getQuotaLimit, FeatureName } from '@/lib/quotas';
@@ -39,6 +39,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"; // Import Collapsible components
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"; // Import Dialog components
+import NucleusPostForm, { NucleusPostData } from '@/components/admin/NucleusPostForm'; // Import the form component and its data type
 
 // Define the type for a feature toggle item
 interface FeatureToggle {
@@ -78,7 +89,6 @@ interface UserQuotaDetails {
     level: UserLevel | null;
     quotas: Record<FeatureName, FeatureQuotaStatus>;
 }
-
 
 // Define type for raw usage data from DB (for the existing stats)
 interface DailyUsageRecord {
@@ -144,6 +154,15 @@ const AdminDashboard: React.FC = () => {
   const [quotaError, setQuotaError] = useState<string | null>(null); // Error state for new quota table
   const [isResettingQuota, setIsResettingQuota] = useState<string | null>(null); // Track which user's quota is being reset
   const { toast } = useToast();
+
+  // --- State for NUCLEUS Post Management ---
+  const [nucleusPosts, setNucleusPosts] = useState<NucleusPostData[]>([]);
+  const [isLoadingNucleusPosts, setIsLoadingNucleusPosts] = useState(true);
+  const [nucleusError, setNucleusError] = useState<string | null>(null);
+  const [isNucleusFormOpen, setIsNucleusFormOpen] = useState(false);
+  const [currentNucleusPost, setCurrentNucleusPost] = useState<NucleusPostData | null>(null); // For editing
+  const [keyInsightsText, setKeyInsightsText] = useState(''); // Separate state for textarea
+  // --- End State for NUCLEUS Post Management ---
 
   // Helper function to calculate time until next midnight UTC
   const getTimeUntilNextMidnightUTC = useCallback(() => {
@@ -248,7 +267,7 @@ const AdminDashboard: React.FC = () => {
         // Fetch all usage data within the date range, including user_id
         const { data: usageRecords, error } = await supabase
           .from('daily_usage')
-          .select('usage_date, feature_name, count, user_id') // Added user_id
+          .select('usage_date, feature_name, count, user_id') // Select the correct 'count' column
           .gte('usage_date', startDateString)
           .order('usage_date', { ascending: true });
 
@@ -256,6 +275,7 @@ const AdminDashboard: React.FC = () => {
 
         // --- Process data for Today's Table ---
         const todayString = formatISO(endDate, { representation: 'date' });
+        // Use usageRecords directly, assuming it has the 'count' property
         const todayRecords = usageRecords?.filter(r => r.usage_date === todayString) || [];
 
         // Get unique user IDs from today's records
@@ -270,7 +290,7 @@ const AdminDashboard: React.FC = () => {
           if (!aggregatedStatsToday[record.feature_name]) {
             aggregatedStatsToday[record.feature_name] = { total_usage: 0, userIds: new Set() };
           }
-          aggregatedStatsToday[record.feature_name].total_usage += record.count;
+          aggregatedStatsToday[record.feature_name].total_usage += record.count; // Use correct 'count' property
           if (record.user_id) { // Ensure user_id exists
             aggregatedStatsToday[record.feature_name].userIds.add(record.user_id);
           }
@@ -306,6 +326,7 @@ const AdminDashboard: React.FC = () => {
         // Populate map with actual usage counts
         usageRecords?.forEach(record => {
           if (dateMap[record.usage_date]) {
+            // Use correct 'count' property. Add type assertion if needed, though Supabase types might handle it.
             dateMap[record.usage_date][record.feature_name] = (dateMap[record.usage_date][record.feature_name] as number || 0) + record.count;
           }
         });
@@ -415,6 +436,87 @@ const AdminDashboard: React.FC = () => {
     fetchAllUserQuotas();
   }, [fetchAllUserQuotas]);
 
+  // --- NUCLEUS Post Management Fetch ---
+  const fetchNucleusPosts = useCallback(async () => {
+    setIsLoadingNucleusPosts(true);
+    setNucleusError(null);
+    try {
+      const { data, error } = await supabase
+        .from('nucleus_posts')
+        .select('*') // Select all columns for editing
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNucleusPosts(data || []);
+    } catch (error: any) {
+      console.error("Error fetching NUCLEUS posts:", error);
+      setNucleusError(error.message || "Could not load NUCLEUS posts.");
+      setNucleusPosts([]);
+    } finally {
+      setIsLoadingNucleusPosts(false);
+    }
+  }, [supabase]); // Depend on supabase client
+
+  // Fetch Nucleus posts on initial load
+  useEffect(() => {
+    fetchNucleusPosts();
+  }, [fetchNucleusPosts]);
+  // --- End NUCLEUS Post Management Fetch ---
+
+  // --- NUCLEUS Form Handlers ---
+  const handleOpenNucleusForm = (post: NucleusPostData | null = null) => {
+    // Manual scroll lock
+    document.body.style.overflow = 'hidden';
+    if (post) {
+      // Editing existing post
+      setCurrentNucleusPost(post);
+      setKeyInsightsText(post.key_insights?.join('\n') ?? ''); // Populate textarea
+    } else {
+      // Creating new post
+      setCurrentNucleusPost({ // Default empty state
+        title: '',
+        slug: '',
+        summary: '',
+        featured_image_url: '',
+        content: '',
+        category: '',
+        subtitle: '',
+        author: '',
+        location: '',
+        key_insights: [],
+      });
+      setKeyInsightsText('');
+    }
+    setIsNucleusFormOpen(true);
+  };
+
+  const handleCloseNucleusForm = () => {
+    // Manual scroll unlock
+    document.body.style.overflow = 'auto';
+    setIsNucleusFormOpen(false);
+    setCurrentNucleusPost(null); // Clear current post on close
+    setKeyInsightsText('');
+  };
+
+  const handleNucleusFormChange = (field: keyof NucleusPostData, value: string) => {
+    setCurrentNucleusPost(prev => prev ? { ...prev, [field]: value } : null);
+  };
+
+  const handleKeyInsightsChange = (text: string) => {
+    setKeyInsightsText(text);
+    // Update the actual key_insights array in the current post state
+    setCurrentNucleusPost(prev => prev ? { ...prev, key_insights: text.split('\n').map(s => s.trim()).filter(s => s) } : null);
+  };
+
+  const handleNucleusSaveSuccess = async () => { // Make async to await fetch
+    // Close the dialog state first
+    setIsNucleusFormOpen(false);
+    // Fetch posts and wait for completion
+    await fetchNucleusPosts();
+    // Then clear state and unlock scroll via handleClose
+    handleCloseNucleusForm();
+  };
+  // --- End NUCLEUS Form Handlers ---
 
   // --- User Management Handlers (existing) ---
   const handleLevelChange = (userId: string, newLevel: UserLevel) => {
@@ -793,13 +895,7 @@ const AdminDashboard: React.FC = () => {
               {/* Table View for Medium Screens and Up */}
               <div className="hidden md:block mb-6">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Feature</TableHead>
-                      <TableHead className="text-center">Users</TableHead> {/* Added Users column */}
-                      <TableHead className="text-right">Total Usage Today</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow><TableHead>Feature</TableHead><TableHead className="text-center">Users</TableHead><TableHead className="text-right">Total Usage Today</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {usageStatsToday.map((stat) => (
                       <TableRow key={stat.feature_name}>
@@ -911,20 +1007,7 @@ const AdminDashboard: React.FC = () => {
               {/* Table View for Large Screens and Up */}
               <div className="hidden lg:block max-h-[350px] overflow-y-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px]">User ID</TableHead>
-                      <TableHead>Level</TableHead>
-                      {/* Dynamically create headers for each feature */}
-                      {allFeatureNames.map(featureName => ( // Assuming allFeatureNames is populated by the stats card useEffect
-                        <TableHead key={featureName} className="text-center text-xs whitespace-nowrap">
-                          {getDisplayFeatureName(featureName)} <br/> (Remaining)
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-center">Quota Reset</TableHead> {/* Changed Header */}
-                      <TableHead className="text-right">Actions</TableHead> {/* Added Actions Header */}
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow><TableHead className="min-w-[150px]">User ID</TableHead><TableHead>Level</TableHead>{allFeatureNames.map(featureName => (<TableHead key={featureName} className="text-center text-xs whitespace-nowrap">{getDisplayFeatureName(featureName)} <br/> (Remaining)</TableHead>))}<TableHead className="text-center">Quota Reset</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {Object.values(userQuotaDetails).map((userDetails) => (
                       <TableRow key={userDetails.userId}>
@@ -1080,6 +1163,187 @@ const AdminDashboard: React.FC = () => {
         </CardContent>
       </Card>
       {/* End User Quota Display Card */}
+
+      {/* NUCLEUS Post Management Card */}
+      <Card className="mb-8">
+        <CardHeader>
+          {/* Responsive Header: Stack on mobile, row on medium+ */}
+          <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+            <CardTitle>NUCLEUS Post Management</CardTitle>
+            {/* Disable Radix modal behavior (scroll lock/focus trap) */}
+            <Dialog
+              modal={false}
+              open={isNucleusFormOpen}
+              onOpenChange={(isOpen) => {
+                // Handle manual close (X button or clicking outside)
+                if (!isOpen) {
+                  handleCloseNucleusForm();
+                } else {
+                  // This case shouldn't happen if triggered only by close,
+                  // but keep setIsOpen for consistency if needed elsewhere.
+                  setIsNucleusFormOpen(true);
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={() => handleOpenNucleusForm()}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Create New Post
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{currentNucleusPost?.id ? 'Edit' : 'Create'} NUCLEUS Post</DialogTitle>
+                  <DialogDescription>
+                    {currentNucleusPost?.id ? 'Modify the details of the existing post.' : 'Fill in the details for the new post.'}
+                  </DialogDescription>
+                </DialogHeader>
+                {/* Render the form only when currentNucleusPost is not null */}
+                {currentNucleusPost && (
+                  <NucleusPostForm
+                    formData={currentNucleusPost}
+                    keyInsightsText={keyInsightsText}
+                    onFormChange={handleNucleusFormChange}
+                    onKeyInsightsChange={handleKeyInsightsChange}
+                    onSaveSuccess={handleNucleusSaveSuccess}
+                    onCancel={handleCloseNucleusForm}
+                    isEditing={!!currentNucleusPost?.id}
+                  />
+                )}
+                {/* Footer is handled by the form itself */}
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingNucleusPosts ? (
+            <p>Loading posts...</p>
+          ) : nucleusError ? (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Error Loading Posts</AlertTitle>
+              <AlertDescription>{nucleusError}</AlertDescription>
+            </Alert>
+          ) : nucleusPosts.length === 0 ? (
+            <p>No NUCLEUS posts found.</p>
+          ) : (
+            <>
+              {/* Table View for Medium Screens and Up */}
+              <div className="hidden md:block max-h-[400px] overflow-y-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Author</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {nucleusPosts.map((post) => (
+                    <TableRow key={post.id}>
+                      <TableCell className="font-medium">{post.title}</TableCell>
+                      <TableCell>{post.category || '-'}</TableCell>
+                      <TableCell>{post.author || '-'}</TableCell>
+                      <TableCell>{post.published_at ? format(new Date(post.published_at), 'PP') : '-'}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenNucleusForm(post)} title="Edit Post">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {/* Delete Confirmation Dialog */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" title="Delete Post">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the post titled "{post.title}".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={async () => {
+                                  try {
+                                    const { error } = await supabase.from('nucleus_posts').delete().eq('id', post.id);
+                                    if (error) throw error;
+                                    toast({ title: "Success", description: "Post deleted successfully." });
+                                    fetchNucleusPosts(); // Refresh list
+                                  } catch (err: any) {
+                                    console.error("Error deleting post:", err);
+                                    toast({ title: "Error Deleting Post", description: err.message || "Could not delete the post.", variant: "destructive" });
+                                  }
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Yes, Delete Post
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Card View for Small Screens */}
+              <div className="block md:hidden space-y-4 max-h-[600px] overflow-y-auto">
+                {nucleusPosts.map((post) => (
+                  <Card key={`card-post-${post.id}`}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">{post.title}</CardTitle>
+                      <CardDescription>
+                        {post.category ? `${post.category} | ` : ''}
+                        {post.author ? `By ${post.author} | ` : ''}
+                        {post.published_at ? format(new Date(post.published_at), 'PP') : 'Not Published'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex justify-end space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenNucleusForm(post)} title="Edit Post">
+                        <Edit className="mr-1 h-4 w-4" /> Edit
+                      </Button>
+                      {/* Delete Confirmation Dialog (copied from table view) */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" title="Delete Post">
+                            <Trash2 className="mr-1 h-4 w-4" /> Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the post titled "{post.title}".
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase.from('nucleus_posts').delete().eq('id', post.id);
+                                  if (error) throw error;
+                                  toast({ title: "Success", description: "Post deleted successfully." });
+                                  fetchNucleusPosts(); // Refresh list
+                                } catch (err: any) {
+                                  console.error("Error deleting post:", err);
+                                  toast({ title: "Error Deleting Post", description: err.message || "Could not delete the post.", variant: "destructive" });
+                                }
+                              }}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Yes, Delete Post
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      {/* End NUCLEUS Post Management Card */}
 
     </div>
   );

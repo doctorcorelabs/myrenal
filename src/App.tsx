@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,6 +36,8 @@ import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
 import ClinicalScoringHub from "./pages/ClinicalScoringHub"; // Import ClinicalScoringHub
 import ExploreDeepSeek from "./pages/ExploreDeepSeek"; // Import ExploreDeepSeek
 import AdminDashboard from "./pages/AdminDashboard"; // Import AdminDashboard
+import NucleusArchive from "./pages/NucleusArchive"; // Import NucleusArchive
+import NucleusPost from "./pages/NucleusPost"; // Import NucleusPost
 // Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -59,6 +60,8 @@ const App = () => (
             <Route path="/experience" element={<Layout><Experience /></Layout>} />
             <Route path="/certifications" element={<Layout><Certifications /></Layout>} />
             <Route path="/contact" element={<Layout><Contact /></Layout>} />
+            <Route path="/nucleus" element={<Layout><NucleusArchive /></Layout>} /> {/* Add Nucleus Archive route */}
+            <Route path="/nucleus/:slug" element={<Layout><NucleusPost /></Layout>} /> {/* Add route for individual NUCLEUS posts */}
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Add ForgotPassword route */}
