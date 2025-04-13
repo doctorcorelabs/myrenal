@@ -128,7 +128,8 @@ const NucleusPost: React.FC = () => {
         {post && !loading && !error && (
           // Added text-justify to the article container
           // Added image centering classes here
-          <article className="prose prose-lg max-w-none dark:prose-invert text-justify prose-img:mx-auto prose-img:block">
+          // Added break-words to handle long URLs
+          <article className="prose prose-lg max-w-none dark:prose-invert text-justify prose-img:mx-auto prose-img:block break-words">
             {/* Optional: Display featured image at the top */}
             {post.featured_image_url && (
               <div className="flex justify-center mb-8">
