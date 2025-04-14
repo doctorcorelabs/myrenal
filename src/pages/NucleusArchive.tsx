@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Import useLocation
 // import clsx from 'clsx'; // Keep clsx commented out
 import { supabase } from '../lib/supabaseClient';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -49,8 +49,20 @@ const NucleusArchive: React.FC = () => { // Add React.FC back
   const [sortOrder, setSortOrder] = useState<string>('published_at-desc');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500); // Restore debouncedSearchTerm
+  const location = useLocation(); // Get location object
 
   const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE); // Re-introduce constant
+
+  // Effect for handling scroll to hash
+  useEffect(() => {
+    if (location.hash === '#nucleus-posts-grid' && !loading) {
+      const element = document.getElementById('nucleus-posts-grid');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    // Dependency array includes hash and loading state
+  }, [location.hash, loading]);
 
   // Fetch unique categories once on mount
   useEffect(() => {
@@ -256,7 +268,7 @@ const NucleusArchive: React.FC = () => { // Add React.FC back
 
         {/* Post Grid */}
         {!loading && !error && posts.length > 0 && (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
+          <div id="nucleus-posts-grid" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8"> {/* Added ID here */}
             {posts.map((post) => {
               const publishedDate = new Date(post.published_at).toLocaleDateString();
               return (

@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Save, Trash2, XCircle, BarChartHorizontal, LineChartIcon, UsersIcon, RefreshCw, Terminal, RotateCcw, Edit, PlusCircle } from "lucide-react"; // Added Edit, PlusCircle
+import { CalendarIcon, Save, Trash2, XCircle, BarChartHorizontal, LineChartIcon, UsersIcon, RefreshCw, Terminal, RotateCcw, Edit, PlusCircle, Loader2, Inbox } from "lucide-react"; // Added Loader2, Inbox
 import { cn } from "@/lib/utils";
 import { formatISO, subDays, eachDayOfInterval, parseISO } from 'date-fns'; // Added parseISO
 import { getQuotaLimit, FeatureName } from '@/lib/quotas';
@@ -22,7 +22,8 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from "@/components/ui/chart"; // Import chart components
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; // Import LineChart/Line
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useInView } from 'react-intersection-observer'; // Import useInView for post management
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"; // Import Dialog components
 import NucleusPostForm, { NucleusPostData } from '@/components/admin/NucleusPostForm'; // Import the form component and its data type
+import NucleusSubmissionsAdmin from '@/components/admin/NucleusSubmissionsAdmin'; // Import the new submissions admin component
 
 // Define the type for a feature toggle item
 interface FeatureToggle {
@@ -157,11 +159,16 @@ const AdminDashboard: React.FC = () => {
 
   // --- State for NUCLEUS Post Management ---
   const [nucleusPosts, setNucleusPosts] = useState<NucleusPostData[]>([]);
-  const [isLoadingNucleusPosts, setIsLoadingNucleusPosts] = useState(true);
+  const [isLoadingNucleusPosts, setIsLoadingNucleusPosts] = useState(true); // Initial load
+  const [isLoadingMoreNucleusPosts, setIsLoadingMoreNucleusPosts] = useState(false); // Subsequent loads
   const [nucleusError, setNucleusError] = useState<string | null>(null);
   const [isNucleusFormOpen, setIsNucleusFormOpen] = useState(false);
-  const [currentNucleusPost, setCurrentNucleusPost] = useState<NucleusPostData | null>(null); // For editing
-  const [keyInsightsText, setKeyInsightsText] = useState(''); // Separate state for textarea
+  const [currentNucleusPost, setCurrentNucleusPost] = useState<NucleusPostData | null>(null);
+  const [keyInsightsText, setKeyInsightsText] = useState('');
+  const [nucleusPostsPage, setNucleusPostsPage] = useState(0); // State for post pagination
+  const [hasMoreNucleusPosts, setHasMoreNucleusPosts] = useState(true); // State for post pagination
+  const { ref: loadMorePostsRef, inView: loadMorePostsInView } = useInView({ threshold: 0.5 }); // Observer for posts
+  const NUCLEUS_POSTS_PER_PAGE = 5; // Items per page for posts
   // --- End State for NUCLEUS Post Management ---
 
   // Helper function to calculate time until next midnight UTC
@@ -436,32 +443,69 @@ const AdminDashboard: React.FC = () => {
     fetchAllUserQuotas();
   }, [fetchAllUserQuotas]);
 
-  // --- NUCLEUS Post Management Fetch ---
-  const fetchNucleusPosts = useCallback(async () => {
-    setIsLoadingNucleusPosts(true);
+  // --- NUCLEUS Post Management Fetch (with Pagination) ---
+  const fetchNucleusPosts = useCallback(async (pageNum: number) => {
+    console.log(`Fetching NUCLEUS posts page: ${pageNum}`); // Debug log
+    if (pageNum === 0) {
+      setIsLoadingNucleusPosts(true);
+      setNucleusPosts([]); // Clear on initial load/refresh
+    } else {
+      setIsLoadingMoreNucleusPosts(true);
+    }
     setNucleusError(null);
+
+    const from = pageNum * NUCLEUS_POSTS_PER_PAGE;
+    const to = from + NUCLEUS_POSTS_PER_PAGE - 1;
+
     try {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('nucleus_posts')
-        .select('*') // Select all columns for editing
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' }) // Select all columns for editing
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      setNucleusPosts(data || []);
+
+      const newPosts = data || [];
+      console.log(`Fetched ${newPosts.length} NUCLEUS posts for page ${pageNum}`); // Debug log
+
+      setNucleusPosts(prev => pageNum === 0 ? newPosts : [...prev, ...newPosts]);
+      setHasMoreNucleusPosts(newPosts.length === NUCLEUS_POSTS_PER_PAGE);
+      console.log(`Has more NUCLEUS posts: ${newPosts.length === NUCLEUS_POSTS_PER_PAGE}`); // Debug log
+
     } catch (error: any) {
       console.error("Error fetching NUCLEUS posts:", error);
       setNucleusError(error.message || "Could not load NUCLEUS posts.");
-      setNucleusPosts([]);
+      if (pageNum === 0) setNucleusPosts([]);
     } finally {
-      setIsLoadingNucleusPosts(false);
+      if (pageNum === 0) {
+        setIsLoadingNucleusPosts(false);
+      } else {
+        setIsLoadingMoreNucleusPosts(false);
+      }
     }
-  }, [supabase]); // Depend on supabase client
+  }, [supabase]);
 
-  // Fetch Nucleus posts on initial load
+  // Fetch Nucleus posts on initial load or page change
   useEffect(() => {
-    fetchNucleusPosts();
-  }, [fetchNucleusPosts]);
+    fetchNucleusPosts(nucleusPostsPage);
+  }, [fetchNucleusPosts, nucleusPostsPage]);
+
+  // Effect to load more posts when the sentinel element is in view
+  useEffect(() => {
+    if (loadMorePostsInView && hasMoreNucleusPosts && !isLoadingMoreNucleusPosts && !isLoadingNucleusPosts) {
+      console.log("Load more NUCLEUS posts triggered!"); // Debug log
+      setNucleusPostsPage(prevPage => prevPage + 1);
+    }
+  }, [loadMorePostsInView, hasMoreNucleusPosts, isLoadingMoreNucleusPosts, isLoadingNucleusPosts]);
+
+  // Function to refresh posts list
+  const handleRefreshNucleusPosts = () => {
+    setNucleusPostsPage(0); // Reset page to 0
+    fetchNucleusPosts(0); // Explicitly fetch the first page
+  };
   // --- End NUCLEUS Post Management Fetch ---
+
 
   // --- NUCLEUS Form Handlers ---
   const handleOpenNucleusForm = (post: NucleusPostData | null = null) => {
@@ -508,13 +552,9 @@ const AdminDashboard: React.FC = () => {
     setCurrentNucleusPost(prev => prev ? { ...prev, key_insights: text.split('\n').map(s => s.trim()).filter(s => s) } : null);
   };
 
-  const handleNucleusSaveSuccess = async () => { // Make async to await fetch
-    // Close the dialog state first
-    setIsNucleusFormOpen(false);
-    // Fetch posts and wait for completion
-    await fetchNucleusPosts();
-    // Then clear state and unlock scroll via handleClose
-    handleCloseNucleusForm();
+  const handleNucleusSaveSuccess = () => { // Removed async as fetch is handled by refresh
+    handleCloseNucleusForm(); // Close form first
+    handleRefreshNucleusPosts(); // Refresh the list (resets to page 0)
   };
   // --- End NUCLEUS Form Handlers ---
 
@@ -875,7 +915,7 @@ const AdminDashboard: React.FC = () => {
       </Card>
 
       {/* Usage Statistics Card */}
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LineChartIcon className="h-5 w-5" /> Usage Statistics {/* Changed Icon */}
@@ -974,7 +1014,7 @@ const AdminDashboard: React.FC = () => {
       {/* User Quota Display Card */}
       <Card className="mb-8">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
             <div>
               <CardTitle>User Daily Quotas</CardTitle>
               <CardDescription>View current daily usage against limits for each user.</CardDescription>
@@ -983,7 +1023,7 @@ const AdminDashboard: React.FC = () => {
               onClick={() => fetchAllUserQuotas(Date.now())} 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 w-full md:w-auto"
               disabled={isLoadingQuotas}
             >
               <RefreshCw className={`h-4 w-4 ${isLoadingQuotas ? 'animate-spin' : ''}`} />
@@ -1164,76 +1204,90 @@ const AdminDashboard: React.FC = () => {
       </Card>
       {/* End User Quota Display Card */}
 
-      {/* NUCLEUS Post Management Card */}
-      <Card className="mb-8">
-        <CardHeader>
-          {/* Responsive Header: Stack on mobile, row on medium+ */}
-          <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <CardTitle>NUCLEUS Post Management</CardTitle>
-            {/* Disable Radix modal behavior (scroll lock/focus trap) */}
-            <Dialog
-              modal={false}
-              open={isNucleusFormOpen}
-              onOpenChange={(isOpen) => {
-                // Handle manual close (X button or clicking outside)
-                if (!isOpen) {
-                  handleCloseNucleusForm();
-                } else {
-                  // This case shouldn't happen if triggered only by close,
-                  // but keep setIsOpen for consistency if needed elsewhere.
-                  setIsNucleusFormOpen(true);
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button size="sm" onClick={() => handleOpenNucleusForm()}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Create New Post
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{currentNucleusPost?.id ? 'Edit' : 'Create'} NUCLEUS Post</DialogTitle>
-                  <DialogDescription>
-                    {currentNucleusPost?.id ? 'Modify the details of the existing post.' : 'Fill in the details for the new post.'}
-                  </DialogDescription>
-                </DialogHeader>
-                {/* Render the form only when currentNucleusPost is not null */}
-                {currentNucleusPost && (
-                  <NucleusPostForm
-                    formData={currentNucleusPost}
-                    keyInsightsText={keyInsightsText}
-                    onFormChange={handleNucleusFormChange}
-                    onKeyInsightsChange={handleKeyInsightsChange}
-                    onSaveSuccess={handleNucleusSaveSuccess}
-                    onCancel={handleCloseNucleusForm}
-                    isEditing={!!currentNucleusPost?.id}
-                  />
-                )}
-                {/* Footer is handled by the form itself */}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoadingNucleusPosts ? (
+       {/* NUCLEUS Post Management Card */}
+       <Card className="mb-8">
+         <CardHeader>
+           {/* Responsive Header: Stack on mobile, row on medium+ */}
+           <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+             <div className="flex-1"> {/* Allow title to take space */}
+               <CardTitle>NUCLEUS Post Management</CardTitle>
+               <CardDescription>Create, edit, or delete published posts.</CardDescription> {/* Added description */}
+             </div>
+             <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2"> {/* Container for buttons */}
+               <Button onClick={handleRefreshNucleusPosts} variant="outline" size="sm" disabled={isLoadingNucleusPosts && nucleusPostsPage === 0}>
+                 <RefreshCw className={`mr-1 h-4 w-4 ${(isLoadingNucleusPosts && nucleusPostsPage === 0) ? 'animate-spin' : ''}`} />
+                 Refresh Posts
+               </Button>
+               <Dialog
+                modal={false}
+                open={isNucleusFormOpen}
+                onOpenChange={(isOpen) => {
+                  // Handle manual close (X button or clicking outside)
+                  if (!isOpen) {
+                    handleCloseNucleusForm();
+                  } else {
+                    // This case shouldn't happen if triggered only by close,
+                    // but keep setIsOpen for consistency if needed elsewhere.
+                    setIsNucleusFormOpen(true);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={() => handleOpenNucleusForm()}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Create New Post
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{currentNucleusPost?.id ? 'Edit' : 'Create'} NUCLEUS Post</DialogTitle>
+                    <DialogDescription>
+                      {currentNucleusPost?.id ? 'Modify the details of the existing post.' : 'Fill in the details for the new post.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  {/* Render the form only when currentNucleusPost is not null */}
+                  {currentNucleusPost && (
+                    <NucleusPostForm
+                      formData={currentNucleusPost}
+                      keyInsightsText={keyInsightsText}
+                      onFormChange={handleNucleusFormChange}
+                      onKeyInsightsChange={handleKeyInsightsChange}
+                      onSaveSuccess={handleNucleusSaveSuccess}
+                      onCancel={handleCloseNucleusForm}
+                      isEditing={!!currentNucleusPost?.id}
+                    />
+                  )}
+                  {/* Footer is handled by the form itself */}
+                </DialogContent>
+              </Dialog>
+             </div>
+           </div>
+         </CardHeader>
+         <CardContent>
+          {/* Show initial loading only */}
+          {isLoadingNucleusPosts && nucleusPostsPage === 0 && !nucleusError && (
             <p>Loading posts...</p>
-          ) : nucleusError ? (
+          )}
+          {nucleusError && (
             <Alert variant="destructive">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Error Loading Posts</AlertTitle>
               <AlertDescription>{nucleusError}</AlertDescription>
             </Alert>
-          ) : nucleusPosts.length === 0 ? (
+          )}
+          {/* Show no posts message only if not initial loading and array is empty */}
+          {!isLoadingNucleusPosts && nucleusPosts.length === 0 && !nucleusError && (
             <p>No NUCLEUS posts found.</p>
-          ) : (
+          )}
+          {/* Render posts if available */}
+          {nucleusPosts.length > 0 && (
             <>
-              {/* Table View for Medium Screens and Up */}
-              <div className="hidden md:block max-h-[400px] overflow-y-auto">
+              {/* Table View for Medium Screens and Up - Remove max-height */}
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Author</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {nucleusPosts.map((post) => (
-                    <TableRow key={post.id}>
+                    {nucleusPosts.map((post, index) => ( // Add index for ref
+                    <TableRow key={post.id} ref={index === nucleusPosts.length - 1 ? loadMorePostsRef : null}> {/* Add ref to last row */}
                       <TableCell className="font-medium">{post.title}</TableCell>
                       <TableCell>{post.category || '-'}</TableCell>
                       <TableCell>{post.author || '-'}</TableCell>
@@ -1262,11 +1316,11 @@ const AdminDashboard: React.FC = () => {
                                 onClick={async () => {
                                   try {
                                     const { error } = await supabase.from('nucleus_posts').delete().eq('id', post.id);
-                                    if (error) throw error;
-                                    toast({ title: "Success", description: "Post deleted successfully." });
-                                    fetchNucleusPosts(); // Refresh list
-                                  } catch (err: any) {
-                                    console.error("Error deleting post:", err);
+                                     if (error) throw error;
+                                     toast({ title: "Success", description: "Post deleted successfully." });
+                                     handleRefreshNucleusPosts(); // Refresh list using new handler
+                                   } catch (err: any) {
+                                     console.error("Error deleting post:", err);
                                     toast({ title: "Error Deleting Post", description: err.message || "Could not delete the post.", variant: "destructive" });
                                   }
                                 }}
@@ -1284,10 +1338,10 @@ const AdminDashboard: React.FC = () => {
                 </Table>
               </div>
 
-              {/* Card View for Small Screens */}
-              <div className="block md:hidden space-y-4 max-h-[600px] overflow-y-auto">
-                {nucleusPosts.map((post) => (
-                  <Card key={`card-post-${post.id}`}>
+              {/* Card View for Small Screens - Remove max-height */}
+              <div className="block md:hidden space-y-4">
+                {nucleusPosts.map((post, index) => ( // Add index for ref
+                  <Card key={`card-post-${post.id}`} ref={index === nucleusPosts.length - 1 ? loadMorePostsRef : null}> {/* Add ref to last card */}
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium">{post.title}</CardTitle>
                       <CardDescription>
@@ -1320,11 +1374,11 @@ const AdminDashboard: React.FC = () => {
                               onClick={async () => {
                                 try {
                                   const { error } = await supabase.from('nucleus_posts').delete().eq('id', post.id);
-                                  if (error) throw error;
-                                  toast({ title: "Success", description: "Post deleted successfully." });
-                                  fetchNucleusPosts(); // Refresh list
-                                } catch (err: any) {
-                                  console.error("Error deleting post:", err);
+                                   if (error) throw error;
+                                   toast({ title: "Success", description: "Post deleted successfully." });
+                                   handleRefreshNucleusPosts(); // Refresh list using new handler
+                                 } catch (err: any) {
+                                   console.error("Error deleting post:", err);
                                   toast({ title: "Error Deleting Post", description: err.message || "Could not delete the post.", variant: "destructive" });
                                 }
                               }}
@@ -1339,12 +1393,33 @@ const AdminDashboard: React.FC = () => {
                   </Card>
                 ))}
               </div>
+
+              {/* Sentinel element for Intersection Observer */}
+              <div ref={loadMorePostsRef} className="h-10" />
+
+              {/* Loading indicator for subsequent pages */}
+              {isLoadingMoreNucleusPosts && (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading more posts...</span>
+                </div>
+              )}
+
+              {/* Message when all items are loaded */}
+              {!hasMoreNucleusPosts && !isLoadingMoreNucleusPosts && nucleusPosts.length > 0 && (
+                <p className="text-center text-muted-foreground py-4">No more posts to load.</p>
+              )}
             </>
           )}
         </CardContent>
       </Card>
       {/* End NUCLEUS Post Management Card */}
 
+      {/* NUCLEUS Submissions Review Card */}
+      <div className="mb-8"> {/* Added div wrapper for consistent margin */}
+        <NucleusSubmissionsAdmin />
+      </div>
+      {/* End NUCLEUS Submissions Review Card */}
     </div>
   );
 };
