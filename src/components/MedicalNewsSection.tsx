@@ -169,8 +169,8 @@ const MedicalNewsSection: React.FC = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Responsive display */}
-            <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Responsive display */}
+            <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons inside on larger screens */}
+            <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons inside on larger screens */}
           </Carousel>
         )}
          {!loading && !error && newsItems.length === 0 && (

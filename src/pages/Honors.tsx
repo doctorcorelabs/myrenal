@@ -3,9 +3,14 @@ import PageHeader from '../components/PageHeader';
 const Honors = () => {
   const awards = [
     {
-      title: "Gold Medal - 1st Author - Invention and Innovation Fair (IIF) 2025",
+      title: "Silver Medal - 1st Author - Jakarta International Science Fair 2025",
       category: "Competition",
-      description: "Received gold medal recognition for research presented at the Invention and Innovation Fair (IIF) 2025."
+      description: "Awarded silver medal for research presented at the Jakarta International Science Fair 2025, issued by Indonesian Young Scientist Association (IYSA)."
+    },
+    {
+      title: "Gold Medal & Special Award - 1st Author - Invention and Innovation Fair (IIF) 2025",
+      category: "Competition",
+      description: "Received gold medal and special award recognition for research presented at the Invention and Innovation Fair (IIF) 2025."
     },
     {
       title: "Gold Medal - 1st Author - International Science and Invention Fair (ISIF) 2024",

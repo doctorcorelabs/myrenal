@@ -75,8 +75,8 @@ const MedicalToolsPreviewSection = () => {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons outside on larger screens */}
-        <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" />
+        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons inside on larger screens */}
+        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" />
       </Carousel>
 
       {/* Add the login message below the carousel */}

@@ -120,8 +120,8 @@ export function TechnologyStackSection() {
           ))}
         </CarouselContent>
         {/* Add Previous/Next buttons, hidden on smaller screens */}
-        <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" />
-        <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 hidden lg:inline-flex" />
+        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons inside on larger screens */}
+        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:inline-flex" /> {/* Position buttons inside on larger screens */}
       </Carousel>
     </section>
   );

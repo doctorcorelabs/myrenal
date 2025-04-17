@@ -4,6 +4,14 @@ const Experience = () => {
   // New data structure with nested subItems and descriptions
   const experiences = [
     {
+      organization: "DaivanLabs",
+      role: "Founder",
+      dateRange: "June 2025 - Present",
+      description: "Founder of DaivanLabs, applying coding skills ('Code') to develop healthcare-related tools ('Cure') and build professional connections ('Connect'). Managing project development and operations.",
+      startYear: 2025,
+      link: "https://daivanlabs.com/" 
+    },
+    {
       organization: "Ministry of Education, Culture, Research, and Technology",
       role: "Awardee Beasiswa Unggulan",
       dateRange: "Oct 2023 - Present",
@@ -70,6 +78,13 @@ const Experience = () => {
   // Group experiences by start year (most recent first)
   const years = Array.from(new Set(experiences.map(exp => exp.startYear))).sort((a, b) => b - a);
 
+  // Generate a mapping of whether each year should start with left or right card
+  // Use odd/even year number to maintain consistency
+  const yearPositionMap = {};
+  years.forEach((year, idx) => {
+    yearPositionMap[year] = idx % 2 === 0; // true starts with right, false starts with left
+  });
+
   return (
     <div>
       <PageHeader 
@@ -107,41 +122,57 @@ const Experience = () => {
                   <div className="space-y-12">
                     {experiences
                       .filter(exp => exp.startYear === year)
-                      .map((exp, index) => (
-                        <div key={index} className="relative">
-                          {/* Timeline dot for item - visible on md screens and above */}
-                          <div className="hidden md:block absolute left-1/2 top-4 transform -translate-x-1/2">
-                            <div className="w-4 h-4 rounded-full bg-medical-teal border-2 border-white shadow"></div>
-                          </div>
-                          
-                          {/* Card Content */}
-                          <div className={`md:w-1/2 ${index % 2 === 0 ? 'md:pr-8 md:mr-auto' : 'md:pl-8 md:ml-auto'}`}>
-                            {/* Added hover animation classes */}
-                            <div className="bg-white rounded-lg shadow-md p-6 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl border border-gray-200">
-                              <p className="text-sm text-gray-500 mb-2">{exp.dateRange}</p>
-                              <h3 className="text-xl font-semibold text-medical-blue mb-1">{exp.role}</h3>
-                              <p className="text-medical-teal font-medium mb-3">{exp.organization}</p>
-                              <p className="text-gray-700 text-justify">{exp.description}</p> {/* Justified description */}
-                              
-                              {/* Render sub-items if they exist */}
-                              {exp.subItems && exp.subItems.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <h4 className="text-md font-semibold text-gray-800 mb-3">Key Roles/Activities:</h4>
-                                  <ul className="space-y-3 pl-4 list-disc list-outside">
-                                    {exp.subItems.map((subItem, subIndex) => (
-                                      <li key={subIndex} className="text-sm">
-                                        <span className="font-semibold">{subItem.title}</span> 
-                                        {subItem.date !== 'N/A' && <span className="text-gray-500 text-xs ml-1">({subItem.date})</span>}
-                                        <p className="text-gray-600 text-justify mt-1">{subItem.description}</p> {/* Justified sub-item description */}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
+                      .map((exp, index) => {
+                        // Determine card position based on year position and current index
+                        const isRightCard = (yearPositionMap[year] ? index % 2 === 0 : index % 2 !== 0);
+                        
+                        return (
+                          <div key={index} className="relative">
+                            {/* Timeline dot for item - visible on md screens and above */}
+                            <div className="hidden md:block absolute left-1/2 top-4 transform -translate-x-1/2">
+                              <div className="w-4 h-4 rounded-full bg-medical-teal border-2 border-white shadow"></div>
+                            </div>
+                            
+                            {/* Card Content */}
+                            <div className={`md:w-1/2 ${isRightCard ? 'md:pl-8 md:ml-auto' : 'md:pr-8 md:mr-auto'}`}>
+                              {/* Added hover animation classes */}
+                              <div className="bg-white rounded-lg shadow-md p-6 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl border border-gray-200">
+                                <p className="text-sm text-gray-500 mb-2">{exp.dateRange}</p>
+                                <h3 className="text-xl font-semibold text-medical-blue mb-1">{exp.role}</h3>
+                                {exp.link ? (
+                                  <a 
+                                    href={exp.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-medical-teal font-medium mb-3 hover:underline inline-block" // Added inline-block
+                                  >
+                                    {exp.organization}
+                                  </a>
+                                ) : (
+                                  <p className="text-medical-teal font-medium mb-3">{exp.organization}</p>
+                                )}
+                                <p className="text-gray-700 text-justify">{exp.description}</p> {/* Justified description */}
+                                
+                                {/* Render sub-items if they exist */}
+                                {exp.subItems && exp.subItems.length > 0 && (
+                                  <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <h4 className="text-md font-semibold text-gray-800 mb-3">Key Roles/Activities:</h4>
+                                    <ul className="space-y-3 pl-4 list-disc list-outside">
+                                      {exp.subItems.map((subItem, subIndex) => (
+                                        <li key={subIndex} className="text-sm">
+                                          <span className="font-semibold">{subItem.title}</span> 
+                                          {subItem.date !== 'N/A' && <span className="text-gray-500 text-xs ml-1">({subItem.date})</span>}
+                                          <p className="text-gray-600 text-justify mt-1">{subItem.description}</p> {/* Justified sub-item description */}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 </div>
               ))}
