@@ -139,16 +139,8 @@ const toolsData: ToolData[] = [
     icon: ClipboardList,
     path: '/tools/clinical-scoring-hub',
     comingSoon: false
-  },
-  {
-    id: 13,
-    featureName: 'learning_resources', // Added feature name
-    title: 'Learning Resources',
-    description: 'Access curated educational materials and resources.',
-    icon: Book,
-    path: '/tools/learning-resources',
-    comingSoon: false
   }
+  // Removed Learning Resources card data
 ];
 
 // --- ToolCard Component ---

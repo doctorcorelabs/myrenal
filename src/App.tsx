@@ -2,16 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"; // Import Navigate
 import Layout from "./components/Layout";
-import Index from "./pages/Index";
-import About from "./pages/About";
-import Education from "./pages/Education";
-import Honors from "./pages/Honors";
-import Research from "./pages/Research";
-import Experience from "./pages/Experience";
-import Certifications from "./pages/Certifications";
-import Contact from "./pages/Contact";
+import Home from "./pages/Home"; // Import the new Home component
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -25,11 +18,6 @@ import DiseaseLibrary from "./pages/DiseaseLibrary"; // Import DiseaseLibrary
 import ClinicalGuidelines from "./pages/ClinicalGuidelines"; // Import ClinicalGuidelines
 import AIChatbot from "./pages/AIChatbot"; // Import AIChatbot
 import AIPeerReview from "./pages/AIPeerReview"; // Import AIPeerReview
-import LearningResources from "./pages/LearningResources"; // Import LearningResources
-import LearningCoursera from "./pages/LearningCoursera"; // Import LearningCoursera
-import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
-import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
-import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import ExploreGemini from "./pages/ExploreGemini"; // Import ExploreGemini
 import InteractionChecker from "./pages/InteractionChecker"; // Import InteractionChecker
 import MindMapMaker from "./pages/MindMapMaker"; // Import MindMapMaker
@@ -52,14 +40,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<Layout><About /></Layout>} />
-            <Route path="/education" element={<Layout><Education /></Layout>} />
-            <Route path="/honors" element={<Layout><Honors /></Layout>} />
-            <Route path="/research" element={<Layout><Research /></Layout>} />
-            <Route path="/experience" element={<Layout><Experience /></Layout>} />
-            <Route path="/certifications" element={<Layout><Certifications /></Layout>} />
-            <Route path="/contact" element={<Layout><Contact /></Layout>} />
+            <Route path="/" element={<Layout><Home /></Layout>} /> {/* Render Home component at root */}
             <Route path="/nucleus" element={<Layout><NucleusArchive /></Layout>} /> {/* Add Nucleus Archive route */}
             <Route path="/nucleus/:slug" element={<Layout><NucleusPost /></Layout>} /> {/* Add route for individual NUCLEUS posts */}
             <Route path="/signin" element={<SignIn />} />
@@ -145,48 +126,6 @@ const App = () => (
                   <Layout><AIPeerReview /></Layout>
                 </ProtectedRoute>
               } 
-            />
-            {/* Add route for Learning Resources */}
-            <Route 
-              path="/tools/learning-resources" 
-              element={
-                <ProtectedRoute>
-                  <Layout><LearningResources /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            {/* Add routes for specific learning resources */}
-            <Route 
-              path="/tools/learning-resources/coursera" 
-              element={
-                <ProtectedRoute>
-                  <Layout><LearningCoursera /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tools/learning-resources/osmosis" 
-              element={
-                <ProtectedRoute>
-                  <Layout><LearningOsmosis /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tools/learning-resources/uptodate" 
-              element={
-                <ProtectedRoute>
-                  <Layout><LearningUpToDate /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tools/learning-resources/other" 
-              element={
-                <ProtectedRoute>
-                  <Layout><LearningOther /></Layout>
-                </ProtectedRoute>
-              }
             />
             {/* Add route for Interaction Checker */}
             <Route

@@ -5,13 +5,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react";
+import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip, LogIn } from "lucide-react"; // Added LogIn icon
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
 import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown'; // Import Components type
 import remarkGfm from 'remark-gfm';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+
+// --- Props Interface ---
+interface ExploreGeminiProps {
+  isAuthenticated?: boolean; // Optional prop to receive auth status
+}
+// --- End Props Interface ---
 
 
 // --- Helper Function to Format Tables ---
@@ -36,7 +42,7 @@ const tryFormatTable = (text: string): string => {
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    
+
     // Detect table start/continuation
     if (tableRegex.test(trimmed) || (inTable && trimmed.startsWith('|'))) {
       if (!inTable) {
@@ -70,7 +76,7 @@ const tryFormatTable = (text: string): string => {
 
 const processTableBuffer = (buffer: string[]): string[] => {
   // Find separator line index
-  const separatorIndex = buffer.findIndex(line => 
+  const separatorIndex = buffer.findIndex(line =>
     line.replace(/[^\|]/g, '').length > 2 && // At least 2 pipes
     line.replace(/[^:-]/g, '').length >= 2 && // Contains at least 2 : or -
     line.trim().match(/^[\|\s:-]+$/)
@@ -88,16 +94,16 @@ const processTableBuffer = (buffer: string[]): string[] => {
   return buffer.map((line, idx) => {
     // Remove leading/trailing whitespace around pipes
     let cleaned = line.trim().replace(/\s*\|\s*/g, '|');
-    
+
     // Add missing starting/ending pipes
     if (!cleaned.startsWith('|')) cleaned = `|${cleaned}`;
     if (!cleaned.endsWith('|')) cleaned = `${cleaned}|`;
-    
+
     // Normalize separator line
     if (idx === 1 || (separatorIndex !== -1 && idx === separatorIndex)) {
       return cleaned.replace(/[^|]/g, '-').replace(/\|/g, '|');
     }
-    
+
     return cleaned;
   });
 };
@@ -261,10 +267,6 @@ Confidentiality: Treat the manuscript content as strictly confidential. Do not r
 
 Transparency: When flagging an issue, explain why it's being flagged (e.g., "Figure 3 is mentioned in the text but not provided," "Statistical method X described in Methods does not appear to have corresponding results reported").`
   },
-  "markdown-table": {
-    label: "Markdown Table Format",
-    text: "When generating tables, use the following Markdown format:\n\n| Column 1 | Column 2 | Column 3 |\n|---|---|---| \n| Data 1 | Data 2 | Data 3 |\n| Data 4 | Data 5 | Data 6 |\n\nEnsure that the separator line consists of '---' for each column and that the columns are properly aligned."
-  },
   "custom": { label: "Custom...", text: "" }
 };
 // --- End System Instructions ---
@@ -311,16 +313,20 @@ const allowedMimeTypes = [
 ];
 const allowedFileTypesString = allowedMimeTypes.join(',');
 
-const ExploreGemini: React.FC = () => {
+// Update component signature to accept props
+const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAuthenticated }) => {
   const featureName: FeatureName = 'explore_gemini';
   const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  // Add openUpgradeDialog from context
-  const { isAuthenticated, navigate, openUpgradeDialog } = useAuth(); 
+  // Get auth status from context as fallback or primary source if prop not passed
+  const { isAuthenticated: contextIsAuthenticated, navigate, openUpgradeDialog } = useAuth();
+  // Determine final auth status (prefer prop if provided)
+  const isAuthenticated = typeof propIsAuthenticated === 'boolean' ? propIsAuthenticated : contextIsAuthenticated;
 
   // State for access check result
   const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
   const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false); // State for login prompt UI
 
   // Component state
   const [prompt, setPrompt] = useState<string>('');
@@ -344,13 +350,16 @@ const ExploreGemini: React.FC = () => {
   const historyEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isLoadingToggles) {
+    // We only need to verify feature access if the user is authenticated
+    // The component should render even if not authenticated
+    if (!isLoadingToggles && isAuthenticated) {
       const verifyInitialAccess = async () => {
         setInitialAccessMessage(null);
-        if (!isAuthenticated) {
-          navigate('/signin');
-          return;
-        }
+        // Removed the immediate redirect block:
+        // if (!isAuthenticated) {
+        //   navigate('/signin');
+        //   return;
+        // }
         try {
           const result = await checkAccess(featureName);
            setInitialAccessAllowed(result.allowed);
@@ -369,8 +378,15 @@ const ExploreGemini: React.FC = () => {
          }
       };
       verifyInitialAccess();
+    } else if (!isLoadingToggles && !isAuthenticated) {
+      // If not authenticated, ensure access is marked as disallowed for UI purposes if needed
+      // but don't redirect here. Submission handlers will catch it.
+      setInitialAccessAllowed(false);
+      // Optionally set a message, though the submit handler toast is primary
+      // setInitialAccessMessage("Sign in to use this feature.");
     }
-  }, [isLoadingToggles]); // Simplify dependency array
+    // Add isAuthenticated to dependency array as the effect now depends on it
+  }, [isLoadingToggles, isAuthenticated, checkAccess, featureName, navigate, toast]);
 
   // Effect to scroll to the bottom when history updates
   useEffect(() => {
@@ -379,20 +395,40 @@ const ExploreGemini: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // --- Add Authentication Check ---
+    if (!isAuthenticated) {
+      // Set login prompt UI state first, before any other state changes
+      setShowLoginPrompt(true);
+      return; // Stop submission if not authenticated
+    }
+    // --- End Authentication Check ---
+
+    // --- Check Feature Access ---
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
-      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" }); 
+      toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
       openUpgradeDialog(); // Open global dialog
-      return;
+      return; // Stop if access denied
     }
-    setIsLoading(true); setError(null); setResponseText(''); setResponseImage(null);
+    // --- End Feature Access Check ---
+
+    // --- If both checks passed, proceed ---
+    setShowLoginPrompt(false); // Hide login prompt if checks pass
+    setIsLoading(true); // Set loading state *only* if checks passed
+    setError(null);
+    setResponseText('');
+    setResponseImage(null);
+
     const payload: any = { prompt, modelName: selectedModel, imageData: uploadedFile };
     if (selectedSystemInstructionId === "custom" && customSystemInstruction.trim()) {
       payload.customSystemInstruction = customSystemInstruction;
     } else if (selectedSystemInstructionId !== "none") {
       payload.systemInstructionId = selectedSystemInstructionId;
     }
+
     try {
+      // API call logic remains here
       const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/';
       const res = await fetch("https://gemini-worker.daivanfebrijuansetiya.workers.dev/", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
@@ -487,6 +523,14 @@ const ExploreGemini: React.FC = () => {
   };
 
   const handleSendInThread = async (threadId: string) => {
+    // --- Add Authentication Check ---
+    if (!isAuthenticated) {
+      // Set login prompt UI state first, before any other state changes
+      setShowLoginPrompt(true);
+      return; // Stop submission if not authenticated
+    }
+    // --- End Authentication Check ---
+
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
@@ -503,6 +547,8 @@ const ExploreGemini: React.FC = () => {
       return; // Nothing to send
     }
 
+    // Hide login prompt if checks pass
+    setShowLoginPrompt(false);
     setThreadLoading(prev => ({ ...prev, [threadId]: true }));
     setThreadErrors(prev => ({ ...prev, [threadId]: null }));
 
@@ -609,16 +655,16 @@ const ExploreGemini: React.FC = () => {
   return (
     <>
       <PageHeader title="Explore GEMINI" subtitle="Leverage Google's advanced AI for medical insights" />
-      <img 
-        src="/gemini logo.png" 
-        alt="Gemini" 
-        style={{ 
-          display: 'block', 
-          margin: '0 auto', 
+      <img
+        src="/gemini logo.png"
+        alt="Gemini"
+        style={{
+          display: 'block',
+          margin: '0 auto',
           width: '300px',
           marginTop: '30px',
-          marginBottom: '20px' 
-        }} 
+          marginBottom: '20px'
+        }}
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
         {/* Show Skeleton only based on the hook's loading state */}
@@ -668,6 +714,25 @@ const ExploreGemini: React.FC = () => {
                   </div>
                   {/* Submit */}
                   <Button type="submit" disabled={isLoading || (!prompt.trim() && !uploadedFile)}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : 'Submit Prompt'}</Button>
+
+                  {/* Conditionally render login prompt */}
+                  {showLoginPrompt && (
+                    <Alert variant="default" className="mt-4 bg-blue-50 border border-blue-200">
+                      <LogIn className="h-4 w-4 text-blue-600" />
+                      <AlertTitle className="text-blue-800">Authentication Required</AlertTitle>
+                      <AlertDescription className="text-blue-700">
+                        Please{' '}
+                        <Link to="/signin" className="font-semibold underline hover:text-blue-800">
+                          Sign In
+                        </Link>{' '}
+                        or{' '}
+                        <Link to="/signup" className="font-semibold underline hover:text-blue-800">
+                          Sign Up
+                        </Link>{' '}
+                        to use this feature.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </form>
               </CardContent>
             </Card>

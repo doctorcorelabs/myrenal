@@ -63,11 +63,11 @@ const SignIn = () => {
       await login(email, password);
       toast({
         title: "Success!",
-        description: "You have successfully signed in.",
-      });
-      navigate('/tools');
-    } catch (error) {
-      toast({
+         description: "You have successfully signed in.",
+       });
+       navigate('/tools/explore-gemini'); // Redirect to Explore Gemini after login
+     } catch (error) {
+       toast({
         title: "Error",
         description: "Invalid email or password. Please try again.",
         variant: "destructive",
