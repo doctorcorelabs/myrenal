@@ -73,27 +73,13 @@ const SignUp = () => {
 
       // Error handling is done within the register function or caught below.
 
-      // Trigger handles profile creation. Check if email confirmation is needed.
-      // Note: signUpData.user might be null if email confirmation is required.
-      // signUpData.session will likely be null until email is confirmed.
-      if (signUpData?.user && signUpData.user.identities && signUpData.user.identities.length === 0) {
-         // This means email confirmation is required by Supabase settings
-         toast({
-           title: "Check your email",
-           description: "Account created! Please check your email to confirm your account before signing in.",
-           duration: 10000,
-         });
-         navigate('/signin'); // Redirect to sign in page
-      } else {
-         // User created, profile created by trigger. Redirect to sign in.
-         // This branch covers cases where confirmation is disabled OR
-         // if Supabase behavior changes and returns user/session immediately.
-         toast({
-           title: "Success!",
-           description: "Your account has been created. Please sign in.",
-         });
-         navigate('/signin');
-      }
+      // Always show the email confirmation message after successful registration attempt
+      toast({
+        title: "Check your email",
+        description: "Account created! Please check your email to confirm your account before signing in.",
+        duration: 10000, // Show for 10 seconds
+      });
+      navigate('/signin'); // Redirect to sign in page
 
     } catch (error: any) {
       console.error("Sign up error:", error); // Keep console error
