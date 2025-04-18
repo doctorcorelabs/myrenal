@@ -571,9 +571,13 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
       ]
     }));
 
-
+    // Construct the payload for the API call
     const payload: any = {
-      history: messagesForApi, // Send the updated history
+      // Include the latest user input at the top level for the worker's validation
+      prompt: promptText,
+      imageData: fileData,
+      // Include the full history for context (backend needs to be updated to use this)
+      history: messagesForApi,
       modelName: thread.initialModel, // Use the model the thread started with
       // Include system instruction if it was set initially
       ...(thread.initialSystemInstructionId === "custom" && thread.initialCustomSystemInstruction

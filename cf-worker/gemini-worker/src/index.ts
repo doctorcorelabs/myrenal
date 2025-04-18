@@ -216,6 +216,7 @@ async function handleRequest(request: Request): Promise<Response> {
     imageData?: { mimeType: string; data: string; };
     systemInstructionId?: string;
     customSystemInstruction?: string;
+    history?: Content[]; // Add history field matching the SDK's Content type
   }
 
   let requestBody: RequestBody;
@@ -306,6 +307,23 @@ async function handleRequest(request: Request): Promise<Response> {
       throw new Error("No content (prompt or file) provided for generation.");
     }
 
+    // --- Prepare Conversation History ---
+    let conversationContents: Content[];
+
+    if (requestBody.history && Array.isArray(requestBody.history) && requestBody.history.length > 0) {
+      // If history is provided by the frontend, use it directly.
+      // The frontend already formats it correctly as Content[].
+      // The last item in the frontend's history *is* the latest user message.
+      conversationContents = requestBody.history;
+      console.log(`Using provided history with ${conversationContents.length} messages.`);
+    } else {
+      // If no history (initial request), create the single user message content.
+      const userContent: Content = { role: "user", parts: parts };
+      conversationContents = [userContent];
+      console.log("No history provided, starting new conversation.");
+    }
+    // --- End Prepare Conversation History ---
+
 
     const generationConfig = {
       temperature: 0.9,
@@ -322,11 +340,10 @@ async function handleRequest(request: Request): Promise<Response> {
     ];
 
     // Construct the user content object
-    const userContent: Content = { role: "user", parts: parts };
-
-    // --- Standard Non-Streaming Implementation (for other models) ---
+    // --- Standard Non-Streaming Implementation ---
+    // Pass the full conversation history (or the single initial message)
     const result = await model.generateContent({
-      contents: [userContent], // Use the same inputs
+      contents: conversationContents, // Use the prepared history
       generationConfig,
       safetySettings,
     });
