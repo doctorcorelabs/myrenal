@@ -15,6 +15,7 @@ import ReactMarkdown, { Components } from 'react-markdown'; // Import Components
 import remarkGfm from 'remark-gfm';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
 import {
   Select,
   SelectContent,
@@ -294,6 +295,7 @@ interface Message {
   image?: ResponseImageData | null;
   file?: FileData | null;
   fileName?: string | null;
+  thoughtsGenerated?: boolean; // Flag indicating thoughts were generated
   timestamp: Date;
 }
 
@@ -302,6 +304,7 @@ interface ExplorationThread {
   initialModel: string;
   initialSystemInstructionId: string;
   initialCustomSystemInstruction?: string;
+  initialEnableThinking?: boolean; // Add state for thinking toggle
   messages: Message[];
   createdAt: Date;
 }
@@ -331,12 +334,14 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
   // Component state
   const [prompt, setPrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash");
+  const [enableThinking, setEnableThinking] = useState<boolean>(false); // State for the thinking toggle
   const [selectedSystemInstructionId, setSelectedSystemInstructionId] = useState<string>("none");
   const [customSystemInstruction, setCustomSystemInstruction] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<FileData | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>('');
   const [responseImage, setResponseImage] = useState<ResponseImageData | null>(null);
+  const [responseThoughtsGenerated, setResponseThoughtsGenerated] = useState<boolean | null>(null); // State for thoughts generated flag
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ExplorationThread[]>([]);
@@ -419,12 +424,18 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     setError(null);
     setResponseText('');
     setResponseImage(null);
+    setResponseThoughtsGenerated(null); // Clear previous thoughts flag
 
     const payload: any = { prompt, modelName: selectedModel, imageData: uploadedFile };
     if (selectedSystemInstructionId === "custom" && customSystemInstruction.trim()) {
       payload.customSystemInstruction = customSystemInstruction;
     } else if (selectedSystemInstructionId !== "none") {
       payload.systemInstructionId = selectedSystemInstructionId;
+    }
+
+    // Add enableThinking flag if the correct model is selected
+    if (selectedModel === "gemini-2.5-flash-preview-04-17") {
+      payload.enableThinking = enableThinking;
     }
 
     try {
@@ -441,7 +452,9 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
         const data = await res.json();
         if (data.responseText) setResponseText(data.responseText);
         if (data.responseImage) setResponseImage(data.responseImage);
-        if (!data.responseText && !data.responseImage) setError("Received an empty response.");
+        if (data.thoughtsGenerated) setResponseThoughtsGenerated(data.thoughtsGenerated); // Store thoughts generated flag
+        // Update error check
+        if (!data.responseText && !data.responseImage && !data.thoughtsGenerated) setError("Received an empty response (no text, image, or thoughts generated flag).");
       } else {
         const text = await res.text(); setError(`Received unexpected response format: ${text}`); console.error("Unexpected format:", text);
       }
@@ -489,13 +502,29 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     if (!currentFormattedResponseText && !responseImage) return;
 
     const userMessage: Message = { id: crypto.randomUUID(), role: 'user', text: prompt, file: uploadedFile, fileName: uploadedFileName, timestamp: new Date(Date.now() - 1000) };
-    // Use the formatted text for the model message
-    const modelMessage: Message = { id: crypto.randomUUID(), role: 'model', text: currentFormattedResponseText || '', image: responseImage, timestamp: new Date() };
+    // Use the formatted text and thoughts for the model message
+    const modelMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'model',
+      text: currentFormattedResponseText || '',
+      image: responseImage,
+      thoughtsGenerated: responseThoughtsGenerated, // Add thoughts generated flag to the message
+      timestamp: new Date()
+    };
 
-    const newThread: ExplorationThread = { id: crypto.randomUUID(), initialModel: selectedModel, initialSystemInstructionId: selectedSystemInstructionId, initialCustomSystemInstruction: selectedSystemInstructionId === "custom" ? customSystemInstruction : undefined, messages: [userMessage, modelMessage], createdAt: new Date() };
+    const newThread: ExplorationThread = {
+      id: crypto.randomUUID(),
+      initialModel: selectedModel,
+      initialSystemInstructionId: selectedSystemInstructionId,
+      initialCustomSystemInstruction: selectedSystemInstructionId === "custom" ? customSystemInstruction : undefined,
+      // Store the thinking setting if it's the relevant model
+      initialEnableThinking: selectedModel === "gemini-2.5-flash-preview-04-17" ? enableThinking : undefined,
+      messages: [userMessage, modelMessage],
+      createdAt: new Date()
+    };
     setHistory(prev => [...prev, newThread]);
-    // Clear the main response area state
-    setPrompt(''); setResponseText(''); setResponseImage(null); setUploadedFile(null); setUploadedFileName(null); setError(null);
+    // Clear the main response area state, including thoughts flag
+    setPrompt(''); setResponseText(''); setResponseImage(null); setResponseThoughtsGenerated(null); setUploadedFile(null); setUploadedFileName(null); setError(null);
     if (mainFileInputRef.current) mainFileInputRef.current.value = "";
     toast({ title: "Added to Exploration History" });
   };
@@ -584,8 +613,13 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
         ? { customSystemInstruction: thread.initialCustomSystemInstruction }
         : thread.initialSystemInstructionId !== "none"
           ? { systemInstructionId: thread.initialSystemInstructionId }
-          : {})
+          : {}),
+      // Add enableThinking flag if the thread started with the correct model and had it enabled/disabled
+      ...(thread.initialModel === "gemini-2.5-flash-preview-04-17" && typeof thread.initialEnableThinking === 'boolean'
+        ? { enableThinking: thread.initialEnableThinking }
+        : {})
     };
+
 
     try {
       const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/'; // Assuming same endpoint
@@ -607,13 +641,16 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
       const contentType = res.headers.get("content-type");
       let rawModelResponseText = ''; // Store raw response first
       let modelResponseImage: ResponseImageData | null = null;
+      let modelResponseThoughtsGenerated: boolean | null = null; // Variable for thoughts generated flag
 
       if (contentType?.includes("application/json")) {
         const data = await res.json();
         if (data.responseText) rawModelResponseText = data.responseText;
         if (data.responseImage) modelResponseImage = data.responseImage;
-        if (!data.responseText && !data.responseImage) {
-           throw new Error("Received an empty response from the model.");
+        if (data.thoughtsGenerated) modelResponseThoughtsGenerated = data.thoughtsGenerated; // Extract thoughts generated flag
+        // Update error check
+        if (!data.responseText && !data.responseImage && !data.thoughtsGenerated) {
+           throw new Error("Received an empty response (no text, image, or thoughts generated flag).");
         }
       } else {
         const text = await res.text();
@@ -629,6 +666,7 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
         role: 'model',
         text: formattedModelResponseText, // Use formatted text
         image: modelResponseImage,
+        thoughtsGenerated: modelResponseThoughtsGenerated, // Add thoughts generated flag
         timestamp: new Date()
       };
 
@@ -694,6 +732,20 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
                       <SelectTrigger id="model-select" className="w-full md:w-[280px]"><SelectValue placeholder="Select a model" /></SelectTrigger>
                       <SelectContent>{modelOptions.map((option) => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
                     </Select>
+                    {/* Conditionally render Thinking Checkbox */}
+                    {selectedModel === "gemini-2.5-flash-preview-04-17" && (
+                      <div className="flex items-center space-x-2 mt-2 pl-1">
+                        <Checkbox
+                          id="enable-thinking"
+                          checked={enableThinking}
+                          onCheckedChange={(checked) => setEnableThinking(checked === true)} // Handle boolean/indeterminate
+                          disabled={isLoading}
+                        />
+                        <Label htmlFor="enable-thinking" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Enable Thinking Mode
+                        </Label>
+                      </div>
+                    )}
                   </div>
                   {/* System Instruction */}
                   <div className="space-y-2">
@@ -755,9 +807,21 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
                     </div>
                   )}
                   {responseImage && (<div><img src={`data:${responseImage.mimeType};base64,${responseImage.data}`} alt="Generated by Gemini" className="max-w-full h-auto rounded-md" /></div>)}
+                  {/* Display Thoughts Generated indicator if available */}
+                  {responseThoughtsGenerated && (
+                    <div className="mt-4 p-3 border-2 border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700/50 flex items-start gap-3">
+                      <Sparkles className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Generated with Thinking Mode</h4>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          This response was created using Gemini's advanced thinking capabilities, which helps improve reasoning and accuracy.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
                 {/* Apply responsive class to Explore Topic button */}
-                {(responseText || responseImage) && !error && !isLoading && (
+                {(responseText || responseImage || responseThoughtsGenerated) && !error && !isLoading && ( // Include thoughts generated flag in condition
                   <CardFooter className="flex justify-end p-4 border-t">
                     <Button variant="secondary" onClick={handleExploreClick} className="w-full sm:w-auto">
                       <Sparkles className="mr-2 h-4 w-4" /> Explore Topic
@@ -781,6 +845,15 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
                             {message.text && (
                               <div className="prose prose-sm max-w-none whitespace-pre-wrap text-justify overflow-x-auto">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                              </div>
+                            )}
+                            {/* Display Thoughts Generated indicator in History */}
+                            {message.role === 'model' && message.thoughtsGenerated && (
+                              <div className="mt-2 p-2 border-2 border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700/50 flex items-start gap-2">
+                                <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Generated with Thinking Mode</p>
+                                </div>
                               </div>
                             )}
                             {message.role === 'user' && message.fileName && (

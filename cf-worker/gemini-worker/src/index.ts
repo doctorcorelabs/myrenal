@@ -217,6 +217,7 @@ async function handleRequest(request: Request): Promise<Response> {
     systemInstructionId?: string;
     customSystemInstruction?: string;
     history?: Content[]; // Add history field matching the SDK's Content type
+    enableThinking?: boolean; // Add field for the thinking toggle
   }
 
   let requestBody: RequestBody;
@@ -282,10 +283,19 @@ async function handleRequest(request: Request): Promise<Response> {
       finalSystemInstruction = "You are a helpful medical assistant." + formattingInstruction;
     }
 
-    const model = genAI.getGenerativeModel({
+    // Prepare options for getGenerativeModel
+    const modelOptions: any = {
       model: selectedModelIdentifier,
       systemInstruction: finalSystemInstruction, // Use determined text or undefined
-    });
+    };
+
+    // Conditionally add includeThoughts to model options
+    if (selectedModelIdentifier === "gemini-2.5-flash-preview-04-17" && requestBody.enableThinking === true) {
+      modelOptions.includeThoughts = true;
+      console.log("Adding includeThoughts=true to getGenerativeModel options for Gemini 2.5 Flash.");
+    }
+
+    const model = genAI.getGenerativeModel(modelOptions); // Pass the constructed options
 
     // Construct parts - include both text and image if present
     const parts: any[] = [];
@@ -339,24 +349,43 @@ async function handleRequest(request: Request): Promise<Response> {
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ];
 
-    // Construct the user content object
-    // --- Standard Non-Streaming Implementation ---
-    // Pass the full conversation history (or the single initial message)
-    const result = await model.generateContent({
+    // Prepare the arguments for generateContent
+    const generateContentArgs: any = {
       contents: conversationContents, // Use the prepared history
-      generationConfig,
+      generationConfig: generationConfig, // Use the original generationConfig
       safetySettings,
-    });
+    };
+
+    const result = await model.generateContent(generateContentArgs); // Pass the constructed arguments
 
     console.log("--- Full Gemini API Result ---");
-    console.log(JSON.stringify(result, null, 2));
-    console.log("--- End Full Gemini API Result ---");
+    // Avoid logging potentially large base64 data in production if result contains it
+    // Consider logging only specific fields or using structured logging if needed
+    // console.log(JSON.stringify(result, null, 2));
+
+    // --- TEMPORARY DEBUG LOGGING ---
+    console.log("--- RAW Google API Result ---");
+    try {
+      console.log(JSON.stringify(result, null, 2)); // Log the full raw result
+    } catch (e) {
+      console.error("Error stringifying raw result for logging:", e);
+    }
+    console.log("--- END RAW Google API Result ---");
+    // --- END TEMPORARY DEBUG LOGGING ---
+
+    console.log("--- End Full Gemini API Result ---"); // Keep original marker for context
 
     const response = result.response;
-    const responsePayload: { responseText?: string; responseImage?: { mimeType: string; data: string } } = {};
+    // Define the response payload structure including optional thoughts
+    // Define the response payload structure including optional thoughts generated flag
+    const responsePayload: {
+      responseText?: string;
+      responseImage?: { mimeType: string; data: string };
+      thoughtsGenerated?: boolean; // Flag to indicate if thoughts were generated
+    } = {};
+    let candidate = (response.candidates && response.candidates.length > 0) ? response.candidates[0] : undefined; // Define candidate here
 
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
+    if (candidate) { // Check if candidate exists
       if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
         candidate.content.parts.forEach(part => {
           if (part.text) {
@@ -368,13 +397,71 @@ async function handleRequest(request: Request): Promise<Response> {
               data: part.inlineData.data
             };
           }
-        });
+        }); // End of forEach
+      } // End of if (candidate.content...)
+
+      // --- Check if Thoughts Were Generated (based on usage metadata) ---
+      // Cast to 'any' to bypass TS error for property not in official type defs yet
+      const usageMetadataAny = response.usageMetadata as any;
+      if (requestBody.enableThinking === true && 
+          usageMetadataAny?.thoughtsTokenCount && 
+          usageMetadataAny.thoughtsTokenCount > 0) {
+        responsePayload.thoughtsGenerated = true;
+        console.log(`Thoughts were generated (token count: ${usageMetadataAny.thoughtsTokenCount}). Flag set.`);
+      } else {
+        responsePayload.thoughtsGenerated = false;
+        console.log("Thoughts generation was either not enabled or no thoughts were generated.");
+      }
+      // --- End Check if Thoughts Were Generated ---
+
+      // Check finish reason even if parts exist
+      if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+        console.warn(`Generation finished unexpectedly: ${candidate.finishReason}`);
+        if (candidate.finishReason === 'SAFETY' && candidate.safetyRatings) {
+          console.warn(`Safety Ratings: ${JSON.stringify(candidate.safetyRatings)}`);
+          responsePayload.responseText = (responsePayload.responseText || "") + `\n\n[Content generation stopped due to safety settings.]`;
+        }
       }
     }
 
-    if (!responsePayload.responseText && !responsePayload.responseImage && response.text) {
-      responsePayload.responseText = response.text();
+    // Fallback / Further checks
+    if (!responsePayload.responseText && !responsePayload.responseImage) {
+       // Check prompt feedback first if no content generated
+       if (response.promptFeedback?.blockReason) {
+         console.warn(`Request blocked due to prompt feedback: ${response.promptFeedback.blockReason}`);
+         throw new Error(`Prompt blocked due to safety settings: ${response.promptFeedback.blockReason}`);
+       }
+       // Check candidate finish reason if candidate exists but no content was extracted
+       else if (candidate && candidate.finishReason && candidate.finishReason !== 'STOP') {
+         // Warning already logged above, maybe add generic message if no specific one added
+         if (!responsePayload.responseText) { // Avoid duplicating safety message
+            responsePayload.responseText = `[Content generation finished early: ${candidate.finishReason}]`;
+         }
+       }
+       // Try response.text() as a last resort
+       else if (response.text) {
+         try {
+           const fallbackText = response.text();
+           if (fallbackText) {
+             console.log("Using response.text() as fallback.");
+             responsePayload.responseText = fallbackText;
+           } else {
+             // If response.text() is also empty, throw error
+             throw new Error("Received an empty response from the model (no candidates, no fallback text).");
+           }
+         } catch (e) {
+            console.error("Error calling response.text() fallback:", e);
+            throw new Error("Received an invalid response from the model.");
+         }
+       } else {
+          // Truly empty/unhandled response
+          throw new Error("Received an empty or unhandled response from the model.");
+       }
     }
+
+    // Removed the old, commented-out fallback logic block that was causing syntax errors.
+    // The new logic above handles these cases.
+
 
     const json = JSON.stringify(responsePayload);
     return new Response(json, {
@@ -388,12 +475,13 @@ async function handleRequest(request: Request): Promise<Response> {
     // --- End Standard Non-Streaming Implementation ---
 
   } catch (error: any) {
-    console.error("Error setting up Gemini:", error);
-    return new Response(JSON.stringify({ error: `Internal Server Error: Failed to set up stream. ${error.message}` }), {
+    console.error("Error during Gemini API call or processing:", error);
+    // Ensure CORS headers are included in error responses too
+    return new Response(JSON.stringify({ error: `Internal Server Error: ${error.message}` }), {
       status: 500,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*", // Add CORS header
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
       },

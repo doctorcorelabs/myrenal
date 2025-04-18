@@ -30,8 +30,8 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar for Desktop (md and up) */}
-      <div className="hidden md:flex md:flex-shrink-0">
+      {/* Sidebar for Desktop (md and up) - ADDED fixed positioning classes */}
+      <div className="hidden md:flex md:flex-shrink-0 md:fixed md:inset-y-0 md:left-0 md:z-30">
         <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleDesktopSidebar} />
       </div>
 
@@ -51,13 +51,15 @@ const Layout = ({ children }: LayoutProps) => {
         </>
       )}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Main Content Container - ADDED dynamic padding */}
+      <div className={`flex flex-1 flex-col ${isSidebarCollapsed ? 'md:pl-16' : 'md:pl-64'}`}>
         {/* Top Navigation Bar for Mobile */}
         <TopNavBar onToggleMobileMenu={toggleMobileMenu} />
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-white"> {/* Moved bg-white here */}
-          <div className="h-full"> {/* Removed flex-1, overflow-y-auto from here */}
+        {/* Main Content Area - REMOVED overflow-y-auto */}
+        <main className="flex-1 bg-white"> {/* Moved bg-white here */}
+          {/* REMOVED h-full from this div */}
+          <div>
             {children}
           </div>
         </main>
