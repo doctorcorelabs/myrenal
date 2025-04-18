@@ -783,7 +783,8 @@ const AdminDashboard: React.FC = () => {
           {isLoadingUsers ? (<p>Loading users...</p>) : users.length === 0 ? (<p>No user profiles found.</p>) : (
             <>
               {/* Table View for Medium Screens and Up */}
-              <div className="hidden md:block max-h-[350px] overflow-y-auto">
+              {/* Added horizontal scroll on medium screens */}
+              <div className="hidden md:block max-h-[350px] overflow-y-auto md:overflow-x-auto">
                 <Table>
                   <TableHeader><TableRow><TableHead>Email / User ID</TableHead><TableHead>Level</TableHead><TableHead>Level Expires</TableHead><TableHead>Joined</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -1045,7 +1046,8 @@ const AdminDashboard: React.FC = () => {
           ) : (
             <>
               {/* Table View for Large Screens and Up */}
-              <div className="hidden lg:block max-h-[350px] overflow-y-auto">
+              {/* Added horizontal scroll */}
+              <div className="hidden lg:block max-h-[350px] overflow-y-auto overflow-x-auto">
                 <Table>
                   <TableHeader><TableRow><TableHead className="min-w-[150px]">User ID</TableHead><TableHead>Level</TableHead>{allFeatureNames.map(featureName => (<TableHead key={featureName} className="text-center text-xs whitespace-nowrap">{getDisplayFeatureName(featureName)} <br/> (Remaining)</TableHead>))}<TableHead className="text-center">Quota Reset</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>

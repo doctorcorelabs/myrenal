@@ -241,7 +241,8 @@ async function handleRequest(request: Request): Promise<Response> {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // --- Model Selection Logic ---
-    const validModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-exp-03-25"];
+    // Updated validModels to include 2.5 Flash and remove 2.5 Pro Exp
+    const validModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-preview-04-17"];
     const defaultModel = "gemini-1.5-flash"; // Use a fast default
     const isLocalDev = false;
     const selectedModelIdentifier = (requestBody.modelName && validModels.includes(requestBody.modelName)) ? requestBody.modelName : defaultModel;

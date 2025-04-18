@@ -96,9 +96,6 @@ const MindMapMaker: React.FC = () => {
   const { openUpgradeDialog } = useAuth(); // Get the dialog function
 
   // State for access check result
-  // No longer using initialAccessAllowed for conditional rendering, but keep for potential checks
-  // const [initialAccessAllowed, setInitialAccessAllowed] = useState(true);
-  // const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null); // No longer needed for alert
   const [isInitiallyLocked, setIsInitiallyLocked] = useState(false); // Track if locked on load
 
   // Component state
@@ -134,16 +131,13 @@ const MindMapMaker: React.FC = () => {
         try {
           const result = await checkAccess(featureName);
            if (!result.allowed) {
-             // Don't show alert, just set the locked state
              setIsInitiallyLocked(true);
-             // Optionally show a subtle toast on load if needed
-             // toast({ title: "Quota Reached", description: result.message || 'Daily quota reached.', variant: "default" });
            } else {
-             setIsInitiallyLocked(false); // Ensure it's false if access is allowed
+             setIsInitiallyLocked(false);
            }
          } catch (error) {
            console.error("Error checking initial feature access:", error);
-           setIsInitiallyLocked(true); // Lock if check fails
+           setIsInitiallyLocked(true);
            toast({
              title: "Error",
              description: "Could not verify feature access at this time.",
@@ -153,8 +147,7 @@ const MindMapMaker: React.FC = () => {
       };
       verifyInitialAccess();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoadingToggles]); // Removed checkAccess, toast from deps as they shouldn't trigger refetch
+  }, [isLoadingToggles, checkAccess, featureName, toast]); // Added dependencies
 
   const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setEditingNodeId(node.id);
@@ -178,8 +171,6 @@ const MindMapMaker: React.FC = () => {
   };
 
   const handleAddNode = () => {
-    // Check access before allowing node addition if needed, or keep it free
-    // For now, keeping it free as per previous state
     const newNodeLabel = window.prompt("Enter label for the new node:");
     if (newNodeLabel !== null && newNodeLabel.trim() !== '') {
       const newNodeId = `manual-node-${nodeCounter}`;
@@ -204,7 +195,6 @@ const MindMapMaker: React.FC = () => {
       return;
     }
 
-    // --- Action Access Check ---
      const accessResult = await checkAccess(featureName);
      if (!accessResult.allowed) {
        toast({
@@ -212,8 +202,8 @@ const MindMapMaker: React.FC = () => {
          description: accessResult.message || 'You cannot create a mind map at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog(); // Open the upgrade dialog
-       return; // Stop generation
+       openUpgradeDialog();
+       return;
     }
 
     setIsLoading(true);
@@ -247,33 +237,27 @@ const MindMapMaker: React.FC = () => {
       setIsLoading(false);
     }
 
-    // --- Increment Usage ---
     await incrementUsage(featureName);
-    // Show remaining quota toast if applicable
     if (accessResult.remaining !== null) {
       const remainingAfterIncrement = accessResult.remaining - 1;
-      // Ensure remaining is not negative before showing
       const displayRemaining = Math.max(0, remainingAfterIncrement);
       toast({
         title: "Usage Recorded",
         description: `Remaining mind map generations for today: ${displayRemaining}`,
       });
-      // If quota is now 0 after incrementing, lock the buttons
       if (displayRemaining <= 0) {
         setIsInitiallyLocked(true);
       }
     }
-    // --- End Increment Usage ---
   };
 
   return (
-    <> {/* Wrap in fragment */}
+    <>
       <PageHeader
         title="AI Mind Map Generator"
         subtitle="Generate visual mind maps from any topic using AI."
       />
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        {/* Loading Skeleton */}
         {isLoadingToggles && (
            <div className="flex flex-col space-y-3 mt-4">
              <Skeleton className="h-[50px] w-full rounded-lg" />
@@ -281,19 +265,13 @@ const MindMapMaker: React.FC = () => {
            </div>
          )}
 
-         {/* Removed Access Denied Alert */}
-
-        {/* Main Content - Always render after loading skeleton */}
         {!isLoadingToggles && (
           <>
             <Card>
               <CardContent className="mt-6">
                 <div className="flex flex-col sm:flex-row gap-2 mb-4 items-center flex-wrap">
-                  {/* Input field only disabled during loading */}
                   <Input type="text" placeholder="Enter topic..." value={topic} onChange={(e) => setTopic(e.target.value)} disabled={isLoading} className="flex-grow min-w-[200px]" />
-                  {/* Generate button only disabled during loading */}
                   <Button onClick={handleGenerate} disabled={isLoading} className="whitespace-nowrap">{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : 'Generate Mind Map'}</Button>
-                  {/* Add Node button only disabled during loading */}
                   <Button onClick={handleAddNode} variant="outline" className="whitespace-nowrap" disabled={isLoading}>Add Node</Button>
                   <div className="flex items-center gap-2 ml-auto">
                     <Label htmlFor="layout-direction" className="whitespace-nowrap">Layout:</Label>
@@ -311,7 +289,8 @@ const MindMapMaker: React.FC = () => {
                     <div className="prose prose-sm max-w-none text-foreground text-justify"><ReactMarkdown>{summary}</ReactMarkdown></div>
                   </div>
                 )}
-                <div className="mt-4 h-[600px] border rounded-md">
+                {/* Adjusted height for responsiveness */}
+                <div className="mt-4 h-[400px] sm:h-[500px] md:h-[600px] border rounded-md">
                   {!isLoading && !layoutedMindMapData && !summary && <div className="flex items-center justify-center h-full text-muted-foreground">Enter a topic and click Generate</div>}
                   {!isLoading && layoutedMindMapData && (
                     <MindMapCanvas key={layoutDirection} initialNodes={layoutedMindMapData.nodes} initialEdges={layoutedMindMapData.edges} onNodeDoubleClick={handleNodeDoubleClick} nodeTypes={nodeTypes} />
@@ -321,7 +300,6 @@ const MindMapMaker: React.FC = () => {
               </CardContent>
               <CardFooter><p className="text-xs text-muted-foreground">Powered by AI. Results may require review.</p></CardFooter>
             </Card>
-            {/* Edit Node Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader><DialogTitle>Edit Node Label</DialogTitle><DialogDescription>Enter the new label. Click save.</DialogDescription></DialogHeader>
@@ -329,7 +307,6 @@ const MindMapMaker: React.FC = () => {
                 <DialogFooter><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="button" onClick={handleSaveLabel}>Save changes</Button></DialogFooter>
               </DialogContent>
             </Dialog>
-            {/* Advanced Mind Map Modal */}
             <Dialog open={isAdvancedModalOpen} onOpenChange={setIsAdvancedModalOpen}>
               <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
                 <DialogHeader><DialogTitle>Advanced Mind Map Generator</DialogTitle><DialogDescription>Interact below. Close when finished.</DialogDescription></DialogHeader>
@@ -337,12 +314,10 @@ const MindMapMaker: React.FC = () => {
                 <DialogFooter className="mt-4"><DialogClose asChild><Button type="button" variant="outline">Close</Button></DialogClose></DialogFooter>
               </DialogContent>
             </Dialog>
-            {/* Buttons Section */}
             <div className="flex flex-col items-center gap-4 mt-8 mb-4">
               <Button
-                disabled={isLoading} // Advanced button only disabled during loading
+                disabled={isLoading}
                 onClick={async () => {
-                // --- Action Access Check for Advanced ---
                 const accessResult = await checkAccess(featureName);
                 if (!accessResult.allowed) {
                   toast({
@@ -350,32 +325,27 @@ const MindMapMaker: React.FC = () => {
                     description: accessResult.message || 'You cannot access the Advanced Mind Map Generator at this time.',
                     variant: "destructive",
                   });
-                  openUpgradeDialog(); // Open the upgrade dialog
-                  return; // Stop if access denied
+                  openUpgradeDialog();
+                  return;
                 }
-                // --- Increment Usage for Advanced ---
                 await incrementUsage(featureName);
-                // Show remaining quota toast if applicable
                 if (accessResult.remaining !== null) {
                   const remainingAfterIncrement = accessResult.remaining - 1;
-                  // Ensure remaining is not negative before showing
                   const displayRemaining = Math.max(0, remainingAfterIncrement);
                   toast({
                     title: "Usage Recorded",
                     description: `Remaining mind map generations for today: ${displayRemaining}`,
                   });
-                  // If quota is now 0 after incrementing, lock the buttons
                   if (displayRemaining <= 0) {
                     setIsInitiallyLocked(true);
                   }
                 }
-                // --- Open Modal ---
                 setIsAdvancedModalOpen(true);
               }}>Advanced Mind Map Generator</Button>
               <Link to="/tools"><Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Back to Tools</Button></Link>
             </div>
           </>
-        )} {/* End of !isLoadingToggles block */}
+        )}
       </div>
     </>
   );

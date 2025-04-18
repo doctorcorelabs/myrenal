@@ -172,8 +172,8 @@ const NucleusSubmissionsAdmin: React.FC = () => {
         {/* Render submissions if available */}
         {submissions.length > 0 && (
           <>
-            {/* Table View for Medium Screens and Up - Remove max-height for infinite scroll */}
-            <div className="hidden md:block">
+            {/* Table View for Medium Screens and Up - Added horizontal scroll */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -265,9 +265,10 @@ const Tools = () => {
       <PageHeader
         title="Medical Tools"
         subtitle="Access specialized tools to assist in your medical studies and practice"
-      />
+       />
 
-      <div className="container max-w-7xl mx-auto px-4 py-12">
+      {/* Adjusted padding for better mobile spacing */}
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {toolsData.map((tool) => (
             // Use AlertDialog for each card to manage its own trigger state

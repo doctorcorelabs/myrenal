@@ -1,35 +1,69 @@
 
-import { ReactNode, useState } from 'react'; // Import useState
-import Sidebar from './Sidebar'; // Import Sidebar
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog"; // Import AlertDialog components
-import UpgradePlanDialogContent from '@/components/UpgradePlanDialog'; // Import the content component
+import { ReactNode, useState } from 'react';
+import Sidebar from './Sidebar';
+import TopNavBar from './TopNavBar'; // Import TopNavBar
+import { useAuth } from '@/contexts/AuthContext';
+import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
+import UpgradePlanDialogContent from '@/components/UpgradePlanDialog';
 
 interface LayoutProps {
   children: ReactNode;
 }
+// Removed duplicate interface definition below
 
 const Layout = ({ children }: LayoutProps) => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Add state for sidebar collapse
-  // Get global dialog state and control functions from context
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
   const { isUpgradeDialogOpen, closeUpgradeDialog } = useAuth();
 
-  const toggleSidebar = () => {
+  const toggleDesktopSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  return (
-    <div className="flex h-screen bg-gray-100"> {/* Main container: flex row, full screen height */}
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} /> {/* Pass state and toggle function */}
-      {/* Removed conditional margin, flex-1 should handle spacing */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-white"> {/* Moved bg-white here */}
-        {/* Removed p-6 class, Added h-full */}
-        <div className="flex-1 overflow-y-auto h-full"> 
-           {children}
-        </div>
-      </main>
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
-      {/* Global Upgrade Dialog remains */}
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar for Desktop (md and up) */}
+      <div className="hidden md:flex md:flex-shrink-0">
+        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleDesktopSidebar} />
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <>
+          {/* Background Overlay */}
+          <div
+            className="fixed inset-0 z-30 bg-black/50 md:hidden"
+            onClick={closeMobileMenu}
+            aria-hidden="true"
+          />
+          {/* Mobile Sidebar */}
+          <div className="fixed inset-y-0 left-0 z-40 flex md:hidden">
+            <Sidebar isCollapsed={false} onToggle={closeMobileMenu} /> {/* Always expanded on mobile, toggle closes it */}
+          </div>
+        </>
+      )}
+
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top Navigation Bar for Mobile */}
+        <TopNavBar onToggleMobileMenu={toggleMobileMenu} />
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto bg-white"> {/* Moved bg-white here */}
+          <div className="h-full"> {/* Removed flex-1, overflow-y-auto from here */}
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* Global Upgrade Dialog */}
       <AlertDialog open={isUpgradeDialogOpen} onOpenChange={closeUpgradeDialog}>
         {/* Apply layout styles directly to the global dialog content container */}
         <AlertDialogContent className="max-h-[90vh] flex flex-col"> 
