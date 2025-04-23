@@ -32,6 +32,7 @@ import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
 import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
 import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import LearningSinera from "./pages/LearningSinera"; // Import LearningSinera
+import AuthorPage from "./pages/Author"; // Import AuthorPage
 // Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -224,6 +225,15 @@ const App = () => (
                element={
                  <ProtectedRoute requiredLevel="Administrator">
                    <Layout><AdminDashboard /></Layout>
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for Author Page */}
+             <Route
+               path="/author"
+               element={
+                 <ProtectedRoute>
+                   <Layout><AuthorPage /></Layout>
                  </ProtectedRoute>
                }
              />

@@ -37,6 +37,7 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     { path: "/tools/explore-gemini", name: "Explore Gemini", icon: Gem },
     { path: "/tools/explore-deepseek", name: "Explore DeepSeek", icon: Brain },
     { path: "/nucleus", name: "Nucleus Archive", icon: Microscope }, // Added Nucleus
+    { path: "/author", name: "Author", icon: User }, // Added Author link
   ];
 
   return (
