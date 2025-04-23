@@ -26,6 +26,12 @@ import ExploreDeepSeek from "./pages/ExploreDeepSeek"; // Import ExploreDeepSeek
 import AdminDashboard from "./pages/AdminDashboard"; // Import AdminDashboard
 import NucleusArchive from "./pages/NucleusArchive"; // Import NucleusArchive
 import NucleusPost from "./pages/NucleusPost"; // Import NucleusPost
+import LearningResources from "./pages/LearningResources"; // Import LearningResources
+import LearningCoursera from "./pages/LearningCoursera"; // Import LearningCoursera
+import LearningOsmosis from "./pages/LearningOsmosis"; // Import LearningOsmosis
+import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToDate
+import LearningOther from "./pages/LearningOther"; // Import LearningOther
+import LearningSinera from "./pages/LearningSinera"; // Import LearningSinera
 // Removed StreamInteraction import
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -159,13 +165,62 @@ const App = () => (
                path="/tools/explore-deepseek"
                element={
                  <ProtectedRoute>
-                   <Layout><ExploreDeepSeek /></Layout>
-                 </ProtectedRoute>
-               }
-             />
-             {/* Add route for Admin Dashboard */}
-             <Route
-               path="/admin-dashboard"
+                  <Layout><ExploreDeepSeek /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Add routes for Learning Resources */}
+            <Route
+              path="/tools/learning-resources"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningResources /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/learning-resources/coursera"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningCoursera /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/learning-resources/osmosis"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningOsmosis /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/learning-resources/uptodate"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningUpToDate /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/learning-resources/other"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningOther /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/learning-resources/sinera"
+              element={
+                <ProtectedRoute>
+                  <Layout><LearningSinera /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Add route for Admin Dashboard */}
+            <Route
+              path="/admin-dashboard"
                element={
                  <ProtectedRoute requiredLevel="Administrator">
                    <Layout><AdminDashboard /></Layout>

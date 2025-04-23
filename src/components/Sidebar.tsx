@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { LogOut, User, Settings, HelpCircle, Zap, FlaskConical, BrainCircuit, Stethoscope, BookOpen, FileText, Microscope, Bot, Users, Database, BarChart, Map, Search, ShieldCheck, Gem, Brain, Home, ChevronsLeft, ChevronsRight, ArrowUpCircle } from 'lucide-react'; // Added ArrowUpCircle icon
+import { LogOut, User, Settings, HelpCircle, Zap, FlaskConical, BrainCircuit, Stethoscope, BookOpen, FileText, Microscope, Bot, Users, Database, BarChart, Map, Search, ShieldCheck, Gem, Brain, Home, ChevronsLeft, ChevronsRight, ArrowUpCircle, GraduationCap } from 'lucide-react'; // Added GraduationCap icon
 
 // Define props interface
 interface SidebarProps {
@@ -30,6 +30,7 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     { path: "/tools/disease-library", name: "Disease Library", icon: BookOpen },
     { path: "/tools/clinical-guidelines", name: "Clinical Guidelines", icon: FileText },
     { path: "/tools/clinical-scoring-hub", name: "Clinical Scoring Hub", icon: BarChart },
+    { path: "/tools/learning-resources", name: "Learning Resources", icon: GraduationCap }, // Added Learning Resources
     { path: "/tools/medical-calculator", name: "Medical Calculator", icon: Stethoscope }, // Changed icon
     { path: "/tools/nutrition-database", name: "Nutrition Database", icon: Database },
     { path: "/tools/ai-mindmap-generator", name: "AI Mind Map Generator", icon: Map },
