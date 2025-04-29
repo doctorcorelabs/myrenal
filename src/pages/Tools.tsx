@@ -27,7 +27,7 @@ interface ToolData {
   description: string;
   icon: React.ElementType; // Use ElementType for component icons
   path: string;
-  featureName: FeatureName; // Add the corresponding feature name
+  featureName?: FeatureName; // Make featureName optional
   comingSoon: boolean;
 }
 
@@ -139,8 +139,16 @@ const toolsData: ToolData[] = [
     icon: ClipboardList,
     path: '/tools/clinical-scoring-hub',
     comingSoon: false
+  },
+  {
+    id: 13, // New ID for Learning Resources
+    // featureName is omitted as it doesn't need access control
+    title: 'Learning Resources',
+    description: 'Access curated learning materials and resources.',
+    icon: Book, // Using Book icon
+    path: '/tools/learning-resources', // Path to the learning resources page
+    comingSoon: false
   }
-  // Removed Learning Resources card data
 ];
 
 // --- ToolCard Component ---
@@ -156,24 +164,37 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onDisabledClick }) => {
 
   useEffect(() => {
     let isMounted = true;
-    const verifyAccess = async () => {
-      try {
-        const result = await checkAccess(tool.featureName);
-        if (isMounted) {
-          setIsDisabled(result.isDisabled ?? false); // Set disabled state based on check
-          setIsLoading(false); // Finish loading
+    // Only check access if a featureName is provided
+    if (tool.featureName) {
+      const verifyAccess = async () => {
+        try {
+          // Ensure featureName exists before calling checkAccess
+          if (tool.featureName) {
+            const result = await checkAccess(tool.featureName);
+            if (isMounted) {
+              setIsDisabled(result.isDisabled ?? false); // Set disabled state based on check
+            }
+          } else {
+             // Should not happen due to outer check, but safe fallback
+             if (isMounted) setIsDisabled(false);
+          }
+        } catch (error) {
+          console.error(`Error checking access for ${tool.featureName}:`, error);
+          if (isMounted) {
+            setIsDisabled(false); // Default to not disabled on error
+          }
+        } finally {
+           if (isMounted) setIsLoading(false); // Finish loading regardless of outcome
         }
-      } catch (error) {
-        console.error(`Error checking access for ${tool.featureName}:`, error);
-        if (isMounted) {
-          setIsDisabled(false); // Default to not disabled on error? Or true? Let's default false.
-          setIsLoading(false);
-        }
-      }
-    };
-    verifyAccess();
+      };
+      verifyAccess();
+    } else {
+      // If no featureName, the tool is always enabled and not loading access status
+      setIsDisabled(false);
+      setIsLoading(false);
+    }
     return () => { isMounted = false; };
-  }, [checkAccess, tool.featureName]);
+  }, [checkAccess, tool.featureName]); // Keep dependencies
 
   const handleButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (isDisabled) {
@@ -193,22 +214,26 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onDisabledClick }) => {
     }
 
     if (isLoading) {
-      return <Skeleton className="h-10 w-full" />; // Show skeleton while loading access status
+      // Only show skeleton if loading is relevant (i.e., featureName exists)
+      return tool.featureName ? <Skeleton className="h-10 w-full" /> : null;
     }
+
+    // Determine if the button should be disabled (only relevant if featureName exists)
+    const isEffectivelyDisabled = tool.featureName ? isDisabled : false;
 
     const buttonContent = (
       <Button
-        className={`w-full ${isDisabled ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 'bg-medical-teal hover:bg-medical-blue'}`}
-        onClick={isDisabled ? handleButtonClick : undefined} // Only attach onClick if disabled
-        aria-disabled={isDisabled} // Indicate disabled state for accessibility
+        className={`w-full ${isEffectivelyDisabled ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 'bg-medical-teal hover:bg-medical-blue'}`}
+        onClick={isEffectivelyDisabled ? handleButtonClick : undefined} // Only attach onClick if disabled
+        aria-disabled={isEffectivelyDisabled} // Indicate disabled state for accessibility
       >
         Launch Tool
       </Button>
     );
 
-    // If disabled, wrap the button in AlertDialogTrigger
-    // If enabled, wrap the button in Link
-    return isDisabled ? (
+    // If effectively disabled (and has a featureName), wrap in AlertDialogTrigger
+    // Otherwise (enabled or no featureName), wrap in Link
+    return isEffectivelyDisabled && tool.featureName ? (
       <AlertDialogTrigger asChild>{buttonContent}</AlertDialogTrigger>
     ) : (
       <Link to={tool.path} className="w-full">

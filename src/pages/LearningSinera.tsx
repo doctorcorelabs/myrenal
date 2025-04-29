@@ -26,9 +26,9 @@ const passwords: { [key: number]: string } = {
 
 // Renamed constant and updated URLs
 const contentUrls: { [key: number]: string } = {
-  1: 'https://drive.google.com/file/d/1ZnyNwu1fWglThm1fOIijxPbK1PbckXUA/preview', // Chapter 1 Google Drive Preview
-  2: 'https://drive.google.com/file/d/1Zokr5nKHWN4Is5naCGOdTAd0LtU2Y8r2/preview', // Chapter 2 Google Drive Preview
-  3: 'https://drive.google.com/file/d/placeholder3/preview', // Placeholder for Chapter 3
+  1: 'https://www.canva.com/design/DAGlW-pOBnk/AzmLbpUod3x5VL_KXPaAjQ/view', // Literature Review Chapter 1
+  2: 'https://www.canva.com/design/DAGlaZcWMCU/4BLJXJ7lyUTXB7bNKIi5MA/view', // Literature Review Chapter 2
+  3: 'https://www.canva.com/design/DAGlsc1WIuI/qYvR2JomplLQGCZrJYeyhA/view', // Literature Review Chapter 3
 };
 
 const LearningSinera: React.FC = () => {
