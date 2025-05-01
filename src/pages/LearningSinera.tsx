@@ -22,6 +22,7 @@ const passwords: { [key: number]: string } = {
   1: 'arunika',
   2: 'scientia',
   3: 'invictus',
+  4: 'veritas',
 };
 
 // Renamed constant and updated URLs
@@ -29,6 +30,7 @@ const contentUrls: { [key: number]: string } = {
   1: 'https://www.canva.com/design/DAGlW-pOBnk/AzmLbpUod3x5VL_KXPaAjQ/view?embed', // Literature Review Chapter 1
   2: 'https://www.canva.com/design/DAGlaZcWMCU/4BLJXJ7lyUTXB7bNKIi5MA/view?embed', // Literature Review Chapter 2
   3: 'https://www.canva.com/design/DAGlsc1WIuI/qYvR2JomplLQGCZrJYeyhA/view?embed', // Literature Review Chapter 3
+  4: 'https://www.canva.com/design/DAGmMFD26-c/IAS1qOVDw0sqSZZ5hFYEdA/view?embed', // Penugasan
 };
 
 const LearningSinera: React.FC = () => {
@@ -101,14 +103,14 @@ const LearningSinera: React.FC = () => {
                 Click a chapter button below. You will be prompted to enter a password to view the presentation.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-            {[1, 2, 3].map((chapter) => (
+            {[1, 2, 3, 4].map((chapter) => (
                 <Button
                 key={chapter}
                 onClick={() => handleButtonClick(chapter)}
                 disabled={authorizedChapter === chapter} // Disable if already authorized
                 className="flex-1"
                 >
-                Literature Review Chapter {chapter}
+                {chapter === 4 ? 'Assignment' : `Literature Review Chapter ${chapter}`}
                 </Button>
             ))}
             </div>
