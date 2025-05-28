@@ -5,13 +5,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip, LogIn } from "lucide-react"; // Added LogIn icon
+import { Terminal, Upload, X, File as FileIcon, ArrowLeft, Loader2, Sparkles, SendHorizonal, Paperclip } from "lucide-react";
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from "@/components/ui/skeleton";
-import ReactMarkdown, { Components } from 'react-markdown'; // Import Components type
+import ReactMarkdown from 'react-markdown'; // Removed Components import
 import remarkGfm from 'remark-gfm';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -318,18 +317,17 @@ const allowedFileTypesString = allowedMimeTypes.join(',');
 
 // Update component signature to accept props
 const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAuthenticated }) => {
-  const featureName: FeatureName = 'explore_gemini';
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const featureName: string = 'explore_gemini';
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
   // Get auth status from context as fallback or primary source if prop not passed
-  const { isAuthenticated: contextIsAuthenticated, navigate, openUpgradeDialog } = useAuth();
+  const { isAuthenticated: contextIsAuthenticated, navigate } = useAuth();
   // Determine final auth status (prefer prop if provided)
   const isAuthenticated = typeof propIsAuthenticated === 'boolean' ? propIsAuthenticated : contextIsAuthenticated;
 
   // State for access check result
   const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
   const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false); // State for login prompt UI
 
   // Component state
   const [prompt, setPrompt] = useState<string>('');
@@ -360,11 +358,6 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     if (!isLoadingToggles && isAuthenticated) {
       const verifyInitialAccess = async () => {
         setInitialAccessMessage(null);
-        // Removed the immediate redirect block:
-        // if (!isAuthenticated) {
-        //   navigate('/signin');
-        //   return;
-        // }
         try {
           const result = await checkAccess(featureName);
            setInitialAccessAllowed(result.allowed);
@@ -387,10 +380,7 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
       // If not authenticated, ensure access is marked as disallowed for UI purposes if needed
       // but don't redirect here. Submission handlers will catch it.
       setInitialAccessAllowed(false);
-      // Optionally set a message, though the submit handler toast is primary
-      // setInitialAccessMessage("Sign in to use this feature.");
     }
-    // Add isAuthenticated to dependency array as the effect now depends on it
   }, [isLoadingToggles, isAuthenticated, checkAccess, featureName, navigate, toast]);
 
   // Effect to scroll to the bottom when history updates
@@ -403,9 +393,8 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
 
     // --- Add Authentication Check ---
     if (!isAuthenticated) {
-      // Set login prompt UI state first, before any other state changes
-      setShowLoginPrompt(true);
-      return; // Stop submission if not authenticated
+      toast({ title: "Access Denied", description: "Please sign in to use this feature.", variant: "destructive" });
+      return;
     }
     // --- End Authentication Check ---
 
@@ -413,14 +402,11 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
-      openUpgradeDialog(); // Open global dialog
-      return; // Stop if access denied
+      return;
     }
     // --- End Feature Access Check ---
 
-    // --- If both checks passed, proceed ---
-    setShowLoginPrompt(false); // Hide login prompt if checks pass
-    setIsLoading(true); // Set loading state *only* if checks passed
+    setIsLoading(true);
     setError(null);
     setResponseText('');
     setResponseImage(null);
@@ -439,7 +425,6 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     }
 
     try {
-      // API call logic remains here
       const functionUrl = 'https://gemini-worker.daivanfebrijuansetiya.workers.dev/';
       const res = await fetch("https://gemini-worker.daivanfebrijuansetiya.workers.dev/", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
@@ -460,7 +445,6 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
       }
     } catch (err: any) { console.error("Error in handleSubmit:", err); setError(err.message || 'An error occurred.'); }
     finally { setIsLoading(false); }
-    await incrementUsage(featureName);
   };
 
   const clearUploadedFile = () => {
@@ -554,16 +538,14 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
   const handleSendInThread = async (threadId: string) => {
     // --- Add Authentication Check ---
     if (!isAuthenticated) {
-      // Set login prompt UI state first, before any other state changes
-      setShowLoginPrompt(true);
-      return; // Stop submission if not authenticated
+      toast({ title: "Access Denied", description: "Please sign in to use this feature.", variant: "destructive" });
+      return;
     }
     // --- End Authentication Check ---
 
     const accessResult = await checkAccess(featureName);
     if (!accessResult.allowed) {
       toast({ title: "Access Denied", description: accessResult.message, variant: "destructive" });
-      openUpgradeDialog(); // Open global dialog
       return;
     }
 
@@ -576,8 +558,6 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
       return; // Nothing to send
     }
 
-    // Hide login prompt if checks pass
-    setShowLoginPrompt(false);
     setThreadLoading(prev => ({ ...prev, [threadId]: true }));
     setThreadErrors(prev => ({ ...prev, [threadId]: null }));
 
@@ -689,14 +669,12 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
     } finally {
       setThreadLoading(prev => ({ ...prev, [threadId]: false }));
     }
-
-    await incrementUsage(featureName);
   };
 
 
   return (
     <>
-      <PageHeader title="Explore GEMINI" subtitle="Leverage Google's advanced AI for medical insights" />
+      <PageHeader title="Jelajahi GEMINI" subtitle="Gunakan AI GEMINI untuk mendapatkan wawasan dan dukungan dalam manajemen penyakit ginjal." />
       <img
         src="/gemini logo.png"
         alt="Gemini"
@@ -774,23 +752,7 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
                   <Button type="submit" disabled={isLoading || (!prompt.trim() && !uploadedFile)}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : 'Submit Prompt'}</Button>
 
                   {/* Conditionally render login prompt */}
-                  {showLoginPrompt && (
-                    <Alert variant="default" className="mt-4 bg-blue-50 border border-blue-200">
-                      <LogIn className="h-4 w-4 text-blue-600" />
-                      <AlertTitle className="text-blue-800">Authentication Required</AlertTitle>
-                      <AlertDescription className="text-blue-700">
-                        Please{' '}
-                        <Link to="/signin" className="font-semibold underline hover:text-blue-800">
-                          Sign In
-                        </Link>{' '}
-                        or{' '}
-                        <Link to="/signup" className="font-semibold underline hover:text-blue-800">
-                          Sign Up
-                        </Link>{' '}
-                        to use this feature.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {/* Removed showLoginPrompt block */}
                 </form>
               </CardContent>
             </Card>
@@ -893,10 +855,10 @@ const ExploreGemini: React.FC<ExploreGeminiProps> = ({ isAuthenticated: propIsAu
             )}
           </>
         )}
-        {/* Back to Tools Button */}
+        {/* Back to Screening Button */}
         <div className="flex justify-center pt-6">
-          <Link to="/tools">
-            <Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Back to Tools</Button>
+          <Link to="/screening">
+            <Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Kembali</Button>
           </Link>
         </div>
       </div>

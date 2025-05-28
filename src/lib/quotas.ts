@@ -1,85 +1,53 @@
-import { UserLevel } from '@/contexts/AuthContext'; // Assuming UserLevel is defined here
+import { UserLevel } from '@/contexts/AuthContext';
 
-export type FeatureName =
-  | 'ai_chatbot'
-  | 'ai_peer_review'
-  | 'disease_library'
+// Define feature names for access control
+export type FeatureName = 
+  | 'medical_calculator'
   | 'drug_reference'
-  | 'clinical_guidelines'
-  | 'interaction_checker'
-  | 'explore_gemini'
-  | 'medical_calculator' // Unlimited
   | 'nutrition_database'
-  | 'learning_resources' // Access based, not count based
+  | 'disease_library'
+  | 'clinical_guidelines'
+  | 'ai_chatbot'
+  | 'explore_gemini'
+  | 'explore_deepseek'
+  | 'interaction_checker'
   | 'mind_map_maker'
-  | 'clinical_scoring' // Unlimited
-  | 'explore_deepseek';
+  | 'clinical_scoring'
+  | 'learning_resources'
+  | 'custom_feature';  // Add any other features as needed
 
-// Define quota limits (null means unlimited or access-based)
-const quotas: Record<UserLevel, Record<FeatureName, number | null>> = {
-  Free: {
-    ai_chatbot: 3,
-    ai_peer_review: 3,
-    disease_library: 3,
-    drug_reference: 3,
-    clinical_guidelines: 3,
-    interaction_checker: 3,
-    explore_gemini: 3,
-    medical_calculator: null, // Unlimited
-    nutrition_database: 3,
-    learning_resources: 0, // No access (represented by 0 for simplicity, logic handled elsewhere)
-    mind_map_maker: 2,
-    clinical_scoring: null, // Unlimited
-    explore_deepseek: 3,
-  },
-  Researcher: {
-    ai_chatbot: 30,
-    ai_peer_review: 15,
-    disease_library: 20,
-    drug_reference: 20,
-    clinical_guidelines: 20,
-    interaction_checker: 15,
-    explore_gemini: 30,
-    medical_calculator: null, // Unlimited
-    nutrition_database: 20,
-    learning_resources: null, // Full access (represented by null)
-    mind_map_maker: 10,
-    clinical_scoring: null, // Unlimited
-    explore_deepseek: 30,
-  },
-  Administrator: { // Administrators likely have unlimited access
-    ai_chatbot: null,
-    ai_peer_review: null,
-    disease_library: null,
-    drug_reference: null,
-    clinical_guidelines: null,
-    interaction_checker: null,
-    explore_gemini: null,
-    medical_calculator: null,
-    nutrition_database: null,
-    learning_resources: null,
-    mind_map_maker: null,
-    clinical_scoring: null,
-    explore_deepseek: null,
-  },
+// Optional: You can add quota definitions here if needed
+export interface QuotaDefinition {
+  feature: FeatureName;
+  limit: number;
+  period?: 'daily' | 'weekly' | 'monthly';
+}
+
+// Optional: Default quotas if needed
+export const defaultQuotas: Record<FeatureName, QuotaDefinition> = {
+  medical_calculator: { feature: 'medical_calculator', limit: -1 },  // -1 means unlimited
+  drug_reference: { feature: 'drug_reference', limit: -1 },
+  nutrition_database: { feature: 'nutrition_database', limit: -1 },
+  disease_library: { feature: 'disease_library', limit: -1 },
+  clinical_guidelines: { feature: 'clinical_guidelines', limit: -1 },
+  ai_chatbot: { feature: 'ai_chatbot', limit: 10, period: 'daily' },
+  explore_gemini: { feature: 'explore_gemini', limit: 10, period: 'daily' },
+  explore_deepseek: { feature: 'explore_deepseek', limit: 10, period: 'daily' },
+  interaction_checker: { feature: 'interaction_checker', limit: -1 },
+  mind_map_maker: { feature: 'mind_map_maker', limit: 5, period: 'daily' },
+  clinical_scoring: { feature: 'clinical_scoring', limit: -1 },
+  learning_resources: { feature: 'learning_resources', limit: -1 },
+  custom_feature: { feature: 'custom_feature', limit: -1 }
 };
 
+// Function to get the quota limit for a given level and feature
 export const getQuotaLimit = (level: UserLevel | null, feature: FeatureName): number | null => {
-  if (!level) {
-    // Default to Free level quotas if level is null or undefined
-    level = 'Free';
+  // For now, we'll use defaultQuotas. In the future, this could be extended
+  // to fetch from a database based on user level.
+  const quota = defaultQuotas[feature];
+  if (quota) {
+    // If limit is -1, it means unlimited, so return null
+    return quota.limit === -1 ? null : quota.limit;
   }
-
-  // Administrators have unlimited access
-  if (level === 'Administrator') {
-    return null;
-  }
-
-  return quotas[level]?.[feature] ?? quotas['Free'][feature]; // Fallback to Free if level/feature not found
-};
-
-// Special check for Learning Resources access
-export const hasLearningResourcesAccess = (level: UserLevel | null): boolean => {
-    if (!level) return false; // No access if no level
-    return level === 'Researcher' || level === 'Administrator';
+  return null; // Return null if feature not found or no specific limit
 };

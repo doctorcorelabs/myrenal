@@ -6,7 +6,7 @@ import { Stethoscope, Book, Brain, FlaskConical, FileSearch, Calculator, Pill, H
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas';
+import { FeatureName } from '../lib/quotas'; // Using relative path
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,12 +31,12 @@ interface ToolData {
   comingSoon: boolean;
 }
 
-const toolsData: ToolData[] = [
+export const toolsData: ToolData[] = [
   {
     id: 1,
     featureName: 'medical_calculator', // Added feature name
-    title: 'Medical Calculator',
-    description: 'Calculate BMI, BSA, GFR, and other important clinical values.',
+    title: 'Kalkulator Medis',
+    description: 'Hitung BMI, BSA, GFR, dan nilai klinis penting lainnya.',
     icon: Calculator,
     path: '/tools/medical-calculator',
     comingSoon: false
@@ -44,8 +44,8 @@ const toolsData: ToolData[] = [
   {
     id: 2,
     featureName: 'drug_reference', // Added feature name
-    title: 'Drug Reference',
-    description: 'Access comprehensive drug information database.',
+    title: 'Referensi Obat',
+    description: 'Akses database informasi obat yang komprehensif.',
     icon: Pill,
     path: '/tools/drug-reference',
     comingSoon: false
@@ -53,8 +53,8 @@ const toolsData: ToolData[] = [
   {
     id: 3,
     featureName: 'nutrition_database', // Added feature name
-    title: 'Nutrition Database',
-    description: 'Explore nutritional information for various food items.',
+    title: 'Database Nutrisi',
+    description: 'Jelajahi informasi nutrisi untuk berbagai item makanan.',
     icon: Apple,
     path: '/tools/nutrition-database',
     comingSoon: false
@@ -62,8 +62,8 @@ const toolsData: ToolData[] = [
   {
     id: 4,
     featureName: 'disease_library', // Added feature name
-    title: 'Disease Library',
-    description: 'Comprehensive information on various conditions.',
+    title: 'Perpustakaan Penyakit',
+    description: 'Informasi komprehensif tentang berbagai kondisi.',
     icon: Book,
     path: '/tools/disease-library',
     comingSoon: false
@@ -71,8 +71,8 @@ const toolsData: ToolData[] = [
   {
     id: 5,
     featureName: 'clinical_guidelines', // Added feature name
-    title: 'Clinical Guidelines',
-    description: 'Access the latest medical practice guidelines.',
+    title: 'Panduan Klinis',
+    description: 'Akses panduan praktik medis terbaru.',
     icon: FileSearch,
     path: '/tools/clinical-guidelines',
     comingSoon: false
@@ -80,26 +80,17 @@ const toolsData: ToolData[] = [
   {
     id: 6,
     featureName: 'ai_chatbot', // Added feature name
-    title: 'AI Chatbot',
-    description: 'Engage with an AI assistant for medical information and queries.',
+    title: 'Chatbot AI',
+    description: 'Berinteraksi dengan asisten AI untuk informasi dan pertanyaan medis.',
     icon: Brain,
     path: '/tools/ai-chatbot',
     comingSoon: false
   },
   {
-    id: 7,
-    featureName: 'ai_peer_review', // Added feature name
-    title: 'AI Peer-Review',
-    description: 'Get AI-powered feedback on your clinical notes or case studies.',
-    icon: FileText,
-    path: '/tools/ai-peer-review',
-    comingSoon: false
-  },
-  {
     id: 8,
     featureName: 'explore_gemini', // Added feature name
-    title: 'Explore GEMINI',
-    description: 'Utilize Google\'s advanced AI for medical research exploration.',
+    title: 'Jelajahi Gemini',
+    description: 'Manfaatkan AI canggih Google untuk eksplorasi penelitian medis.',
     icon: Computer,
     path: '/tools/explore-gemini',
     comingSoon: false
@@ -107,8 +98,8 @@ const toolsData: ToolData[] = [
   {
     id: 9,
     featureName: 'explore_deepseek',
-    title: 'Explore DeepSeek',
-    description: 'Leverage DeepSeek AI for advanced medical insights.',
+    title: 'Jelajahi DeepSeek',
+    description: 'Manfaatkan AI DeepSeek untuk wawasan medis lanjutan.',
     icon: Bot, // Using the Bot icon, similar to other AI tools
     path: '/tools/explore-deepseek', // Proposed path
     comingSoon: false
@@ -116,8 +107,8 @@ const toolsData: ToolData[] = [
   {
     id: 10,
     featureName: 'interaction_checker', // Added feature name
-    title: 'Drug Interaction Checker',
-    description: 'Check for potential interactions between multiple drugs.',
+    title: 'Pemeriksa Interaksi Obat',
+    description: 'Periksa potensi interaksi antara beberapa obat.',
     icon: AlertTriangle,
     path: '/tools/interaction-checker',
     comingSoon: false
@@ -125,8 +116,8 @@ const toolsData: ToolData[] = [
   {
     id: 11,
     featureName: 'mind_map_maker', // Added feature name
-    title: 'AI Mind Map Generator',
-    description: 'Generate visual mind maps from any topic using AI.',
+    title: 'Pembuat Mind Map',
+    description: 'Hasilkan peta pikiran visual dari topik apa pun menggunakan AI.',
     icon: Network,
     path: '/tools/ai-mindmap-generator',
     comingSoon: false
@@ -134,8 +125,8 @@ const toolsData: ToolData[] = [
   {
     id: 12,
     featureName: 'clinical_scoring', // Added feature name
-    title: 'Clinical Scoring Hub',
-    description: 'Access various validated clinical scoring calculators.',
+    title: 'Pusat Penilaian Klinis',
+    description: 'Akses berbagai kalkulator penilaian klinis yang tervalidasi.',
     icon: ClipboardList,
     path: '/tools/clinical-scoring-hub',
     comingSoon: false
@@ -143,8 +134,8 @@ const toolsData: ToolData[] = [
   {
     id: 13, // New ID for Learning Resources
     // featureName is omitted as it doesn't need access control
-    title: 'Learning Resources',
-    description: 'Access curated learning materials and resources.',
+    title: 'Sumber Daya Pembelajaran',
+    description: 'Akses materi dan sumber daya pembelajaran yang dikurasi.',
     icon: Book, // Using Book icon
     path: '/tools/learning-resources', // Path to the learning resources page
     comingSoon: false
@@ -208,7 +199,7 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onDisabledClick }) => {
     if (tool.comingSoon) {
       return (
         <Button className="w-full bg-gray-400 cursor-not-allowed" disabled>
-          Coming Soon
+          Segera Hadir
         </Button>
       );
     }
@@ -227,7 +218,7 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onDisabledClick }) => {
         onClick={isEffectivelyDisabled ? handleButtonClick : undefined} // Only attach onClick if disabled
         aria-disabled={isEffectivelyDisabled} // Indicate disabled state for accessibility
       >
-        Launch Tool
+        Luncurkan Alat
       </Button>
     );
 
@@ -288,8 +279,8 @@ const Tools = () => {
   return (
     <>
       <PageHeader
-        title="Medical Tools"
-        subtitle="Access specialized tools to assist in your medical studies and practice"
+        title="Alat"
+        subtitle="Akses alat sesuai kebutuhan Anda"
        />
 
       {/* Adjusted padding for better mobile spacing */}
@@ -303,14 +294,14 @@ const Tools = () => {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
-                     <XCircle className="h-5 w-5 text-red-500" /> Access Denied
+                     <XCircle className="h-5 w-5 text-red-500" /> Akses Ditolak
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Access to the "{modalTitle}" feature is currently disabled for maintenance. Please check back later.
+                    Akses ke fitur "{modalTitle}" saat ini dinonaktifkan untuk pemeliharaan. Mohon periksa kembali nanti.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setIsModalOpen(false)}>Close</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => setIsModalOpen(false)}>Tutup</AlertDialogCancel>
                   {/* No action button needed */}
                 </AlertDialogFooter>
               </AlertDialogContent>

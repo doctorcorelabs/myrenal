@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,22 @@ const tools = [
 
 const Home = () => {
   const { isAuthenticated, user } = useAuth(); // Assuming user object might have name
+  const [currentToolIndex, setCurrentToolIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentToolIndex((prevIndex) => (prevIndex + 1) % tools.length);
+    }, 3000); // Change tool every 3 seconds
+
+    return () => clearInterval(interval); // Clean up the interval on component unmount
+  }, [tools.length]); // Re-run effect if tools array length changes
 
   // Determine the welcome message
   const welcomeMessage = isAuthenticated && user?.email
     ? `Welcome back, ${user.email}!` // Placeholder, adjust if user name is available
-    : "Welcome to NucleAI!";
+    : "Welcome to MyRenal!";
+
+  const currentTool = tools[currentToolIndex];
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
@@ -73,22 +84,20 @@ const Home = () => {
       {/* Quick Access Section */}
       <section>
         <h2 className="text-2xl font-semibold tracking-tight mb-4">Quick Access Tools</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {tools.map((tool) => (
-            <Link to={tool.path} key={tool.path} className="block group">
-              <Card className="h-full hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <tool.icon className="h-5 w-5 text-primary" />
-                    {tool.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-justify">{tool.description}</CardDescription> {/* Added text-justify */}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="grid grid-cols-1 gap-4"> {/* Changed grid to display one item */}
+          <Link to={currentTool.path} key={currentTool.path} className="block group">
+            <Card className="h-full hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <currentTool.icon className="h-5 w-5 text-primary" />
+                  {currentTool.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-justify">{currentTool.description}</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </section>
 

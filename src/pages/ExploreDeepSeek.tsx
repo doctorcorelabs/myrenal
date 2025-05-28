@@ -5,7 +5,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog"; // Added AlertDialog imports
 import { Terminal, Sparkles, SendHorizonal, Loader2, Paperclip, X, ArrowLeft } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,8 +16,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { useAuth } from '@/contexts/AuthContext'; // Added useAuth
 import { supabase } from '@/lib/supabaseClient'; // Added supabase
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added useFeatureAccess
-import UpgradePlanDialogContent from '@/components/UpgradePlanDialog'; // Corrected Import
-import { FeatureName } from '@/lib/quotas'; // Added FeatureName
 
 // Configure the worker source for pdfjs-dist
 // Make sure the worker file is copied to your public directory during build
@@ -44,10 +41,9 @@ interface ExplorationThread {
 
 const ExploreDeepSeek: React.FC = () => {
   const { toast } = useToast();
-  // Get user, level, and the function to open the global dialog (will be added to context later)
-  const { user, level, openUpgradeDialog } = useAuth(); 
-  const { checkAccess, incrementUsage } = useFeatureAccess(); // Corrected: Initialize hook
-  // Removed local dialog state: const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  // Get user, level
+  const { user, level } = useAuth(); 
+  const { checkAccess } = useFeatureAccess(); 
 
   const [prompt, setPrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<DeepSeekModel>('deepseek-chat');
@@ -66,7 +62,6 @@ const ExploreDeepSeek: React.FC = () => {
   const [threadExtractedTexts, setThreadExtractedTexts] = useState<{ [threadId: string]: string | null }>({}); // State for extracted text per thread
   const fileInputRef = React.useRef<HTMLInputElement>(null); // Ref for main file input
   const threadFileInputRefs = useRef<{ [threadId: string]: HTMLInputElement | null }>({}); // Refs for thread file inputs
-  // Removed historyEndRef and associated useEffect
 
 
   // --- Main Submit Handler (Non-Streaming) ---
@@ -79,22 +74,21 @@ const ExploreDeepSeek: React.FC = () => {
       return;
     }
 
-    // --- Quota Check ---
-    const featureName: FeatureName = 'explore_deepseek';
+    // --- Access Check ---
+    const featureName: string = 'explore_deepseek';
     const access = await checkAccess(featureName);
 
-    if (!access.allowed) { // Corrected property check based on hook definition
+    if (!access.allowed) {
       toast({
         title: "Access Denied",
-        description: access.message || 'Quota limit reached for Explore DeepSeek.',
+        description: access.message || 'You do not have access to Explore DeepSeek.',
         variant: "destructive"
       });
-      setError(access.message || 'Quota limit reached for Explore DeepSeek.');
-      openUpgradeDialog(); // Open the global dialog
-      setIsLoading(false); // Stop loading indicator
-      return; // Stop execution if no access
+      setError(access.message || 'Access denied for Explore DeepSeek.');
+      setIsLoading(false);
+      return;
     }
-    // --- End Quota Check ---
+    // --- End Access Check ---
 
     setIsLoading(true);
     setError(null);
@@ -111,7 +105,7 @@ const ExploreDeepSeek: React.FC = () => {
     let finalUserContent = prompt;
     if (extractedText && selectedFile) {
         finalUserContent = `[Content from ${selectedFile.name}]:\n\n${extractedText}\n\n[User Prompt]:\n\n${prompt || '(No additional prompt)'}`;
-    } else if (!prompt.trim() && !selectedFile) { // Redundant check, handled above, but safe
+    } else if (!prompt.trim() && !selectedFile) {
         setError('Please enter a prompt or upload a file with text content.');
         setIsLoading(false);
         return;
@@ -119,15 +113,10 @@ const ExploreDeepSeek: React.FC = () => {
 
     const messages: Omit<Message, 'id' | 'timestamp'>[] = [
       { role: 'system', content: 'You are a helpful medical assistant.' },
-      { role: 'user', content: finalUserContent }, // Use combined content
+      { role: 'user', content: finalUserContent },
     ];
 
     try {
-      // --- Increment Usage (Call but don't check return value for truthiness) ---
-      await incrementUsage(featureName);
-      // Log potential errors from the hook itself if needed, or handle within the hook
-      // --- End Increment Usage ---
-
       const res = await fetch(workerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,7 +153,7 @@ const ExploreDeepSeek: React.FC = () => {
         fileInputRef.current.value = '';
       }
     }
-  }, [prompt, selectedModel, extractedText, selectedFile, toast, checkAccess, incrementUsage, user, level]); // Added dependencies
+  }, [prompt, selectedModel, extractedText, selectedFile, toast, checkAccess, user, level]);
 
 
   // --- File Handling Logic (Main Prompt) ---
@@ -189,7 +178,7 @@ const ExploreDeepSeek: React.FC = () => {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          // Ensure item.str exists before joining
+           // Ensure item.str exists before joining
           fullText += textContent.items.map((item: any) => item.str || '').join(' ') + '\n';
         }
         setExtractedText(fullText.trim());
@@ -339,22 +328,21 @@ const ExploreDeepSeek: React.FC = () => {
       return;
     }
 
-    // --- Quota Check for Thread ---
-    const featureName: FeatureName = 'explore_deepseek'; // Same feature key
+    // --- Access Check for Thread ---
+    const featureName: string = 'explore_deepseek';
     const access = await checkAccess(featureName);
 
-    if (!access.allowed) { // Corrected property check based on hook definition
+    if (!access.allowed) {
       toast({
         title: "Access Denied",
-        description: access.message || 'Quota limit reached for Explore DeepSeek.',
+        description: access.message || 'You do not have access to Explore DeepSeek.',
         variant: "destructive"
       });
-      setThreadErrors(prev => ({ ...prev, [threadId]: access.message || 'Quota limit reached for Explore DeepSeek.' }));
-      openUpgradeDialog(); // Open the global dialog
-      setThreadLoading(prev => ({ ...prev, [threadId]: false })); // Stop loading for this thread
-      return; // Stop execution
+      setThreadErrors(prev => ({ ...prev, [threadId]: access.message || 'Access denied for Explore DeepSeek.' }));
+      setThreadLoading(prev => ({ ...prev, [threadId]: false }));
+      return;
     }
-    // --- End Quota Check ---
+    // --- End Access Check ---
 
 
     setThreadLoading(prev => ({ ...prev, [threadId]: true }));
@@ -369,7 +357,7 @@ const ExploreDeepSeek: React.FC = () => {
     const newUserMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: finalThreadUserContent, // Use combined content for the thread
+      content: finalThreadUserContent,
       timestamp: new Date(Date.now() - 1000)
     };
 
@@ -391,10 +379,6 @@ const ExploreDeepSeek: React.FC = () => {
     }
 
     try {
-      // --- Increment Usage ---
-      await incrementUsage(featureName);
-      // --- End Increment Usage ---
-
       const res = await fetch(workerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -466,8 +450,8 @@ const ExploreDeepSeek: React.FC = () => {
   return (
     <>
       <PageHeader
-        title="Explore DeepSeek"
-        subtitle="Leverage DeepSeek AI for advanced medical insights"
+        title="Jelajahi DeepSeek"
+        subtitle="Manfaatkan AI DeepSeek untuk analisis mendalam tentang data dan penelitian terkait ginjal."
       />
       <div className="container max-w-4xl mx-auto px-4 py-12 space-y-6">
         {/* Main Interaction Area */}
@@ -574,20 +558,19 @@ const ExploreDeepSeek: React.FC = () => {
           <div className="mt-10 space-y-6">
             <h2 className="text-2xl font-semibold tracking-tight text-center border-t pt-6">Exploration Threads</h2>
             {history.map((thread) => (
-              <Card key={thread.id} className="bg-muted/50 shadow-md"> {/* Removed id */}
-                <CardHeader> {/* Reverted header */}
+              <Card key={thread.id} className="bg-muted/50 shadow-md">
+                <CardHeader>
                   <CardTitle className="text-lg">Exploration Thread</CardTitle>
                   <p className="text-xs text-muted-foreground">Started: {thread.createdAt.toLocaleString()} | Model: {thread.initialModel}</p>
                 </CardHeader>
-                <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4"> {/* Removed id */}
+                <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-4">
                   {/* Render messages within the thread, filtering out system messages */}
                   {thread.messages.filter(message => message.role !== 'system').map((message) => (
                     <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-background border' : 'bg-background border'}`}> {/* Changed user message style */}
+                      <div className={`p-3 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-background border' : 'bg-background border'}`}>
                         {message.content && (
-                          // Added wrapper div with overflow-x-auto
                           <div className="overflow-x-auto">
-                             <div className="max-w-none prose prose-sm dark:prose-invert text-justify"> {/* Added text-justify */}
+                             <div className="max-w-none prose prose-sm dark:prose-invert text-justify">
                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                  {message.content}
                                </ReactMarkdown>
@@ -628,13 +611,13 @@ const ExploreDeepSeek: React.FC = () => {
                        </Button>
                      </div>
                    )}
-                  <div className="flex items-center gap-2 w-full relative"> {/* Added relative positioning */}
+                  <div className="flex items-center gap-2 w-full relative">
                      <Textarea
                        placeholder={threadFiles[thread.id] ? `Using content from ${threadFiles[thread.id]?.name}. Add follow-up...` : "Follow-up prompt..."}
                        value={threadInputs[thread.id] || ''}
                        onChange={(e) => handleThreadInputChange(thread.id, e.target.value)}
                        rows={2}
-                       className="flex-grow resize-none pr-10" // Add padding for button
+                       className="flex-grow resize-none pr-10"
                        disabled={threadLoading[thread.id]}
                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendInThread(thread.id); } }}
                      />
@@ -642,7 +625,7 @@ const ExploreDeepSeek: React.FC = () => {
                      <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute bottom-1 right-12 h-7 w-7" // Position near send button
+                        className="absolute bottom-1 right-12 h-7 w-7"
                         onClick={() => triggerThreadFileSelect(thread.id)}
                         title="Attach File (TXT/PDF)"
                         disabled={threadLoading[thread.id]}
@@ -652,7 +635,7 @@ const ExploreDeepSeek: React.FC = () => {
                      </Button>
                      <input
                         type="file"
-                        ref={el => threadFileInputRefs.current[thread.id] = el} // Assign ref dynamically
+                        ref={el => threadFileInputRefs.current[thread.id] = el}
                         onChange={(e) => handleThreadFileChange(e, thread.id)}
                         className="hidden"
                         accept=".txt,.pdf"
@@ -662,7 +645,7 @@ const ExploreDeepSeek: React.FC = () => {
                      <Button
                        size="icon"
                        onClick={() => handleSendInThread(thread.id)}
-                       disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])} // Disable if no text AND no file
+                       disabled={threadLoading[thread.id] || (!threadInputs[thread.id]?.trim() && !threadFiles[thread.id])}
                        className="shrink-0"
                      >
                        <SendHorizonal className="h-4 w-4" />
@@ -672,22 +655,20 @@ const ExploreDeepSeek: React.FC = () => {
                 </CardFooter>
               </Card>
             ))}
-            {/* Removed historyEndRef div */}
           </div>
         )}
 
-        {/* Back to Tools Button */}
+        {/* Back to Screening Button */}
         <div className="mt-12 flex justify-center">
           <Button asChild variant="outline">
-            <Link to="/tools" className="inline-flex items-center gap-2">
+            <Link to="/screening" className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Tools
+              Kembali
             </Link>
           </Button>
         </div>
 
-      </div> {/* End container */}
-      {/* Removed local AlertDialog rendering */}
+      </div>
     </>
   );
 };

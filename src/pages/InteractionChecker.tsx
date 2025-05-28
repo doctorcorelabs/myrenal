@@ -8,7 +8,6 @@ import { AlertTriangle, X, Loader2, Sparkles, ArrowLeft, Terminal } from 'lucide
 import { useAuth } from '@/contexts/AuthContext'; // useAuth is already imported
 import { useNavigate, Link } from 'react-router-dom';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import feature access hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert components
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
@@ -22,10 +21,10 @@ interface InteractionResult {
 }
 
 const InteractionChecker = () => {
-  const featureName: FeatureName = 'interaction_checker';
-  const { isAuthenticated, openUpgradeDialog } = useAuth(); // Get openUpgradeDialog
+  const featureName: string = 'interaction_checker';
+  const { isAuthenticated } = useAuth(); // Removed openUpgradeDialog
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [drugs, setDrugs] = useState<string[]>(['', '']);
@@ -34,7 +33,6 @@ const InteractionChecker = () => {
   const [error, setError] = useState<string | null>(null);
 
   // State for access check result
-  // Removed isCheckingInitialAccess state
   const [initialAccessAllowed, setInitialAccessAllowed] = useState(false);
   const [initialAccessMessage, setInitialAccessMessage] = useState<string | null>(null);
 
@@ -43,21 +41,15 @@ const InteractionChecker = () => {
     // Only run verifyAccess if the hook is done loading toggles
     if (!isLoadingToggles) {
       const verifyInitialAccess = async () => {
-        // Removed setIsCheckingInitialAccess(true)
         setInitialAccessMessage(null); // Clear message before check
         if (!isAuthenticated) {
-          // Should ideally be handled by ProtectedRoute, but double-check
           navigate('/signin');
           return;
         }
         try {
           const result = await checkAccess(featureName);
-         if (result.quota === 0 || result.isDisabled) { // Check if denied by level/toggle
-              setInitialAccessAllowed(false);
-              setInitialAccessMessage(result.message || 'Access denied.');
-         } else {
-              setInitialAccessAllowed(true); // Allow rendering the UI
-         }
+          setInitialAccessAllowed(result.allowed);
+          setInitialAccessMessage(result.message);
        } catch (error) {
          console.error("Error checking initial feature access:", error);
          setInitialAccessAllowed(false);
@@ -67,11 +59,11 @@ const InteractionChecker = () => {
            description: "Could not verify feature access at this time.",
            variant: "destructive",
          });
-       } // Removed finally block
+       }
     };
       verifyInitialAccess();
     }
-  }, [isLoadingToggles]); // Simplify dependency array
+  }, [isLoadingToggles, isAuthenticated, checkAccess, featureName, navigate, toast]); // Simplify dependency array
 
   const handleInputChange = (index: number, value: string) => {
     const newDrugs = [...drugs];
@@ -106,7 +98,6 @@ const InteractionChecker = () => {
          description: accessResult.message || 'You cannot perform an interaction check at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the check
     }
     // --- End Action Access Check ---
@@ -145,10 +136,6 @@ const InteractionChecker = () => {
     } finally {
       setIsLoading(false);
     }
-
-    // --- Increment Usage ---
-    await incrementUsage(featureName);
-    // --- End Increment Usage ---
   };
 
   const handleSummarize = useCallback(async (index: number) => {
@@ -221,8 +208,8 @@ const InteractionChecker = () => {
   return (
     <>
       <PageHeader
-        title="Drug Interaction Checker"
-        subtitle="Check potential drug interactions using data sourced from OpenFDA."
+        title="Pemeriksa Interaksi Obat"
+        subtitle="Periksa potensi interaksi obat menggunakan data dari OpenFDA."
       />
       <div className="container max-w-4xl mx-auto px-4 py-12">
 
@@ -363,10 +350,10 @@ const InteractionChecker = () => {
 
       {/* Back to Tools Button - Always visible outside the conditional block */}
       <div className="flex justify-center mt-8 mb-4">
-        <Link to="/tools">
+        <Link to="/treatment">
           <Button variant="outline" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Tools
+            Kembali
           </Button>
         </Link>
       </div>

@@ -9,16 +9,16 @@ import Curb65Score from '@/components/scores/Curb65Score';
 import MeldScore from '@/components/scores/MeldScore';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
-import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
-import { useToast } from '@/components/ui/use-toast'; // Added toast
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Added Alert
-import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
+import { ArrowLeft, Terminal } from 'lucide-react'; // Terminal ditambahkan
+import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Mengimpor hook
+import { FeatureName } from '@/lib/quotas'; // Mengimpor FeatureName dari quotas.ts
+import { useToast } from '@/components/ui/use-toast'; // Toast ditambahkan
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Alert ditambahkan
+import { Skeleton } from '@/components/ui/skeleton'; // Skeleton ditambahkan
 
 const ClinicalScoringHub: React.FC = () => {
   const featureName: FeatureName = 'clinical_scoring';
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
 
   // State for access check result
@@ -33,19 +33,19 @@ const ClinicalScoringHub: React.FC = () => {
       try {
         const result = await checkAccess(featureName);
          // Check the result inside the try block
-         if (result.quota === 0 || result.isDisabled) {
+         if (!result.allowed || result.isDisabled) {
             setInitialAccessAllowed(false);
-            setInitialAccessMessage(result.message || 'Access denied.');
+            setInitialAccessMessage(result.message || 'Akses ditolak.');
          } else {
             setInitialAccessAllowed(true);
          }
        } catch (error) { // Catch block correctly placed for the try
          console.error("Error checking initial feature access:", error);
          setInitialAccessAllowed(false);
-         setInitialAccessMessage('Failed to check feature access.');
+         setInitialAccessMessage('Gagal memeriksa akses fitur.');
          toast({
-           title: "Error",
-           description: "Could not verify feature access at this time.",
+           title: "Kesalahan",
+           description: "Tidak dapat memverifikasi akses fitur saat ini.",
            variant: "destructive",
          });
        }
@@ -57,14 +57,14 @@ const ClinicalScoringHub: React.FC = () => {
     } // End of if (!isLoadingToggles)
   }, [isLoadingToggles]); // Simplify dependency array
 
-  // TODO: Pass incrementUsage down to individual score components or have them use the hook.
-  // For now, usage is only checked on initial load.
+  // TODO: Teruskan incrementUsage ke komponen skor individual atau minta mereka menggunakan hook.
+  // Untuk saat ini, penggunaan hanya diperiksa pada pemuatan awal.
 
   return (
     <div className="container mx-auto px-4 py-8">
       <PageHeader
-        title="Clinical Scoring Hub"
-        subtitle="A collection of validated clinical scoring calculators for risk stratification, diagnosis, severity assessment, and prognosis."
+        title="Pusat Penilaian Klinis"
+        subtitle="Kumpulan kalkulator penilaian klinis tervalidasi untuk stratifikasi risiko, diagnosis, penilaian keparahan, dan prognosis."
       />
 
       {/* Show Skeleton only based on the hook's loading state */}
@@ -80,9 +80,9 @@ const ClinicalScoringHub: React.FC = () => {
        {!isLoadingToggles && !initialAccessAllowed && (
           <Alert variant="destructive" className="mt-6">
             <Terminal className="h-4 w-4" />
-            <AlertTitle>Access Denied</AlertTitle>
+            <AlertTitle>Akses Ditolak</AlertTitle>
             <AlertDescription>
-              {initialAccessMessage || 'You do not have permission to access this feature.'}
+              {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
             </AlertDescription>
           </Alert>
         )}
@@ -91,58 +91,58 @@ const ClinicalScoringHub: React.FC = () => {
       {!isLoadingToggles && initialAccessAllowed && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {/* Placeholder for Score Categories/Calculators */}
+            {/* Placeholder untuk Kategori/Kalkulator Skor */}
             <Card>
           <CardHeader>
-            <CardTitle>Cardiology Scores</CardTitle>
+            <CardTitle>Skor Kardiologi</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-justify">Calculators related to cardiovascular risk and conditions.</p>
-            {/* Links or embedded calculators will go here */}
-            <p className="mt-4 text-sm text-muted-foreground text-justify">(CHADS2-VASc, HEART Score, etc.)</p>
+            <p className="text-justify">Kalkulator terkait risiko dan kondisi kardiovaskular.</p>
+            {/* Tautan atau kalkulator tersemat akan ditempatkan di sini */}
+            <p className="mt-4 text-sm text-muted-foreground text-justify">(CHADS2-VASc, HEART Score, dll.)</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pulmonology/Critical Care Scores</CardTitle>
+            <CardTitle>Skor Pulmonologi/Perawatan Kritis</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-justify">Calculators for respiratory conditions and critical illness.</p>
-            {/* Links or embedded calculators will go here */}
-             <p className="mt-4 text-sm text-muted-foreground text-justify">(Wells' PE, CURB-65, GCS, etc.)</p>
+            <p className="text-justify">Kalkulator untuk kondisi pernapasan dan penyakit kritis.</p>
+            {/* Tautan atau kalkulator tersemat akan ditempatkan di sini */}
+             <p className="mt-4 text-sm text-muted-foreground text-justify">(Wells' PE, CURB-65, GCS, dll.)</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Gastroenterology Scores</CardTitle>
+            <CardTitle>Skor Gastroenterologi</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-justify">Calculators relevant to liver and digestive diseases.</p>
-            {/* Links or embedded calculators will go here */}
-             <p className="mt-4 text-sm text-muted-foreground text-justify">(MELD Score, etc.)</p>
+            <p className="text-justify">Kalkulator yang relevan dengan penyakit hati dan pencernaan.</p>
+            {/* Tautan atau kalkulator tersemat akan ditempatkan di sini */}
+             <p className="mt-4 text-sm text-muted-foreground text-justify">(MELD Score, dll.)</p>
           </CardContent>
         </Card>
 
          <Card>
           <CardHeader>
-            <CardTitle>Other Scores</CardTitle>
+            <CardTitle>Skor Lainnya</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-justify">Various other useful clinical scores.</p>
-            {/* Links or embedded calculators will go here */}
-             <p className="mt-4 text-sm text-muted-foreground text-justify">(Wells' DVT, etc.)</p>
+            <p className="text-justify">Berbagai skor klinis berguna lainnya.</p>
+            {/* Tautan atau kalkulator tersemat akan ditempatkan di sini */}
+             <p className="mt-4 text-sm text-muted-foreground text-justify">(Wells' DVT, dll.)</p>
           </CardContent>
         </Card>
-        {/* Add more category cards as needed */}
+        {/* Tambahkan lebih banyak kartu kategori sesuai kebutuhan */}
       </div>
 
       {/* Display Calculators Section */}
       <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-6">Calculators</h2>
-        {/* We can add logic here later to select which calculator to show */}
-        {/* For now, just display the CHADS2-VASc */}
+        <h2 className="text-2xl font-semibold mb-6">Kalkulator</h2>
+        {/* Kita bisa menambahkan logika di sini nanti untuk memilih kalkulator mana yang akan ditampilkan */}
+        {/* Untuk saat ini, cukup tampilkan CHADS2-VASc */}
         <ChadsvascScore />
         <WellsScoreDvt />
         <WellsScorePe />
@@ -150,20 +150,20 @@ const ClinicalScoringHub: React.FC = () => {
         <Curb65Score />
         <MeldScore />
 
-        {/* Placeholder for other calculators */}
+        {/* Placeholder untuk kalkulator lainnya */}
       </div>
 
-      {/* Back to Tools Button */}
+      {/* Tombol Kembali ke Alat */}
       <div className="mt-12 mb-8 flex justify-center">
-        <Link to="/tools">
+        <Link to="/screening">
           <Button variant="outline" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Tools
+            Kembali
           </Button>
         </Link>
       </div>
      </>
-    )} {/* End of initialAccessAllowed block */}
+    )} {/* Akhir dari blok initialAccessAllowed */}
     </div>
   );
 };

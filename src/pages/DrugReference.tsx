@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, AlertTriangle, Loader2, Terminal } from 'lucide-react'; // Added Terminal
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -39,11 +38,11 @@ interface DrugResult {
 
 
 const DrugReference = () => {
-  const featureName: FeatureName = 'drug_reference';
+  const featureName: string = 'drug_reference';
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const { openUpgradeDialog } = useAuth(); // Get the dialog function
+  const { } = useAuth(); // Removed openUpgradeDialog
 
   // State for initial access check
   const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -66,13 +65,8 @@ const DrugReference = () => {
         setInitialAccessMessage(null);
         try {
           const result = await checkAccess(featureName);
-         // Check if quota is explicitly 0 (denied by level)
-         if (result.quota === 0) {
-              setInitialAccessAllowed(false);
-              setInitialAccessMessage(result.message || 'Access denied for your level.');
-         } else {
-              setInitialAccessAllowed(true); // Allow rendering the search UI
-         }
+          setInitialAccessAllowed(result.allowed);
+          setInitialAccessMessage(result.message);
        } catch (error) {
          console.error("Error checking initial feature access:", error);
          setInitialAccessAllowed(false);
@@ -101,7 +95,6 @@ const DrugReference = () => {
          description: accessResult.message || 'You cannot perform a search at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the search
     }
     // --- End Action Access Check ---
@@ -162,11 +155,6 @@ const DrugReference = () => {
       // This block always executes
       setIsLoading(false);
     }
-
-    // --- Increment Usage ---
-    // Increment after confirming the search will proceed
-    await incrementUsage(featureName);
-    // --- End Increment Usage ---
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -272,8 +260,8 @@ const DrugReference = () => {
   return (
     <div>
       <PageHeader 
-        title="Drug Reference" 
-        subtitle="Search US FDA drug label information via OpenFDA."
+        title="Referensi Obat" 
+        subtitle="Cari informasi label obat US FDA melalui OpenFDA."
       />
 
       <div className="container-custom">
@@ -373,10 +361,10 @@ This tool **DOES NOT substitute for professional medical advice, diagnosis, or t
 
           {/* Back Button */}
           <div className="mt-12 flex justify-center">
-            <Link to="/tools">
+            <Link to="/treatment">
               <Button variant="outline" className="flex items-center gap-2">
                 <ArrowLeft size={16} />
-                Back to Tools
+                Kembali
               </Button>
             </Link>
           </div>

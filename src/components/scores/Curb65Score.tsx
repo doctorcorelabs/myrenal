@@ -81,8 +81,8 @@ const Curb65Score: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle>CURB-65 Score Calculator</CardTitle>
-        <CardDescription className="text-justify">For Community-Acquired Pneumonia Severity Assessment</CardDescription>
+        <CardTitle>Kalkulator Skor CURB-65</CardTitle>
+        <CardDescription className="text-justify">Untuk Penilaian Tingkat Keparahan Pneumonia Komunitas</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -93,7 +93,7 @@ const Curb65Score: React.FC = () => {
               checked={criteria.confusion}
               onCheckedChange={() => handleCheckboxChange('confusion')}
             />
-            <Label htmlFor="confusion" className="text-justify">Confusion (new disorientation in person, place, or time) (+1 pt)</Label>
+            <Label htmlFor="confusion" className="text-justify">Kebingungan (disorientasi baru pada orang, tempat, atau waktu) (+1 pt)</Label>
           </div>
           {/* Urea */}
           <div className="flex items-center space-x-2">
@@ -102,7 +102,7 @@ const Curb65Score: React.FC = () => {
               checked={criteria.ureaGreaterThan7}
               onCheckedChange={() => handleCheckboxChange('ureaGreaterThan7')}
             />
-            <Label htmlFor="ureaGreaterThan7" className="text-justify">{'Urea > 7 mmol/L (or BUN > 19 mg/dL) (+1 pt)'}</Label>
+            <Label htmlFor="ureaGreaterThan7" className="text-justify">{'Urea > 7 mmol/L (atau BUN > 19 mg/dL) (+1 pt)'}</Label>
           </div>
           {/* Respiratory Rate */}
           <div className="flex items-center space-x-2">
@@ -111,7 +111,7 @@ const Curb65Score: React.FC = () => {
               checked={criteria.respiratoryRateGreaterThan30}
               onCheckedChange={() => handleCheckboxChange('respiratoryRateGreaterThan30')}
             />
-            <Label htmlFor="respiratoryRateGreaterThan30" className="text-justify">{'Respiratory Rate ≥ 30 breaths/min (+1 pt)'}</Label>
+            <Label htmlFor="respiratoryRateGreaterThan30" className="text-justify">{'Laju Pernapasan ≥ 30 napas/menit (+1 pt)'}</Label>
           </div>
           {/* Blood Pressure */}
           <div className="flex items-center space-x-2">
@@ -120,40 +120,40 @@ const Curb65Score: React.FC = () => {
               checked={criteria.lowBloodPressure}
               onCheckedChange={() => handleCheckboxChange('lowBloodPressure')}
             />
-            <Label htmlFor="lowBloodPressure" className="text-justify">{'Low Blood Pressure (SBP < 90 mmHg or DBP ≤ 60 mmHg) (+1 pt)'}</Label>
+            <Label htmlFor="lowBloodPressure" className="text-justify">{'Tekanan Darah Rendah (SBP < 90 mmHg atau DBP ≤ 60 mmHg) (+1 pt)'}</Label>
           </div>
           {/* Age */}
           <div className="flex items-center space-x-2">
-             <Label htmlFor="age" className="w-20">Age:</Label>
+             <Label htmlFor="age" className="w-20">Usia:</Label>
              <Input
                id="age"
                type="number"
                value={age}
                onChange={handleAgeChange}
-               placeholder="Enter age"
+               placeholder="Masukkan usia"
                className="flex-1"
              />
-             <Label className="ml-2">{'(≥ 65 years = +1 pt)'}</Label>
+             <Label className="ml-2">{'(≥ 65 tahun = +1 pt)'}</Label>
            </div>
         </div>
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score: {score}</AlertTitle>
+          <AlertTitle>Skor Terhitung: {score}</AlertTitle>
           <AlertDescription className="text-justify">
             {interpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool aids severity assessment and site-of-care decisions but does not replace clinical judgment. Consider other factors (e.g., comorbidities, oxygen saturation).
+             Alat ini membantu penilaian keparahan dan keputusan lokasi perawatan tetapi tidak menggantikan penilaian klinis. Pertimbangkan faktor lain (misalnya, komorbiditas, saturasi oksigen).
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>

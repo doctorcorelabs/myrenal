@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
@@ -29,11 +28,11 @@ interface GuidelineResult {
 const RESULTS_PER_PAGE = 30;
 
 const ClinicalGuidelines = () => {
-    const featureName: FeatureName = 'clinical_guidelines';
+    const featureName: string = 'clinical_guidelines';
     // Get isLoadingToggles from the hook
-    const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+    const { checkAccess, isLoadingToggles } = useFeatureAccess();
     const { toast } = useToast();
-    const { openUpgradeDialog } = useAuth(); // Get the dialog function
+    const { } = useAuth(); // Removed openUpgradeDialog
 
     // State for initial access check
     const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -65,13 +64,9 @@ const ClinicalGuidelines = () => {
               setInitialAccessMessage(null);
               try {
                 const result = await checkAccess(featureName);
-            if (result.quota === 0) {
-                 setInitialAccessAllowed(false);
-                 setInitialAccessMessage(result.message || 'Access denied for your level.');
-            } else {
-                 setInitialAccessAllowed(true);
-            }
-          } catch (error) {
+                setInitialAccessAllowed(result.allowed);
+                setInitialAccessMessage(result.message);
+            } catch (error) {
             console.error("Error checking initial feature access:", error);
             setInitialAccessAllowed(false);
             setInitialAccessMessage('Failed to check feature access.');
@@ -92,8 +87,6 @@ const ClinicalGuidelines = () => {
 
     const fetchPageData = async (pageToFetch: number) => {
         // --- Action Access Check (for subsequent page fetches) ---
-        // We assume initial access was granted to reach this point,
-        // but we still check quota for fetching more pages.
         const accessResult = await checkAccess(featureName);
         if (!accessResult.allowed) {
           toast({
@@ -101,7 +94,6 @@ const ClinicalGuidelines = () => {
             description: accessResult.message || 'You cannot load the next page at this time.',
             variant: "destructive",
           });
-          openUpgradeDialog(); // Open the upgrade dialog
           setIsLoading(false); // Ensure loading stops if denied
           return;
         }
@@ -154,11 +146,6 @@ const ClinicalGuidelines = () => {
         } finally {
             setIsLoading(false);
         }
-
-        // --- Increment Usage (for subsequent page fetches) ---
-        // Increment after successfully fetching a new page's data
-        await incrementUsage(featureName);
-        // --- End Increment Usage ---
     };
 
     const performPubmedSearch = async (resetPage = true) => {
@@ -170,7 +157,6 @@ const ClinicalGuidelines = () => {
           description: accessResult.message || 'You cannot perform a search at this time.',
           variant: "destructive",
         });
-        openUpgradeDialog(); // Open the upgrade dialog
         return; // Stop the search
       }
       // --- End Action Access Check ---
@@ -233,11 +219,6 @@ const ClinicalGuidelines = () => {
              setTotalResults(0);
              setIsLoading(false);
         }
-
-        // --- Increment Usage (for initial search) ---
-        // Increment after confirming the search will proceed
-        await incrementUsage(featureName);
-        // --- End Increment Usage ---
     };
 
 
@@ -297,8 +278,8 @@ const ClinicalGuidelines = () => {
     return (
         <>
             <PageHeader
-                title="Clinical Guidelines"
-                subtitle="Search PubMed for clinical practice guidelines."
+                title="Panduan Klinis"
+                subtitle="Cari PubMed untuk panduan praktik klinis."
             />
             <div className="container max-w-7xl mx-auto px-4 py-12">
 
@@ -470,9 +451,9 @@ const ClinicalGuidelines = () => {
                  {/* Back to Tools Button */}
                  <div className="mt-12 text-center">
                     <Button variant="outline" asChild>
-                        <Link to="/tools" className="inline-flex items-center">
+                        <Link to="/treatment" className="inline-flex items-center">
                             <ArrowLeft className="mr-2 h-4 w-4" /> {/* Added icon */}
-                            Back to Tools
+                            Kembali
                         </Link>
                     </Button>
                  </div>

@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ArrowLeft, Loader2, Info, Terminal } from 'lucide-react'; // Import Loader2, Info, Terminal
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert
@@ -24,11 +23,11 @@ interface SearchResultLinks {
 }
 
 const DiseaseLibrary = () => {
-  const featureName: FeatureName = 'disease_library';
+  const featureName: string = 'disease_library';
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const { openUpgradeDialog } = useAuth(); // Get the dialog function
+  const { } = useAuth(); // Removed openUpgradeDialog
 
   // State for initial access check
   const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -53,28 +52,19 @@ const DiseaseLibrary = () => {
         setIsCheckingInitialAccess(true); // Start page-specific check
         setInitialAccessMessage(null);
         try {
-          // Check access without intending to increment yet
           const result = await checkAccess(featureName);
-        // We only care if they have *any* access (quota > 0 or null)
-        // The specific remaining count doesn't matter here, only for the search action itself.
-         // We use result.quota !== 0 check to determine if the level allows access at all.
-         if (result.quota === 0) { // Explicitly denied by level
-              setInitialAccessAllowed(false);
-              setInitialAccessMessage(result.message || 'Access denied for your level.');
-         } else {
-              setInitialAccessAllowed(true); // Allow rendering the search UI
-         }
-
-       } catch (error) {
-         console.error("Error checking initial feature access:", error);
-         setInitialAccessAllowed(false);
-         setInitialAccessMessage('Failed to check feature access.');
-         toast({
-           title: "Error",
-           description: "Could not verify feature access at this time.",
-           variant: "destructive",
-         });
-       } finally {
+          setInitialAccessAllowed(result.allowed);
+          setInitialAccessMessage(result.message);
+        } catch (error) {
+          console.error("Error checking initial feature access:", error);
+          setInitialAccessAllowed(false);
+          setInitialAccessMessage('Failed to check feature access.');
+          toast({
+            title: "Error",
+            description: "Could not verify feature access at this time.",
+            variant: "destructive",
+          });
+        } finally {
           setIsCheckingInitialAccess(false); // Finish page-specific check
         }
       };
@@ -95,7 +85,6 @@ const DiseaseLibrary = () => {
          description: accessResult.message || 'You cannot perform a search at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the search
     }
     // --- End Action Access Check ---
@@ -151,16 +140,6 @@ const DiseaseLibrary = () => {
     } finally {
       setIsLoading(false);
     }
-
-    // --- Increment Usage ---
-    // Increment only after confirming the search will proceed
-    await incrementUsage(featureName);
-     // Optionally show remaining quota after successful search
-     // if (accessResult.remaining !== null) {
-     //    const remainingAfterIncrement = accessResult.remaining - 1;
-     //    toast({ title: "Info", description: `Remaining search quota for today: ${remainingAfterIncrement}` });
-     // }
-     // --- End Increment Usage ---
   };
 
   // Function to fetch detailed information
@@ -208,10 +187,12 @@ const DiseaseLibrary = () => {
  // Helper function to parse the detailed info string into sections using block extraction
  const parseDetailedInfo = (details: string | null): Record<string, string> => {
     if (!details) return {};
+    console.log("Raw detailed info for parsing:", details); // Add logging for raw details
     // Use Object.create(null) for a cleaner object without prototype chain
     const sections: Record<string, string> = Object.create(null);
     // Regex to find main headings (e.g., "1. **Heading:**") globally and capture the heading text
-    const headingRegex = /^\d+\.\s*\*\*\s*(.+?)\s*:\*\*/gm; // g for global, m for multiline
+    // Adjusted regex to precisely match the observed AI output format "1. **Title:**"
+    const headingRegex = /^\*\*\d+\.\s*(.+?)\*\*\s*$/gm; // g for global, m for multiline
 
     let match;
     const matches = [];
@@ -223,6 +204,7 @@ const DiseaseLibrary = () => {
             length: match[0].length // Length of the full heading match
         });
     }
+    console.log("Regex matches found:", matches); // Add logging for regex matches
 
     // Iterate through the found headings to extract content between them
     for (let i = 0; i < matches.length; i++) {
@@ -252,8 +234,8 @@ const DiseaseLibrary = () => {
   return (
     <>
       <PageHeader
-        title="Disease Information Search"
-        subtitle="Search for disease information on Mayo Clinic and MedlinePlus."
+        title="Perpustakaan Penyakit"
+        subtitle="Cari informasi komprehensif tentang berbagai penyakit dan kondisi terkait."
       />
 
       <div className="container max-w-4xl mx-auto px-4 py-12">
@@ -266,13 +248,13 @@ const DiseaseLibrary = () => {
            </div>
          )}
 
-         {/* Access Denied Message (Show only if NOT loading and access is denied) */}
+         {/* Pesan Akses Ditolak (Tampilkan hanya jika TIDAK memuat dan akses ditolak) */}
          {!(isCheckingInitialAccess || isLoadingToggles) && !initialAccessAllowed && (
             <Alert variant="destructive" className="mt-4">
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Access Denied</AlertTitle>
+              <AlertTitle>Akses Ditolak</AlertTitle>
               <AlertDescription>
-                {initialAccessMessage || 'You do not have permission to access this feature.'}
+                {initialAccessMessage || 'Anda tidak memiliki izin untuk mengakses fitur ini.'}
               </AlertDescription>
             </Alert>
           )}
@@ -282,19 +264,19 @@ const DiseaseLibrary = () => {
           <>
             {/* Disclaimer */}
             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 text-justify" role="alert">
-          <p className="font-bold">IMPORTANT DISCLAIMER:</p>
-          <p>This tool provides links to external search results on authoritative sources (Mayo Clinic, MedlinePlus) for general informational purposes ONLY. It DOES NOT constitute medical advice, diagnosis, or treatment recommendation. Always consult with a qualified healthcare professional for any health concerns or before making any decisions related to your health or treatment.</p>
+          <p className="font-bold">Catatan PENTING:</p>
+          <p>Alat ini menyediakan tautan ke hasil pencarian eksternal dari sumber-sumber terkemuka (Mayo Clinic, MedlinePlus) untuk tujuan informasi umum SAJA. Ini BUKAN merupakan nasihat medis, diagnosis, atau rekomendasi pengobatan. Selalu konsultasikan dengan profesional kesehatan yang berkualifikasi untuk setiap masalah kesehatan atau sebelum membuat keputusan terkait kesehatan atau pengobatan Anda.</p>
         </div>
 
         {/* Search Form */}
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-6">
           <Input
             type="text"
-            placeholder="Enter disease or condition name..."
+            placeholder="Masukkan nama penyakit atau kondisi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-grow"
-            aria-label="Search for disease information"
+            aria-label="Cari informasi penyakit"
           />
           <Button type="submit" className="bg-medical-teal hover:bg-medical-blue">
             {isLoading ? (
@@ -302,7 +284,7 @@ const DiseaseLibrary = () => {
             ) : (
               <Search className="mr-2 h-4 w-4" />
             )}
-            {isLoading ? 'Searching...' : 'Search'}
+            {isLoading ? 'Mencari...' : 'Cari'}
           </Button>
         </form>
 
@@ -310,14 +292,14 @@ const DiseaseLibrary = () => {
         {isLoading && (
           <div className="flex justify-center items-center mt-6">
             <Loader2 className="h-6 w-6 animate-spin text-medical-teal" />
-            <span className="ml-2">Generating AI summary...</span>
+            <span className="ml-2">Membuat ringkasan AI...</span>
           </div>
         )}
 
         {/* Direct Search Results Links - MOVED HERE */}
         {searchResults && !isLoading && (
           <div className="mt-6 p-4 border rounded-md bg-gray-100">
-            <h3 className="text-lg font-semibold mb-3">Direct Search Links:</h3>
+            <h3 className="text-lg font-semibold mb-3">Tautan Pencarian Langsung:</h3>
             <p className="mb-2">
               <a
                 href={searchResults.mayoClinic}
@@ -325,7 +307,7 @@ const DiseaseLibrary = () => {
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline font-medium"
               >
-                View search results on Mayo Clinic
+                Lihat hasil pencarian di Mayo Clinic
               </a>
             </p>
             <p>
@@ -335,7 +317,7 @@ const DiseaseLibrary = () => {
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline font-medium"
               >
-                View search results on MedlinePlus
+                Lihat hasil pencarian di MedlinePlus
               </a>
             </p>
           </div>
@@ -344,7 +326,7 @@ const DiseaseLibrary = () => {
         {/* AI Summary or Error */}
         {!isLoading && (aiSummary || apiError) && (
           <div className="mt-6 p-4 border rounded-md bg-gray-50">
-            <h3 className="text-lg font-semibold mb-3">AI Generated Summary for "{searchQuery}":</h3>
+            <h3 className="text-lg font-semibold mb-3">Ringkasan Buatan AI untuk "{searchQuery}":</h3>
             {apiError ? (
               <p className="text-red-600">Error: {apiError}</p>
             ) : (
@@ -356,7 +338,7 @@ const DiseaseLibrary = () => {
                   </ReactMarkdown>
                 </div>
                 {/* Justify the summary disclaimer */}
-                <p className="text-xs text-gray-500 mt-3 italic text-justify">Disclaimer: This summary was generated by AI and is for informational purposes only. Always consult the original sources and a healthcare professional.</p>
+                <p className="text-xs text-gray-500 mt-3 italic text-justify">Catatan: Ringkasan ini dibuat oleh AI dan hanya untuk tujuan informasi. Selalu konsultasikan sumber asli dan profesional kesehatan.</p>
                 {/* Explore More Button */}
                 {aiSummary && !detailedInfo && !isDetailedLoading && !detailedError && ( // Show button only if summary exists
                    <Button
@@ -365,7 +347,7 @@ const DiseaseLibrary = () => {
                      className="mt-4"
                      disabled={isDetailedLoading}
                    >
-                     <Info className="mr-2 h-4 w-4" /> Explore More Details
+                     <Info className="mr-2 h-4 w-4" /> Jelajahi Detail Lebih Lanjut
                    </Button>
                 )}
               </>
@@ -377,14 +359,14 @@ const DiseaseLibrary = () => {
         {isDetailedLoading && (
           <div className="flex justify-center items-center mt-6">
             <Loader2 className="h-6 w-6 animate-spin text-medical-teal" />
-            <span className="ml-2">Fetching detailed information...</span>
+            <span className="ml-2">Mengambil informasi detail...</span>
           </div>
         )}
 
          {/* Detailed Information Display or Error */}
          {!isDetailedLoading && (detailedInfo || detailedError) && (
            <div className="mt-6 p-4 border rounded-md bg-white">
-              <h3 className="text-lg font-semibold mb-3">Detailed Information for "{searchQuery}":</h3>
+              <h3 className="text-lg font-semibold mb-3">Informasi Detail untuk "{searchQuery}":</h3>
               {detailedError ? (
                 <p className="text-red-600">Error: {detailedError}</p>
              ) : detailedSections && Object.keys(detailedSections).length > 0 ? (
@@ -407,10 +389,10 @@ const DiseaseLibrary = () => {
                  ))}
                </Accordion>
              ) : (
-                <p className="text-gray-600">Could not parse detailed information sections.</p>
+                <p className="text-gray-600">Tidak dapat mengurai bagian informasi detail.</p>
              )}
              {/* Justify the detailed info disclaimer */}
-             <p className="text-xs text-gray-500 mt-4 italic text-justify">Disclaimer: This detailed information was generated by AI and is for informational purposes only. Always consult the original sources and a healthcare professional.</p>
+             <p className="text-xs text-gray-500 mt-4 italic text-justify">Catatan: Informasi detail ini dibuat oleh AI dan hanya untuk tujuan informasi. Selalu konsultasikan sumber asli dan profesional kesehatan.</p>
           </div>
         )}
           </>
@@ -420,9 +402,9 @@ const DiseaseLibrary = () => {
 
       {/* Back Button Section */}
       <div className="flex justify-center mt-8 mb-12">
-        <Link to="/tools">
+        <Link to="/screening">
           <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Tools
+            <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
           </Button>
         </Link>
       </div>

@@ -77,13 +77,13 @@ const GcsScore: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle>Glasgow Coma Scale (GCS) Calculator</CardTitle>
-        <CardDescription className="text-justify">Assesses level of consciousness after head injury.</CardDescription>
+        <CardTitle>Kalkulator Skala Koma Glasgow (GCS)</CardTitle>
+        <CardDescription className="text-justify">Menilai tingkat kesadaran setelah cedera kepala.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Eye Opening Response */}
         <div>
-          <Label className="font-semibold mb-2 block">Eye Opening Response (E)</Label>
+          <Label className="font-semibold mb-2 block">Respons Pembukaan Mata (E)</Label>
           <RadioGroup
             value={criteria.eyeOpening.toString()}
             onValueChange={(value) => handleRadioChange('eyeOpening', value)}
@@ -92,7 +92,7 @@ const GcsScore: React.FC = () => {
             {eyeOptions.map((opt) => (
               <div key={`eye-${opt.value}`} className="flex items-center space-x-2">
                 <RadioGroupItem value={opt.value.toString()} id={`eye-${opt.value}`} />
-                <Label htmlFor={`eye-${opt.value}`}>{opt.label} ({opt.value} pts)</Label>
+                <Label htmlFor={`eye-${opt.value}`}>{opt.label} ({opt.value} pt)</Label>
               </div>
             ))}
           </RadioGroup>
@@ -100,7 +100,7 @@ const GcsScore: React.FC = () => {
 
         {/* Verbal Response */}
         <div>
-          <Label className="font-semibold mb-2 block">Verbal Response (V)</Label>
+          <Label className="font-semibold mb-2 block">Respons Verbal (V)</Label>
           <RadioGroup
             value={criteria.verbalResponse.toString()}
             onValueChange={(value) => handleRadioChange('verbalResponse', value)}
@@ -109,7 +109,7 @@ const GcsScore: React.FC = () => {
             {verbalOptions.map((opt) => (
               <div key={`verbal-${opt.value}`} className="flex items-center space-x-2">
                 <RadioGroupItem value={opt.value.toString()} id={`verbal-${opt.value}`} />
-                <Label htmlFor={`verbal-${opt.value}`}>{opt.label} ({opt.value} pts)</Label>
+                <Label htmlFor={`verbal-${opt.value}`}>{opt.label} ({opt.value} pt)</Label>
               </div>
             ))}
           </RadioGroup>
@@ -117,7 +117,7 @@ const GcsScore: React.FC = () => {
 
         {/* Motor Response */}
         <div>
-          <Label className="font-semibold mb-2 block">Motor Response (M)</Label>
+          <Label className="font-semibold mb-2 block">Respons Motorik (M)</Label>
           <RadioGroup
             value={criteria.motorResponse.toString()}
             onValueChange={(value) => handleRadioChange('motorResponse', value)}
@@ -126,7 +126,7 @@ const GcsScore: React.FC = () => {
             {motorOptions.map((opt) => (
               <div key={`motor-${opt.value}`} className="flex items-center space-x-2">
                 <RadioGroupItem value={opt.value.toString()} id={`motor-${opt.value}`} />
-                <Label htmlFor={`motor-${opt.value}`}>{opt.label} ({opt.value} pts)</Label>
+                <Label htmlFor={`motor-${opt.value}`}>{opt.label} ({opt.value} pt)</Label>
               </div>
             ))}
           </RadioGroup>
@@ -134,22 +134,22 @@ const GcsScore: React.FC = () => {
 
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score: {score ?? 'N/A'}</AlertTitle>
+          <AlertTitle>Skor Terhitung: {score ?? 'N/A'}</AlertTitle>
           <AlertDescription className="text-justify">
             {interpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool is for educational purposes. GCS assessment requires clinical training. Consider factors like intubation (V score = VT) or sedation.
+             Alat ini untuk tujuan pendidikan. Penilaian GCS memerlukan pelatihan klinis. Pertimbangkan faktor-faktor seperti intubasi (skor V = VT) atau sedasi.
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>

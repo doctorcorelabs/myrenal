@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Terminal, Loader2, ArrowLeft } from "lucide-react";
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Added hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast'; // Added toast
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
@@ -53,11 +52,11 @@ interface FdcApiResponse {
 
 // --- Component ---
 const NutritionDatabase = () => {
-  const featureName: FeatureName = 'nutrition_database';
+  const featureName: string = 'nutrition_database';
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const { openUpgradeDialog } = useAuth(); // Get the dialog function
+  const { } = useAuth(); // Removed openUpgradeDialog
 
   // State for initial access check
   const [isCheckingInitialAccess, setIsCheckingInitialAccess] = useState(true);
@@ -87,12 +86,8 @@ const NutritionDatabase = () => {
         setInitialAccessMessage(null);
         try {
          const result = await checkAccess(featureName);
-         if (result.quota === 0) {
-              setInitialAccessAllowed(false);
-              setInitialAccessMessage(result.message || 'Access denied for your level.');
-         } else {
-              setInitialAccessAllowed(true);
-         }
+         setInitialAccessAllowed(result.allowed);
+         setInitialAccessMessage(result.message);
        } catch (error) {
          console.error("Error checking initial feature access:", error);
          setInitialAccessAllowed(false);
@@ -122,7 +117,6 @@ const NutritionDatabase = () => {
          description: accessResult.message || 'You cannot perform a search at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog(); // Open the upgrade dialog
        return; // Stop the search
     }
     // --- End Action Access Check ---
@@ -159,10 +153,6 @@ const NutritionDatabase = () => {
     } finally {
       setIsLoadingSearch(false);
     }
-
-    // --- Increment Usage ---
-    await incrementUsage(featureName);
-    // --- End Increment Usage ---
   };
 
   // --- Detail Fetch Logic ---
@@ -209,8 +199,8 @@ const NutritionDatabase = () => {
   return (
     <>
       <PageHeader 
-        title="Nutrition Database" 
-        subtitle="Search the FoodData Central database for nutritional information"
+        title="Database Nutrisi" 
+        subtitle="Cari database FoodData Central untuk informasi nutrisi"
       />
       <div className="container max-w-7xl mx-auto px-4 py-12 space-y-6">
 
@@ -379,14 +369,14 @@ const NutritionDatabase = () => {
         )} {/* End of initialAccessAllowed block */}
 
         {/* Back to Tools Button */}
-        <div className="flex justify-center mt-8 mb-4">
-          <Link to="/tools">
-            <Button variant="outline" className="inline-flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Tools
-            </Button>
-          </Link>
-        </div>
+          <div className="flex justify-center mt-8 mb-4">
+            <Link to="/treatment">
+              <Button variant="outline" className="inline-flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Kembali
+              </Button>
+            </Link>
+          </div>
         
       </div>
     </>

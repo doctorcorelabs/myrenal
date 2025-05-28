@@ -83,8 +83,8 @@ const ChadsvascScore: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
-        <CardTitle>CHA₂DS₂-VASc Score Calculator</CardTitle>
-        <CardDescription className="text-justify">For Stroke Risk Stratification in Atrial Fibrillation</CardDescription>
+        <CardTitle>Kalkulator Skor CHA₂DS₂-VASc</CardTitle>
+        <CardDescription className="text-justify">Untuk Stratifikasi Risiko Stroke pada Fibrilasi Atrium</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -97,36 +97,36 @@ const ChadsvascScore: React.FC = () => {
                 disabled={key === 'age65To74' && criteria.age75OrOlder} // Disable 65-74 if 75+ is checked
               />
               <Label htmlFor={key} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-justify">
-                {key === 'congestiveHeartFailure' && 'Congestive Heart Failure / LV Dysfunction (1 pt)'}
-                {key === 'hypertension' && 'Hypertension (1 pt)'}
-                {key === 'age75OrOlder' && 'Age ≥ 75 years (2 pts)'}
+                {key === 'congestiveHeartFailure' && 'Gagal Jantung Kongestif / Disfungsi LV (1 pt)'}
+                {key === 'hypertension' && 'Hipertensi (1 pt)'}
+                {key === 'age75OrOlder' && 'Usia ≥ 75 tahun (2 pt)'}
                 {key === 'diabetesMellitus' && 'Diabetes Mellitus (1 pt)'}
-                {key === 'strokeTiaThromboembolism' && 'Stroke / TIA / Thromboembolism History (2 pts)'}
-                {key === 'vascularDisease' && 'Vascular Disease (Prior MI, PAD, Aortic Plaque) (1 pt)'}
-                {key === 'age65To74' && 'Age 65-74 years (1 pt)'}
-                {key === 'sexCategoryFemale' && 'Sex Category Female (1 pt)'}
+                {key === 'strokeTiaThromboembolism' && 'Riwayat Stroke / TIA / Tromboembolisme (2 pt)'}
+                {key === 'vascularDisease' && 'Penyakit Vaskular (Riwayat MI, PAD, Plak Aorta) (1 pt)'}
+                {key === 'age65To74' && 'Usia 65-74 tahun (1 pt)'}
+                {key === 'sexCategoryFemale' && 'Jenis Kelamin Perempuan (1 pt)'}
               </Label>
             </div>
           ))}
         </div>
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score: {score}</AlertTitle>
+          <AlertTitle>Skor Terhitung: {score}</AlertTitle>
           <AlertDescription className="text-justify">
             {interpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool is for educational purposes only and does not replace clinical judgment. Consult current guidelines.
+             Alat ini hanya untuk tujuan pendidikan dan tidak menggantikan penilaian klinis. Konsultasikan panduan terkini.
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>

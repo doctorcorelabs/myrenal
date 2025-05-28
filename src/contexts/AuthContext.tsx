@@ -1,10 +1,9 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient'; // Import Supabase client
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-// Removed: import { useToast } from '@/components/ui/use-toast';
 
 // User type including profile level - Updated levels
-export type UserLevel = 'Free' | 'Researcher' | 'Administrator'; // Removed Premium, Added Administrator
+export type UserLevel = 'Free' | 'Researcher' | 'Administrator';
 
 type User = {
   id: string;
@@ -23,8 +22,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<any>;
   register: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
-  upgradeToResearcher: () => Promise<void>;
-  // Add state and functions for global upgrade dialog
   isUpgradeDialogOpen: boolean;
   openUpgradeDialog: () => void;
   closeUpgradeDialog: () => void;
@@ -43,8 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [navigate, setNavigate] = useState(() => () => {}); // Initialize navigate
   const [loading, setLoading] = useState<boolean>(true);
-  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false); // State for global dialog
-  // Removed: const { toast } = useToast();
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
 
   // Function to fetch user profile including level
   const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
@@ -136,7 +132,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) throw error;
-    // Removed toast logic block
     return data;
   };
 
@@ -157,31 +152,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(false);
   };
 
-  const upgradeToResearcher = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ level: 'Researcher' })
-        .eq('id', user?.id)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      // Update the user's level in the AuthContext
-      setUser({ ...user, level: 'Researcher' });
-      setLevel('Researcher');
-      // Removed toast logic block
-    } catch (error) {
-      console.error('Error upgrading to Researcher:', error);
-      // Removed toast logic block
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed upgradeToResearcher function
 
   // Don't render children until initial auth check is complete
   if (loading) {
@@ -189,8 +160,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   // Functions to control the global upgrade dialog
-  const openUpgradeDialog = () => setIsUpgradeDialogOpen(true);
-  const closeUpgradeDialog = () => setIsUpgradeDialogOpen(false);
+  const openUpgradeDialog = () => {
+    setIsUpgradeDialogOpen(true);
+  };
+
+  const closeUpgradeDialog = () => {
+    setIsUpgradeDialogOpen(false);
+  };
 
   return (
     <AuthContext.Provider value={{
@@ -203,8 +179,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       login,
       register,
       logout,
-      upgradeToResearcher,
-      // Add dialog state and functions to provider value
       isUpgradeDialogOpen,
       openUpgradeDialog,
       closeUpgradeDialog

@@ -69,7 +69,7 @@ const Layout = ({ children }: LayoutProps) => {
       <AlertDialog open={isUpgradeDialogOpen} onOpenChange={closeUpgradeDialog}>
         {/* Apply layout styles directly to the global dialog content container */}
         <AlertDialogContent className="max-h-[90vh] flex flex-col"> 
-          <UpgradePlanDialogContent />
+          <UpgradePlanDialogContent onClose={closeUpgradeDialog} />
         </AlertDialogContent>
       </AlertDialog>
     </div>

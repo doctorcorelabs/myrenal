@@ -4,7 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"; // Import Navigate
 import Layout from "./components/Layout";
-import Home from "./pages/Home"; // Import the new Home component
+import Home from "./pages/Home";
+import NewHome from "./pages/NewHome"; // Import the new Home component
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -33,7 +34,14 @@ import LearningUpToDate from "./pages/LearningUpToDate"; // Import LearningUpToD
 import LearningOther from "./pages/LearningOther"; // Import LearningOther
 import LearningSinera from "./pages/LearningSinera"; // Import LearningSinera
 import AuthorPage from "./pages/Author"; // Import AuthorPage
-// Removed StreamInteraction import
+import Screening from "./pages/Screening"; // Import Screening
+import Treatment from "./pages/Treatment"; // Import Treatment
+// Import renal calculators
+import EGFRCalculator from "./components/medical-calculators/renal/EGFRCalculator";
+import UACRCalculator from "./components/medical-calculators/renal/UACRCalculator";
+import CockcroftGaultCalculator from "./components/medical-calculators/renal/CockcroftGaultCalculator";
+import FENaCalculator from "./components/medical-calculators/renal/FENaCalculator";
+import AnionGapCalculator from "./components/medical-calculators/renal/AnionGapCalculator";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -47,7 +55,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Layout><Home /></Layout>} /> {/* Render Home component at root */}
+            <Route path="/" element={<Layout><NewHome /></Layout>} /> {/* Render NewHome component at root */}
             <Route path="/nucleus" element={<Layout><NucleusArchive /></Layout>} /> {/* Add Nucleus Archive route */}
             <Route path="/nucleus/:slug" element={<Layout><NucleusPost /></Layout>} /> {/* Add route for individual NUCLEUS posts */}
             <Route path="/signin" element={<SignIn />} />
@@ -62,12 +70,53 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* Add route for Medical Calculator */}
+            {/* Add route for Medical Calculator Index */}
             <Route 
               path="/tools/medical-calculator" 
               element={
                 <ProtectedRoute>
                   <Layout><MedicalCalculator /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add routes for specific Renal Calculators */}
+            <Route 
+              path="/tools/medical-calculator/egfr" 
+              element={
+                <ProtectedRoute>
+                  <Layout><EGFRCalculator /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/medical-calculator/uacr" 
+              element={
+                <ProtectedRoute>
+                  <Layout><UACRCalculator /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/medical-calculator/cockcroft-gault" 
+              element={
+                <ProtectedRoute>
+                  <Layout><CockcroftGaultCalculator /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/medical-calculator/fena" 
+              element={
+                <ProtectedRoute>
+                  <Layout><FENaCalculator /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tools/medical-calculator/anion-gap" 
+              element={
+                <ProtectedRoute>
+                  <Layout><AnionGapCalculator /></Layout>
                 </ProtectedRoute>
               } 
             />
@@ -237,7 +286,24 @@ const App = () => (
                  </ProtectedRoute>
                }
              />
-             {/* Removed Stream Interaction route */}
+             {/* Add route for Screening Page */}
+             <Route
+               path="/screening"
+               element={
+                 <ProtectedRoute>
+                   <Layout><Screening /></Layout>
+                 </ProtectedRoute>
+               }
+             />
+             {/* Add route for Treatment Page */}
+             <Route
+               path="/treatment"
+               element={
+                 <ProtectedRoute>
+                   <Layout><Treatment /></Layout>
+                 </ProtectedRoute>
+               }
+             />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

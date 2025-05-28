@@ -121,8 +121,8 @@ const MeldScore: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle>MELD / MELD-Na Score Calculator</CardTitle>
-        <CardDescription className="text-justify">Model for End-Stage Liver Disease Prognosis</CardDescription>
+        <CardTitle>Kalkulator Skor MELD / MELD-Na</CardTitle>
+        <CardDescription className="text-justify">Model untuk Prognosis Penyakit Hati Stadium Akhir</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -134,18 +134,18 @@ const MeldScore: React.FC = () => {
               step="0.1"
               value={values.bilirubin}
               onChange={handleInputChange}
-              placeholder="e.g., 1.2"
+              placeholder="misalnya, 1.2"
             />
           </div>
           <div>
-            <Label htmlFor="creatinine">Creatinine (mg/dL)</Label>
+            <Label htmlFor="creatinine">Kreatinin (mg/dL)</Label>
             <Input
               id="creatinine"
               type="number"
               step="0.1"
               value={values.creatinine}
               onChange={handleInputChange}
-              placeholder="e.g., 1.0"
+              placeholder="misalnya, 1.0"
             />
           </div>
           <div>
@@ -156,17 +156,17 @@ const MeldScore: React.FC = () => {
               step="0.1"
               value={values.inr}
               onChange={handleInputChange}
-              placeholder="e.g., 1.1"
+              placeholder="misalnya, 1.1"
             />
           </div>
            <div>
-            <Label htmlFor="sodium">Sodium (mEq/L)</Label>
+            <Label htmlFor="sodium">Natrium (mEq/L)</Label>
             <Input
               id="sodium"
               type="number"
               value={values.sodium}
               onChange={handleInputChange}
-              placeholder="e.g., 135 (for MELD-Na)"
+              placeholder="misalnya, 135 (untuk MELD-Na)"
             />
           </div>
         </div>
@@ -176,27 +176,27 @@ const MeldScore: React.FC = () => {
               checked={values.dialysisTwiceInWeek}
               onCheckedChange={() => handleCheckboxChange('dialysisTwiceInWeek')}
             />
-            <Label htmlFor="dialysisTwiceInWeek" className="text-justify">Dialysis twice within the past 7 days?</Label>
+            <Label htmlFor="dialysisTwiceInWeek" className="text-justify">Dialisis dua kali dalam 7 hari terakhir?</Label>
           </div>
 
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score</AlertTitle>
+          <AlertTitle>Skor Terhitung</AlertTitle>
           <AlertDescription className="text-justify">
             {interpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool is for educational purposes. MELD score calculation follows specific UNOS/OPTN rules. Consult official guidelines for clinical use, especially regarding transplant allocation.
+             Alat ini untuk tujuan pendidikan. Perhitungan skor MELD mengikuti aturan UNOS/OPTN tertentu. Konsultasikan panduan resmi untuk penggunaan klinis, terutama terkait alokasi transplantasi.
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>

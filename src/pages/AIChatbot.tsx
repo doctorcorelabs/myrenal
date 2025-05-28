@@ -4,14 +4,13 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
 import { useEffect, useState } from 'react';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 const AIChatbot = () => {
-  const featureName: FeatureName = 'ai_chatbot';
+  const featureName: string = 'ai_chatbot';
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true); // Still track page-specific check
   const [accessAllowed, setAccessAllowed] = useState(false);
@@ -26,18 +25,7 @@ const AIChatbot = () => {
         try {
           const result = await checkAccess(featureName);
           setAccessAllowed(result.allowed);
-          if (result.allowed) {
-            // Increment usage only if access is granted
-            // We increment usage *before* the user interacts with the iframe
-            // Alternatively, could increment based on iframe interaction, but that's more complex.
-            await incrementUsage(featureName);
-            // Optionally show remaining quota
-            // if (result.remaining !== null) {
-            //   toast({ title: "Info", description: `Remaining quota for ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
-            // }
-          } else {
-            setAccessMessage(result.message || 'Access denied.'); // Set message if denied
-          }
+          setAccessMessage(result.message); // Set message if denied
         } catch (error) {
           console.error("Error checking feature access:", error);
           setAccessAllowed(false);
@@ -62,8 +50,8 @@ const AIChatbot = () => {
   return (
     <>
       <PageHeader
-        title="AI Chatbot"
-         subtitle="Engage with an AI assistant for medical information and queries" 
+        title="Chatbot AI"
+         subtitle="Dapatkan bantuan dan informasi cepat tentang kesehatan ginjal dan pertanyaan terkait." 
        />
        {/* Make this container grow and use flexbox for the iframe */}
        <div className="container max-w-7xl mx-auto px-4 flex flex-col flex-grow">
@@ -97,12 +85,12 @@ const AIChatbot = () => {
             </iframe>
          )}
 
-          {/* Back to Tools Button */}
+          {/* Back to Screening Button */}
           <div className="flex justify-center mt-8 mb-4"> {/* Added mb-4 for spacing above footer */}
-            <Link to="/tools">
+            <Link to="/screening">
               <Button variant="outline" className="flex items-center gap-2">
                 <ArrowLeft size={16} />
-                Back to Tools
+                Kembali
               </Button>
             </Link>
           </div>

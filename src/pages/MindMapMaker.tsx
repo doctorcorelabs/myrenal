@@ -28,7 +28,6 @@ import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Terminal, Loader2 } from 'lucide-react'; // Added Terminal, Loader2
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useAuth } from '@/contexts/AuthContext'; // Added Auth context
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -90,10 +89,10 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: LayoutDire
 };
 
 const MindMapMaker: React.FC = () => {
-  const featureName: FeatureName = 'mind_map_maker';
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const featureName: string = 'mind_map_maker';
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
-  const { openUpgradeDialog } = useAuth(); // Get the dialog function
+  const { } = useAuth(); // Removed openUpgradeDialog
 
   // State for access check result
   const [isInitiallyLocked, setIsInitiallyLocked] = useState(false); // Track if locked on load
@@ -202,7 +201,6 @@ const MindMapMaker: React.FC = () => {
          description: accessResult.message || 'You cannot create a mind map at this time.',
          variant: "destructive",
        });
-       openUpgradeDialog();
        return;
     }
 
@@ -236,26 +234,13 @@ const MindMapMaker: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-
-    await incrementUsage(featureName);
-    if (accessResult.remaining !== null) {
-      const remainingAfterIncrement = accessResult.remaining - 1;
-      const displayRemaining = Math.max(0, remainingAfterIncrement);
-      toast({
-        title: "Usage Recorded",
-        description: `Remaining mind map generations for today: ${displayRemaining}`,
-      });
-      if (displayRemaining <= 0) {
-        setIsInitiallyLocked(true);
-      }
-    }
   };
 
   return (
     <>
       <PageHeader
-        title="AI Mind Map Generator"
-        subtitle="Generate visual mind maps from any topic using AI."
+        title="Pembuat Mind Map AI"
+        subtitle="Hasilkan peta pikiran visual dari topik apa pun menggunakan AI."
       />
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
         {isLoadingToggles && (
@@ -325,24 +310,11 @@ const MindMapMaker: React.FC = () => {
                     description: accessResult.message || 'You cannot access the Advanced Mind Map Generator at this time.',
                     variant: "destructive",
                   });
-                  openUpgradeDialog();
                   return;
-                }
-                await incrementUsage(featureName);
-                if (accessResult.remaining !== null) {
-                  const remainingAfterIncrement = accessResult.remaining - 1;
-                  const displayRemaining = Math.max(0, remainingAfterIncrement);
-                  toast({
-                    title: "Usage Recorded",
-                    description: `Remaining mind map generations for today: ${displayRemaining}`,
-                  });
-                  if (displayRemaining <= 0) {
-                    setIsInitiallyLocked(true);
-                  }
                 }
                 setIsAdvancedModalOpen(true);
               }}>Advanced Mind Map Generator</Button>
-              <Link to="/tools"><Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Back to Tools</Button></Link>
+              <Link to="/treatment"><Button variant="outline" className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Kembali</Button></Link>
             </div>
           </>
         )}

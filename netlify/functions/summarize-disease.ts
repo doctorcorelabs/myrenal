@@ -34,7 +34,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body." }) };
   }
 
-  const prompt = `Provide a brief, neutral summary (around 2-4 sentences) about the medical condition: "${query}". Focus on what it is, common symptoms, and general causes. Do not provide medical advice or treatment recommendations. State that this information is for general knowledge only and users should consult healthcare professionals.`;
+const prompt = `Berikan ringkasan singkat dan netral (sekitar 2-4 kalimat) tentang kondisi medis: "${query}". Fokus pada apa itu, gejala umum, dan penyebab umum. Jangan berikan nasihat medis atau rekomendasi pengobatan. Nyatakan bahwa informasi ini hanya untuk pengetahuan umum dan pengguna harus berkonsultasi dengan profesional kesehatan. Berikan ringkasan ini dalam Bahasa Indonesia.`;
 
   try {
     console.log(`Generating summary for query: ${query}`);

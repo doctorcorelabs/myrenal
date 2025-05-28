@@ -4,15 +4,14 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Terminal } from 'lucide-react'; // Added Terminal
 import { useEffect, useState } from 'react';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess'; // Import hook
-import { FeatureName } from '@/lib/quotas'; // Import FeatureName from quotas.ts
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const AIPeerReview = () => {
-  const featureName: FeatureName = 'ai_peer_review';
+  const featureName: string = 'ai_peer_review';
   // Get isLoadingToggles from the hook
-  const { checkAccess, incrementUsage, isLoadingToggles } = useFeatureAccess();
+  const { checkAccess, isLoadingToggles } = useFeatureAccess();
   const { toast } = useToast();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true); // Still track page-specific check
   const [accessAllowed, setAccessAllowed] = useState(false);
@@ -26,26 +25,18 @@ const AIPeerReview = () => {
         setAccessMessage(null);
         try {
           const result = await checkAccess(featureName);
-        setAccessAllowed(result.allowed);
-        if (result.allowed) {
-          await incrementUsage(featureName);
-          // Optionally show remaining quota
-          // if (result.remaining !== null) {
-          //   toast({ title: "Info", description: `Remaining quota for ${featureName.replace(/_/g, ' ')}: ${result.remaining}` });
-          // }
-        } else {
-          setAccessMessage(result.message || 'Access denied.');
-        }
-      } catch (error) {
-        console.error("Error checking feature access:", error);
-        setAccessAllowed(false);
-        setAccessMessage('Failed to check feature access.');
-        toast({
-          title: "Error",
-          description: "Could not verify feature access at this time.",
-          variant: "destructive",
-        });
-      } finally {
+          setAccessAllowed(result.allowed);
+          setAccessMessage(result.message);
+        } catch (error) {
+          console.error("Error checking feature access:", error);
+          setAccessAllowed(false);
+          setAccessMessage('Failed to check feature access.');
+          toast({
+            title: "Error",
+            description: "Could not verify feature access at this time.",
+            variant: "destructive",
+          });
+        } finally {
           setIsCheckingAccess(false); // Finish page-specific check
         }
       };
@@ -60,8 +51,8 @@ const AIPeerReview = () => {
   return (
     <>
       <PageHeader
-        title="AI Peer-Review"
-        subtitle="Get AI-powered feedback on your clinical notes or case studies"
+        title="Peninjauan Sejawat AI"
+        subtitle="Dapatkan umpan balik bertenaga AI pada catatan klinis atau studi kasus Anda"
       />
       <div className="container max-w-7xl mx-auto px-4 py-8 flex flex-col flex-grow">
 

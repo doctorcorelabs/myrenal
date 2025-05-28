@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { UserLevel } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { getQuotaLimit, hasLearningResourcesAccess, FeatureName } from '@/lib/quotas'; // Import from quotas.ts
 
 // Interface for feature toggle status
 interface FeatureToggleStatus {
@@ -12,10 +11,7 @@ interface FeatureToggleStatus {
 
 interface AccessCheckResult {
   allowed: boolean;
-  remaining: number | null; // null if unlimited
   message: string | null; // Message to display if not allowed
-  quota: number | null;
-  currentUsage: number;
   level: UserLevel | null; // The effective level used for the check
   isExpired?: boolean; // Flag if Researcher level is expired
   isDisabled?: boolean; // Flag if feature is disabled by admin
@@ -85,7 +81,7 @@ export function useFeatureAccess() {
         setIsLoadingToggles(false);
         setLastFetchTime(Date.now());
       }
-  }, [lastFetchTime]); // Removed toast dependency as it's not used here
+  }, [lastFetchTime]);
 
   // Effect for initial fetch and setting up focus listener
   useEffect(() => {
@@ -97,9 +93,9 @@ export function useFeatureAccess() {
   }, [fetchToggles]);
 
 
-  const checkAccess = useCallback(async (featureName: FeatureName): Promise<AccessCheckResult> => {
+  const checkAccess = useCallback(async (featureName: string): Promise<AccessCheckResult> => {
     console.log(`\n--- [checkAccess] Start Check for Feature: ${featureName} ---`);
-    const defaultDenied: AccessCheckResult = { allowed: false, remaining: 0, message: 'Authentication required.', quota: 0, currentUsage: 0, level: null };
+    const defaultDenied: AccessCheckResult = { allowed: false, message: 'Authentication required.', level: null };
 
      if (isLoadingToggles) {
         console.log("[checkAccess] Toggles still loading.");
@@ -143,7 +139,7 @@ export function useFeatureAccess() {
     // --- Handle Administrator Access ---
     if (effectiveLevel === 'Administrator') {
         console.log(`[checkAccess] Access GRANTED: User is Administrator.`);
-        return { allowed: true, remaining: null, message: null, quota: null, currentUsage: 0, level: effectiveLevel };
+        return { allowed: true, message: null, level: effectiveLevel };
     }
     // --- End Handle Administrator Access ---
 
@@ -159,136 +155,18 @@ export function useFeatureAccess() {
     console.log(`[checkAccess] Effective Level after expiry check: ${effectiveLevel}`);
     // --- End Handle Level Expiry ---
 
-
-    // --- Check Quotas based on Effective Level using imported functions ---
-
-    // Special check for Learning Resources (Access-based)
-    if (featureName === 'learning_resources') {
-        const canAccess = hasLearningResourcesAccess(effectiveLevel);
-        console.log(`[checkAccess] Learning Resources check - Level: ${effectiveLevel}, Can Access: ${canAccess}`);
-        if (!canAccess) {
-            const message = `Feature 'Learning Resources' is not available for level ${effectiveLevel}.`;
-            console.log(`[checkAccess] Access DENIED: ${message}`);
-            return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: effectiveLevel, isExpired };
-        } else {
-            console.log(`[checkAccess] Access GRANTED: Learning Resources allowed for level ${effectiveLevel}.`);
-            return { allowed: true, remaining: null, message: null, quota: null, currentUsage: 0, level: effectiveLevel, isExpired };
-        }
-    }
-
-    // Get quota limit for other features
-    const userQuota = getQuotaLimit(effectiveLevel, featureName);
-    console.log(`[checkAccess] Quota limit for ${featureName} at level ${effectiveLevel}: ${userQuota}`);
-
-    // If quota is null (unlimited for the effective level), allow access
-    if (userQuota === null) {
-      console.log(`[checkAccess] Access GRANTED: Quota is unlimited for this level.`);
-      return { allowed: true, remaining: null, message: null, quota: null, currentUsage: 0, level: effectiveLevel, isExpired };
-    }
-
-    // Handle immediate denial if effective level has 0 quota
-    if (userQuota === 0) {
-        const message = `Feature '${featureName.replace(/_/g, ' ')}' is not available for level ${effectiveLevel}.`;
+    // All features are allowed for authenticated users unless explicitly disabled by admin
+    // or if it's 'learning_resources' for 'Free' level.
+    if (featureName === 'learning_resources' && effectiveLevel === 'Free') {
+        const message = `Feature 'Learning Resources' is not available for level ${effectiveLevel}.`;
         console.log(`[checkAccess] Access DENIED: ${message}`);
-        return { allowed: false, remaining: 0, message: message, quota: 0, currentUsage: 0, level: effectiveLevel, isExpired };
+        return { allowed: false, message: message, level: effectiveLevel, isExpired };
     }
 
+    console.log(`[checkAccess] Access GRANTED: Feature '${featureName}' allowed for level ${effectiveLevel}.`);
+    return { allowed: true, message: null, level: effectiveLevel, isExpired };
 
-    // Fetch current usage from the NEW Supabase function with cache busting
-    console.log(`[checkAccess] Calling RPC 'get_today_usage_count' for user ${currentUser.id}, feature ${featureName}`);
-    try {
-      // *** MODIFIED RPC CALL with cache busting parameter ***
-      const { data: usageCount, error: usageError } = await supabase.rpc('get_today_usage_count', {
-        user_id_param: currentUser.id,
-        feature_name_param: featureName,
-        _cache_buster: Date.now(), // Add cache buster to prevent stale data
-      });
+  }, [supabase, featureToggles, isLoadingToggles]);
 
-      if (usageError) {
-        console.error(`[checkAccess] Error fetching usage via RPC 'get_today_usage_count':`, usageError);
-        return { ...defaultDenied, message: 'Failed to check usage quota.', level: effectiveLevel, isExpired };
-      }
-
-      // *** MODIFIED RESULT HANDLING ***
-      // The new function directly returns the count (number) or null if error/no rows
-      const currentUsage = typeof usageCount === 'number' ? usageCount : 0;
-      const actualQuota = userQuota; // userQuota was determined using effectiveLevel
-
-      console.log(`[checkAccess] Current Usage (from get_today_usage_count): ${currentUsage}, Quota Limit: ${actualQuota}`);
-
-      const remaining = actualQuota - currentUsage;
-
-      if (currentUsage >= actualQuota) {
-        const message = `Daily quota (${actualQuota}) for feature '${featureName.replace(/_/g, ' ')}' has been reached. Please try again tomorrow.`;
-        console.log(`[checkAccess] Access DENIED: ${message}`);
-        return {
-          allowed: false,
-          remaining: 0,
-          message: message,
-          quota: actualQuota,
-          currentUsage: currentUsage,
-          level: effectiveLevel,
-          isExpired
-        };
-      } else {
-        console.log(`[checkAccess] Access GRANTED: Usage (${currentUsage}) is less than quota (${actualQuota}). Remaining: ${remaining}`);
-        return {
-          allowed: true,
-          remaining: remaining,
-          message: null,
-          quota: actualQuota,
-          currentUsage: currentUsage,
-          level: effectiveLevel,
-          isExpired
-        };
-      }
-    } catch (err) {
-      console.error(`[checkAccess] Exception fetching usage via RPC 'get_today_usage_count':`, err);
-      return { ...defaultDenied, message: 'An error occurred while checking the quota.', level: effectiveLevel, isExpired };
-    }
-  }, [supabase, featureToggles, isLoadingToggles]); // Added dependencies
-
-  const incrementUsage = useCallback(async (featureName: FeatureName) => {
-    console.log(`[incrementUsage] Attempting to increment usage for feature: ${featureName}`);
-    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !currentUser) {
-      console.warn('[incrementUsage] Not authenticated.');
-      toast({
-          title: "Error",
-          description: `Failed to record usage: Invalid authentication.`,
-          variant: "destructive",
-        });
-      return;
-    }
-    console.log(`[incrementUsage] User authenticated: ${currentUser.id}`);
-
-    try {
-      console.log(`[incrementUsage] Calling RPC 'increment_usage' for user ${currentUser.id}, feature ${featureName}`);
-      const { error } = await supabase.rpc('increment_usage', {
-        user_id_param: currentUser.id,
-        feature_name_param: featureName,
-      });
-
-      if (error) {
-        console.error(`[incrementUsage] Error calling RPC:`, error);
-        toast({
-          title: "Error",
-          description: `Failed to record usage for feature '${featureName.replace(/_/g, ' ')}'.`,
-          variant: "destructive",
-        });
-      } else {
-        console.log(`[incrementUsage] Successfully incremented usage for ${featureName}.`);
-      }
-    } catch (err) {
-      console.error(`[incrementUsage] Exception calling RPC:`, err);
-       toast({
-          title: "Error",
-          description: `An error occurred while recording usage for feature '${featureName.replace(/_/g, ' ')}'.`,
-          variant: "destructive",
-        });
-    }
-  }, [supabase, toast]);
-
-  return { checkAccess, incrementUsage, isLoadingToggles };
+  return { checkAccess, isLoadingToggles };
 }

@@ -75,8 +75,8 @@ const WellsScorePe: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto mt-6"> {/* Added margin top */}
       <CardHeader>
-        <CardTitle>Wells' Score Calculator for PE</CardTitle>
-        <CardDescription className="text-justify">For Pulmonary Embolism Probability Assessment</CardDescription>
+        <CardTitle>Kalkulator Skor Wells untuk PE</CardTitle>
+        <CardDescription className="text-justify">Untuk Penilaian Probabilitas Emboli Paru</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -88,36 +88,36 @@ const WellsScorePe: React.FC = () => {
                 onCheckedChange={() => handleCheckboxChange(key)}
               />
               <Label htmlFor={key} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-justify">
-                {key === 'clinicalSignsDvt' && 'Clinical signs and symptoms of DVT (minimum of leg swelling and pain with palpation of the deep veins) (+3 pts)'}
-                {key === 'peMostLikelyDiagnosis' && 'PE is #1 diagnosis OR equally likely (+3 pts)'}
-                {key === 'heartRateGreaterThan100' && 'Heart rate > 100 bpm (+1.5 pts)'}
-                {key === 'immobilizationOrSurgery' && 'Immobilization at least 3 days OR surgery in the previous 4 weeks (+1.5 pts)'}
-                {key === 'previousPeOrDvt' && 'Previous, objectively diagnosed PE or DVT (+1.5 pts)'}
-                {key === 'hemoptysis' && 'Hemoptysis (+1 pt)'}
-                {key === 'malignancy' && 'Malignancy with treatment within 6 months or palliative (+1 pt)'}
+                {key === 'clinicalSignsDvt' && 'Tanda dan gejala klinis DVT (minimal pembengkakan kaki dan nyeri saat palpasi vena dalam) (+3 pt)'}
+                {key === 'peMostLikelyDiagnosis' && 'PE adalah diagnosis #1 ATAU sama mungkinnya (+3 pt)'}
+                {key === 'heartRateGreaterThan100' && 'Denyut jantung > 100 bpm (+1.5 pt)'}
+                {key === 'immobilizationOrSurgery' && 'Imobilisasi minimal 3 hari ATAU operasi dalam 4 minggu sebelumnya (+1.5 pt)'}
+                {key === 'previousPeOrDvt' && 'Riwayat PE atau DVT yang didiagnosis secara objektif sebelumnya (+1.5 pt)'}
+                {key === 'hemoptysis' && 'Hemoptisis (+1 pt)'}
+                {key === 'malignancy' && 'Keganasan dengan pengobatan dalam 6 bulan atau paliatif (+1 pt)'}
               </Label>
             </div>
           ))}
         </div>
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score: {score}</AlertTitle>
+          <AlertTitle>Skor Terhitung: {score}</AlertTitle>
           <AlertDescription className="text-justify">
-            Traditional: {interpretation} <br />
-            Simplified (2-Level): {simplifiedInterpretation}
+            Tradisional: {interpretation} <br />
+            Sederhana (2-Level): {simplifiedInterpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool aids in risk stratification but does not replace clinical judgment or diagnostic testing (e.g., D-dimer, CTPA). Consult current guidelines.
+             Alat ini membantu dalam stratifikasi risiko tetapi tidak menggantikan penilaian klinis atau tes diagnostik (misalnya, D-dimer, CTPA). Konsultasikan panduan terkini.
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>

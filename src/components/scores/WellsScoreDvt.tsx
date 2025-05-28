@@ -79,8 +79,8 @@ const WellsScoreDvt: React.FC = () => {
   return (
     <Card className="w-full max-w-lg mx-auto mt-6"> {/* Added margin top */}
       <CardHeader>
-        <CardTitle>Wells' Score Calculator for DVT</CardTitle>
-        <CardDescription className="text-justify">For Deep Vein Thrombosis Probability Assessment</CardDescription>
+        <CardTitle>Kalkulator Skor Wells untuk DVT</CardTitle>
+        <CardDescription className="text-justify">Untuk Penilaian Probabilitas Trombosis Vena Dalam</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -92,38 +92,38 @@ const WellsScoreDvt: React.FC = () => {
                 onCheckedChange={() => handleCheckboxChange(key)}
               />
               <Label htmlFor={key} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-justify">
-                {key === 'activeCancer' && 'Active cancer (treatment within 6 months, or palliative) (+1 pt)'}
-                {key === 'paralysisParesisImmobilization' && 'Paralysis, paresis, or recent plaster immobilization of lower extremity (+1 pt)'}
-                {key === 'bedriddenRecently' && 'Recently bedridden >3 days or major surgery within 12 weeks requiring general/regional anesthesia (+1 pt)'}
-                {key === 'localizedTenderness' && 'Localized tenderness along the distribution of the deep venous system (+1 pt)'}
-                {key === 'entireLegSwollen' && 'Entire leg swollen (+1 pt)'}
-                {key === 'calfSwellingDifference' && 'Calf swelling >3 cm compared to asymptomatic leg (measured 10 cm below tibial tuberosity) (+1 pt)'}
-                {key === 'pittingEdema' && 'Pitting edema (confined to symptomatic leg) (+1 pt)'}
-                {key === 'collateralSuperficialVeins' && 'Collateral superficial veins (non-varicose) (+1 pt)'}
-                {key === 'previousDvt' && 'Previously documented DVT (+1 pt)'}
-                {key === 'alternativeDiagnosisLikely' && 'Alternative diagnosis at least as likely as DVT (-2 pts)'}
+                {key === 'activeCancer' && 'Kanker aktif (pengobatan dalam 6 bulan, atau paliatif) (+1 pt)'}
+                {key === 'paralysisParesisImmobilization' && 'Paralisis, paresis, atau imobilisasi gips baru-baru ini pada ekstremitas bawah (+1 pt)'}
+                {key === 'bedriddenRecently' && 'Baru-baru ini tirah baring >3 hari atau operasi besar dalam 12 minggu yang memerlukan anestesi umum/regional (+1 pt)'}
+                {key === 'localizedTenderness' && 'Nyeri tekan terlokalisasi di sepanjang distribusi sistem vena dalam (+1 pt)'}
+                {key === 'entireLegSwollen' && 'Seluruh kaki bengkak (+1 pt)'}
+                {key === 'calfSwellingDifference' && 'Perbedaan pembengkakan betis >3 cm dibandingkan kaki asimtomatik (diukur 10 cm di bawah tuberositas tibia) (+1 pt)'}
+                {key === 'pittingEdema' && 'Edema pitting (terbatas pada kaki yang bergejala) (+1 pt)'}
+                {key === 'collateralSuperficialVeins' && 'Vena superfisial kolateral (non-varises) (+1 pt)'}
+                {key === 'previousDvt' && 'Riwayat DVT yang didokumentasikan sebelumnya (+1 pt)'}
+                {key === 'alternativeDiagnosisLikely' && 'Diagnosis alternatif setidaknya sama mungkinnya dengan DVT (-2 pt)'}
               </Label>
             </div>
           ))}
         </div>
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Calculated Score: {score}</AlertTitle>
+          <AlertTitle>Skor Terhitung: {score}</AlertTitle>
           <AlertDescription className="text-justify">
             {interpretation}
           </AlertDescription>
         </Alert>
          <Alert variant="destructive">
            <Info className="h-4 w-4" />
-           <AlertTitle>Disclaimer</AlertTitle>
+           <AlertTitle>Penyangkalan</AlertTitle>
            <AlertDescription className="text-justify">
-             This tool is for educational purposes only and does not replace clinical judgment or diagnostic testing (e.g., D-dimer, ultrasound). Consult current guidelines.
+             Alat ini hanya untuk tujuan pendidikan dan tidak menggantikan penilaian klinis atau tes diagnostik (misalnya, D-dimer, USG). Konsultasikan panduan terkini.
            </AlertDescription>
          </Alert>
       </CardContent>
       <CardFooter>
         <Button onClick={resetCalculator} variant="outline" className="w-full">
-          Reset
+          Atur Ulang
         </Button>
       </CardFooter>
     </Card>
