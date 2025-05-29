@@ -14,7 +14,7 @@ const generationConfig = {
   temperature: 0.7, // Adjust temperature for creativity vs. factuality
   topK: 1,
   topP: 1,
-  maxOutputTokens: 8192, // Adjust as needed
+  maxOutputTokens: 2000, // Adjust as needed
 };
 
 const safetySettings = [

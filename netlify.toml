@@ -17,7 +17,7 @@
 
 # Tingkatkan timeout untuk fungsi get-disease-details
 [functions."get-disease-details"]
-  timeout = 25
+  timeout = 60
 
 # Jadwalkan fungsi fetch-medical-news untuk berjalan setiap 10 jam
 [functions."fetch-medical-news"]
