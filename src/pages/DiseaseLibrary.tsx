@@ -339,17 +339,6 @@ const DiseaseLibrary = () => {
                 </div>
                 {/* Justify the summary disclaimer */}
                 <p className="text-xs text-gray-500 mt-3 italic text-justify">Catatan: Ringkasan ini dibuat oleh AI dan hanya untuk tujuan informasi. Selalu konsultasikan sumber asli dan profesional kesehatan.</p>
-                {/* Explore More Button */}
-                {aiSummary && !detailedInfo && !isDetailedLoading && !detailedError && ( // Show button only if summary exists
-                   <Button
-                     onClick={handleExploreMore}
-                     variant="secondary"
-                     className="mt-4"
-                     disabled={isDetailedLoading}
-                   >
-                     <Info className="mr-2 h-4 w-4" /> Jelajahi Detail Lebih Lanjut
-                   </Button>
-                )}
               </>
             )}
           </div>
@@ -363,38 +352,6 @@ const DiseaseLibrary = () => {
           </div>
         )}
 
-         {/* Detailed Information Display or Error */}
-         {!isDetailedLoading && (detailedInfo || detailedError) && (
-           <div className="mt-6 p-4 border rounded-md bg-white">
-              <h3 className="text-lg font-semibold mb-3">Informasi Detail untuk "{searchQuery}":</h3>
-              {detailedError ? (
-                <p className="text-red-600">Error: {detailedError}</p>
-             ) : detailedSections && Object.keys(detailedSections).length > 0 ? (
-               <Accordion type="single" collapsible className="w-full">
-                 {Object.entries(detailedSections).map(([title, content], index) => (
-                   <AccordionItem value={title} key={title}>
-                     <AccordionTrigger className="text-base font-medium hover:no-underline">
-                       {/* Display the title from the object entry */}
-                       {title}
-                     </AccordionTrigger>
-                     <AccordionContent className="text-sm text-gray-800 pt-2 pl-4">
-                       {/* Restore ReactMarkdown and add text-justify class */}
-                       <div className="prose prose-sm max-w-none text-justify">
-                         <ReactMarkdown>
-                           {content}
-                         </ReactMarkdown>
-                       </div>
-                     </AccordionContent>
-                   </AccordionItem>
-                 ))}
-               </Accordion>
-             ) : (
-                <p className="text-gray-600">Tidak dapat mengurai bagian informasi detail.</p>
-             )}
-             {/* Justify the detailed info disclaimer */}
-             <p className="text-xs text-gray-500 mt-4 italic text-justify">Catatan: Informasi detail ini dibuat oleh AI dan hanya untuk tujuan informasi. Selalu konsultasikan sumber asli dan profesional kesehatan.</p>
-          </div>
-        )}
           </>
         )} {/* End of initialAccessAllowed block */}
 

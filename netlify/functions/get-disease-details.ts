@@ -84,6 +84,7 @@ Strukturkan respons Anda menggunakan judul-judul berikut dalam Bahasa Indonesia.
 `;
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+  console.log(`[Netlify Function] Remaining time: ${context.getRemainingTimeInMillis()} ms`);
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
