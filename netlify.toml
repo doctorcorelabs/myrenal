@@ -15,6 +15,10 @@
 [functions."explore_gemini"]
   timeout = 25
 
+# Tingkatkan timeout untuk fungsi get-disease-details
+[functions."get-disease-details"]
+  timeout = 25
+
 # Jadwalkan fungsi fetch-medical-news untuk berjalan setiap 10 jam
 [functions."fetch-medical-news"]
   schedule = "0 */10 * * *"
