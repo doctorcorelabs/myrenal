@@ -192,7 +192,7 @@ const DiseaseLibrary = () => {
     const sections: Record<string, string> = Object.create(null);
     // Regex to find main headings (e.g., "1. **Heading:**") globally and capture the heading text
     // Adjusted regex to precisely match the observed AI output format "1. **Title:**"
-    const headingRegex = /^\*\*\d+\.\s*(.+?)\*\*\s*$/gm; // g for global, m for multiline
+    const headingRegex = /^\d+\.\s*\*\*(.+?)\*\*:/gm; // g for global, m for multiline
 
     let match;
     const matches = [];
